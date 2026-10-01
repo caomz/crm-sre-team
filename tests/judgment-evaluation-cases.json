@@ -1,0 +1,222 @@
+{
+  "version": "2.4.0",
+  "scope": "SYNTHETIC_EVALUATION_DESIGN_NOT_MODEL_RESULTS",
+  "execution_status": "NOT_RUN_IN_MODEL",
+  "scoring_status": "NOT_SCORED",
+  "numeric_probability": false,
+  "cases": [
+    {
+      "id": "J01",
+      "status": "NOT_RUN_IN_MODEL",
+      "source_behavior_case": "B29",
+      "evidence_sequence": [
+        {
+          "step": 1,
+          "material": "云状问题：用户只问是不是数据库问题。",
+          "data_kind": "SYNTHETIC_CASE_DESCRIPTION"
+        }
+      ],
+      "reference_context": {
+        "availability": "AS_SPECIFIED_IN_SYNTHETIC_MATERIAL",
+        "source": "DESIGN_ONLY_NOT_HOST_INPUT"
+      },
+      "adjudicated_outcome": {
+        "source": "SYNTHETIC_TEST_AUTHOR_NOT_REAL_RCA",
+        "label": "UNRESOLVED",
+        "reason": "本用例评估判断纪律，不凭合成材料确认实际根因。"
+      },
+      "expected_good_reasoning_properties": [
+        "先拆时窗、等待机制、先后和对照等可验证小问题；不无证据凑候选；可保留空 candidates 并请求最小材料，不代数据库域确认根因。",
+        "不输出数值概率或自报评分；无法验证的判断保持未知"
+      ],
+      "scoring_status": "NOT_SCORED"
+    },
+    {
+      "id": "J02",
+      "status": "NOT_RUN_IN_MODEL",
+      "source_behavior_case": "B30",
+      "evidence_sequence": [
+        {
+          "step": 1,
+          "material": "CPU 80%，没有已授权历史或 peer 基线，可选 reference_context 缺失。",
+          "data_kind": "SYNTHETIC_CASE_DESCRIPTION"
+        }
+      ],
+      "reference_context": {
+        "availability": "AS_SPECIFIED_IN_SYNTHETIC_MATERIAL",
+        "source": "DESIGN_ONLY_NOT_HOST_INPUT"
+      },
+      "adjudicated_outcome": {
+        "source": "SYNTHETIC_TEST_AUTHOR_NOT_REAL_RCA",
+        "label": "UNRESOLVED",
+        "reason": "本用例评估判断纪律，不凭合成材料确认实际根因。"
+      },
+      "expected_good_reasoning_properties": [
+        "不因参考缺失单独 blocked；有候选时 NO_REFERENCE_AVAILABLE、两个 expected_* 及 effect 均 UNKNOWN，不凭经验标支持或虚构基础率。",
+        "不输出数值概率或自报评分；无法验证的判断保持未知"
+      ],
+      "scoring_status": "NOT_SCORED"
+    },
+    {
+      "id": "J03",
+      "status": "NOT_RUN_IN_MODEL",
+      "source_behavior_case": "B31",
+      "evidence_sequence": [
+        {
+          "step": 1,
+          "material": "CPU 80%，授权同节点历史正常高峰也常见 80%，对象/负载/口径可比。",
+          "data_kind": "SYNTHETIC_CASE_DESCRIPTION"
+        }
+      ],
+      "reference_context": {
+        "availability": "AS_SPECIFIED_IN_SYNTHETIC_MATERIAL",
+        "source": "DESIGN_ONLY_NOT_HOST_INPUT"
+      },
+      "adjudicated_outcome": {
+        "source": "SYNTHETIC_TEST_AUTHOR_NOT_REAL_RCA",
+        "label": "UNRESOLVED",
+        "reason": "本用例评估判断纪律，不凭合成材料确认实际根因。"
+      },
+      "expected_good_reasoning_properties": [
+        "reference_basis 引用真实授权基线，COMMON/COMMON 得 NEUTRAL；高数值不自动形成根因。",
+        "不输出数值概率或自报评分；无法验证的判断保持未知"
+      ],
+      "scoring_status": "NOT_SCORED"
+    },
+    {
+      "id": "J04",
+      "status": "NOT_RUN_IN_MODEL",
+      "source_behavior_case": "B32",
+      "evidence_sequence": [
+        {
+          "step": 1,
+          "material": "授权材料含 JVM 停顿机制、故障前异常停顿以及匹配窗口同版本正常 peer，证据可支撑两侧预期。",
+          "data_kind": "SYNTHETIC_CASE_DESCRIPTION"
+        }
+      ],
+      "reference_context": {
+        "availability": "AS_SPECIFIED_IN_SYNTHETIC_MATERIAL",
+        "source": "DESIGN_ONLY_NOT_HOST_INPUT"
+      },
+      "adjudicated_outcome": {
+        "source": "SYNTHETIC_TEST_AUTHOR_NOT_REAL_RCA",
+        "label": "UNRESOLVED",
+        "reason": "本用例评估判断纪律，不凭合成材料确认实际根因。"
+      },
+      "expected_good_reasoning_properties": [
+        "可提议 SUPPORTS 类并说明基线和局限；缺少任一支持的预期仍 UNKNOWN，不能由 peer 差异单独宣告根因。",
+        "不输出数值概率或自报评分；无法验证的判断保持未知"
+      ],
+      "scoring_status": "NOT_SCORED"
+    },
+    {
+      "id": "J05",
+      "status": "NOT_RUN_IN_MODEL",
+      "source_behavior_case": "B33",
+      "evidence_sequence": [
+        {
+          "step": 1,
+          "material": "部署后故障；同类授权部署历史无异常，但当前机制证据不足。",
+          "data_kind": "SYNTHETIC_CASE_DESCRIPTION"
+        }
+      ],
+      "reference_context": {
+        "availability": "AS_SPECIFIED_IN_SYNTHETIC_MATERIAL",
+        "source": "DESIGN_ONLY_NOT_HOST_INPUT"
+      },
+      "adjudicated_outcome": {
+        "source": "SYNTHETIC_TEST_AUTHOR_NOT_REAL_RCA",
+        "label": "UNRESOLVED",
+        "reason": "本用例评估判断纪律，不凭合成材料确认实际根因。"
+      },
+      "expected_good_reasoning_properties": [
+        "记录时间关联和参考类局限，当前差异写 case_specific_factors；不把故事或历史成功频次等同当前因果，不擅设概率。",
+        "不输出数值概率或自报评分；无法验证的判断保持未知"
+      ],
+      "scoring_status": "NOT_SCORED"
+    },
+    {
+      "id": "J06",
+      "status": "NOT_RUN_IN_MODEL",
+      "source_behavior_case": "B34",
+      "evidence_sequence": [
+        {
+          "step": 1,
+          "material": "拟请求无论阳性还是阴性都不改变 H01/H02 判断。",
+          "data_kind": "SYNTHETIC_CASE_DESCRIPTION"
+        }
+      ],
+      "reference_context": {
+        "availability": "AS_SPECIFIED_IN_SYNTHETIC_MATERIAL",
+        "source": "DESIGN_ONLY_NOT_HOST_INPUT"
+      },
+      "adjudicated_outcome": {
+        "source": "SYNTHETIC_TEST_AUTHOR_NOT_REAL_RCA",
+        "label": "UNRESOLVED",
+        "reason": "本用例评估判断纪律，不凭合成材料确认实际根因。"
+      },
+      "expected_good_reasoning_properties": [
+        "不提出或不发布该请求；不能以填写了两个候选当作有区分度，不能藏到子问题或 pending 绕过配额。",
+        "不输出数值概率或自报评分；无法验证的判断保持未知"
+      ],
+      "scoring_status": "NOT_SCORED"
+    },
+    {
+      "id": "J07",
+      "status": "NOT_RUN_IN_MODEL",
+      "source_behavior_case": "B35",
+      "evidence_sequence": [
+        {
+          "step": 1,
+          "material": "H01/H02 均能解释现象，授权证据不足以排序。",
+          "data_kind": "SYNTHETIC_CASE_DESCRIPTION"
+        }
+      ],
+      "reference_context": {
+        "availability": "AS_SPECIFIED_IN_SYNTHETIC_MATERIAL",
+        "source": "DESIGN_ONLY_NOT_HOST_INPUT"
+      },
+      "adjudicated_outcome": {
+        "source": "SYNTHETIC_TEST_AUTHOR_NOT_REAL_RCA",
+        "label": "UNRESOLVED",
+        "reason": "本用例评估判断纪律，不凭合成材料确认实际根因。"
+      },
+      "expected_good_reasoning_properties": [
+        "提出最小可区分材料，discriminates_between 是 target 的子集，两分支写不同影响；没有材料时允许保守方向。",
+        "不输出数值概率或自报评分；无法验证的判断保持未知"
+      ],
+      "scoring_status": "NOT_SCORED"
+    },
+    {
+      "id": "J08",
+      "status": "NOT_RUN_IN_MODEL",
+      "source_behavior_case": "B36",
+      "evidence_sequence": [
+        {
+          "step": 1,
+          "material": "H01 是宿主给出的当前候选，旧授权证据 E001 仅有限支持；尚未独立确认。",
+          "data_kind": "SYNTHETIC_CASE_DESCRIPTION"
+        },
+        {
+          "step": 2,
+          "material": "本轮新授权 E 与原领先候选矛盾，并有可比参考支持削弱方向。",
+          "data_kind": "SYNTHETIC_CASE_DESCRIPTION"
+        }
+      ],
+      "reference_context": {
+        "availability": "AS_SPECIFIED_IN_SYNTHETIC_MATERIAL",
+        "source": "DESIGN_ONLY_NOT_HOST_INPUT"
+      },
+      "adjudicated_outcome": {
+        "source": "SYNTHETIC_TEST_AUTHOR_NOT_REAL_RCA",
+        "label": "UNRESOLVED",
+        "reason": "本用例评估判断纪律，不凭合成材料确认实际根因。"
+      },
+      "expected_good_reasoning_properties": [
+        "允许 DOWN，列反证及参考依据，不维护旧故事；不把替代解释或恢复写成已确认。",
+        "不输出数值概率或自报评分；无法验证的判断保持未知"
+      ],
+      "scoring_status": "NOT_SCORED"
+    }
+  ]
+}

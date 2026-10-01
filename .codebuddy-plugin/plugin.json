@@ -1,0 +1,227 @@
+{
+  "name": "crm-sre-team",
+  "version": "2.6.1",
+  "description": "Offline CRM evidence analysis. Real WorkBuddy native delegation when available; otherwise single-model analysis. A separate managed Harness remains unimplemented.",
+  "author": {
+    "name": "哲哥"
+  },
+  "agents": [
+    "./agents/telecom-crm-sre-team-lead.md",
+    "./agents/telecom-crm-crm-business-flow.md",
+    "./agents/telecom-crm-linux-infra.md",
+    "./agents/telecom-crm-oracle-dba.md",
+    "./agents/telecom-crm-java-runtime.md",
+    "./agents/telecom-crm-observability-diagnosis.md",
+    "./agents/telecom-crm-change-capacity-dr.md",
+    "./agents/telecom-crm-k8s-platform.md"
+  ],
+  "skills": [
+    "./skills/stability-director",
+    "./skills/crm-business-flow",
+    "./skills/linux-infra",
+    "./skills/oracle-dba",
+    "./skills/java-runtime",
+    "./skills/observability-diagnosis",
+    "./skills/change-capacity-dr",
+    "./skills/k8s-platform"
+  ],
+  "expertType": "team",
+  "agentName": "telecom-crm-sre-team-lead",
+  "teamInfo": {
+    "leadAgent": "telecom-crm-sre-team-lead",
+    "memberAgents": [
+      "telecom-crm-crm-business-flow",
+      "telecom-crm-linux-infra",
+      "telecom-crm-oracle-dba",
+      "telecom-crm-java-runtime",
+      "telecom-crm-observability-diagnosis",
+      "telecom-crm-change-capacity-dr",
+      "telecom-crm-k8s-platform"
+    ]
+  },
+  "displayName": {
+    "en": "Telecom CRM Stability Expert Team",
+    "zh": "电信CRM稳定性专家团"
+  },
+  "profession": {
+    "en": "Telecom CRM Stability Expert Team",
+    "zh": "电信CRM稳定性专家团"
+  },
+  "displayDescription": {
+    "en": "Authorized evidence only. Real native delegation when available; otherwise single-model analysis. No production access or fabricated consultation.",
+    "zh": "仅分析授权脱敏材料，按真实能力协同七域专家或单模型分析；不连接生产、不伪造会诊，结论供人工复核。"
+  },
+  "avatar": "avatars/team.png",
+  "categoryId": "02-Engineering",
+  "defaultInitPrompt": {
+    "zh": "仅分析我指定且允许分享的脱敏材料，不连接生产、不索取凭据，不输出生产命令。有真实 WorkBuddy 团队能力时按需委派成员，否则明确单模型分析、不模拟会诊。验证失败的托管任务不可降级绕过。用户每轮最多3项原子请求。我的问题与已有材料如下：",
+    "en": "Analyze only my authorized sanitized materials. No production access, credentials, or executable production instructions. Delegate only using actual permitted WorkBuddy team tools; otherwise state single-model analysis. Do not bypass failed managed verification. At most 3 atomic user requests per round. My issue and materials:"
+  },
+  "plugin": "crm-sre-team",
+  "tags": [
+    {
+      "en": "Incident Response",
+      "zh": "故障诊断"
+    },
+    {
+      "en": "Root Cause Analysis",
+      "zh": "根因分析"
+    },
+    {
+      "en": "Telecom CRM O&M",
+      "zh": "电信CRM运维"
+    }
+  ],
+  "quickPrompts": [
+    {
+      "zh": "仅分析我指定且允许分享的脱敏材料，不连接生产、不索取凭据，不输出生产命令。有真实 WorkBuddy 团队能力时按需委派成员，否则明确单模型分析、不模拟会诊。验证失败的托管任务不可降级绕过。用户每轮最多3项原子请求。我的问题与已有材料如下：",
+      "en": "Analyze only my authorized sanitized materials. No production access, credentials, or executable production instructions. Delegate only using actual permitted WorkBuddy team tools; otherwise state single-model analysis. Do not bypass failed managed verification. At most 3 atomic user requests per round. My issue and materials:"
+    },
+    {
+      "zh": "变更后订单积压与接口超时。请先核对我提供的变更摘要、时窗和证据，按证据选择必要专家；回退只能给人工评审卡，时间重合不等于根因。",
+      "en": "Review my change summary, event window and evidence for order backlog and interface timeouts. Route only as justified; rollback is a human review card, not presumed cause or execution."
+    },
+    {
+      "zh": "CRM性能逐渐劣化。先利用已有业务指标和材料，再按证据决定需要哪个专业域；不要默认同时索取Oracle、JVM和主机快照，每轮最多3项原子材料。",
+      "en": "CRM performance is degrading. Start with existing business metrics and evidence, then select relevant domains. Do not default to Oracle, JVM and host snapshots; at most 3 atomic requests per round."
+    }
+  ],
+  "members": [
+    {
+      "id": "telecom-crm-sre-team-lead",
+      "name": {
+        "en": "Stability Director",
+        "zh": "稳定性总指挥"
+      },
+      "displayName": {
+        "en": "Stability Director",
+        "zh": "稳定性总指挥"
+      },
+      "profession": {
+        "en": "Stability Director",
+        "zh": "稳定性总指挥"
+      },
+      "avatar": "avatars/telecom-crm-sre-team-lead.png",
+      "role": "lead"
+    },
+    {
+      "id": "telecom-crm-crm-business-flow",
+      "name": {
+        "en": "CRM Business Flow Expert",
+        "zh": "CRM业务链路专家"
+      },
+      "displayName": {
+        "en": "CRM Business Flow Expert",
+        "zh": "CRM业务链路专家"
+      },
+      "profession": {
+        "en": "CRM Business Flow Expert",
+        "zh": "CRM业务链路专家"
+      },
+      "avatar": "avatars/telecom-crm-crm-business-flow.png",
+      "role": "member"
+    },
+    {
+      "id": "telecom-crm-linux-infra",
+      "name": {
+        "en": "Linux Infrastructure Expert",
+        "zh": "Linux基础设施专家"
+      },
+      "displayName": {
+        "en": "Linux Infrastructure Expert",
+        "zh": "Linux基础设施专家"
+      },
+      "profession": {
+        "en": "Linux Infrastructure Expert",
+        "zh": "Linux基础设施专家"
+      },
+      "avatar": "avatars/telecom-crm-linux-infra.png",
+      "role": "member"
+    },
+    {
+      "id": "telecom-crm-oracle-dba",
+      "name": {
+        "en": "Oracle Database Expert",
+        "zh": "Oracle数据库专家"
+      },
+      "displayName": {
+        "en": "Oracle Database Expert",
+        "zh": "Oracle数据库专家"
+      },
+      "profession": {
+        "en": "Oracle Database Expert",
+        "zh": "Oracle数据库专家"
+      },
+      "avatar": "avatars/telecom-crm-oracle-dba.png",
+      "role": "member"
+    },
+    {
+      "id": "telecom-crm-java-runtime",
+      "name": {
+        "en": "Java & JVM Expert",
+        "zh": "Java应用与JVM专家"
+      },
+      "displayName": {
+        "en": "Java & JVM Expert",
+        "zh": "Java应用与JVM专家"
+      },
+      "profession": {
+        "en": "Java & JVM Expert",
+        "zh": "Java应用与JVM专家"
+      },
+      "avatar": "avatars/telecom-crm-java-runtime.png",
+      "role": "member"
+    },
+    {
+      "id": "telecom-crm-observability-diagnosis",
+      "name": {
+        "en": "Evidence & Observability Expert",
+        "zh": "证据与可观测性专家"
+      },
+      "displayName": {
+        "en": "Evidence & Observability Expert",
+        "zh": "证据与可观测性专家"
+      },
+      "profession": {
+        "en": "Evidence & Observability Expert",
+        "zh": "证据与可观测性专家"
+      },
+      "avatar": "avatars/telecom-crm-observability-diagnosis.png",
+      "role": "member"
+    },
+    {
+      "id": "telecom-crm-change-capacity-dr",
+      "name": {
+        "en": "Change, Capacity & DR Expert",
+        "zh": "变更容量容灾专家"
+      },
+      "displayName": {
+        "en": "Change, Capacity & DR Expert",
+        "zh": "变更容量容灾专家"
+      },
+      "profession": {
+        "en": "Change, Capacity & DR Expert",
+        "zh": "变更容量容灾专家"
+      },
+      "avatar": "avatars/telecom-crm-change-capacity-dr.png",
+      "role": "member"
+    },
+    {
+      "id": "telecom-crm-k8s-platform",
+      "name": {
+        "en": "Kubernetes Support Expert",
+        "zh": "K8s辅助专家"
+      },
+      "displayName": {
+        "en": "Kubernetes Support Expert",
+        "zh": "K8s辅助专家"
+      },
+      "profession": {
+        "en": "Kubernetes Support Expert",
+        "zh": "K8s辅助专家"
+      },
+      "avatar": "avatars/telecom-crm-k8s-platform.png",
+      "role": "member"
+    }
+  ]
+}

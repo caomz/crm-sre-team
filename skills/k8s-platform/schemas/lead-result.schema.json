@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:crm-sre:schemas:lead-result",
+  "title": "lead result (proposal only)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "task_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "blocked"
+      ]
+    },
+    "blocked_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1000
+      },
+      "minItems": 0,
+      "maxItems": 10
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+      },
+      "minItems": 0,
+      "maxItems": 30
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:crm-sre:schemas:common#/$defs/fact"
+      },
+      "minItems": 0,
+      "maxItems": 30
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:crm-sre:schemas:common#/$defs/candidate"
+      },
+      "minItems": 0,
+      "maxItems": 10
+    },
+    "pending": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:crm-sre:schemas:common#/$defs/pending"
+      },
+      "minItems": 0,
+      "maxItems": 30
+    },
+    "excluded": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:crm-sre:schemas:common#/$defs/excluded"
+      },
+      "minItems": 0,
+      "maxItems": 20
+    },
+    "request_proposals": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:crm-sre:schemas:common#/$defs/request"
+      },
+      "minItems": 0,
+      "maxItems": 3
+    },
+    "handoff_proposals": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:crm-sre:schemas:common#/$defs/handoff"
+      },
+      "minItems": 0,
+      "maxItems": 3
+    },
+    "review_needs": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:crm-sre:schemas:common#/$defs/review_need"
+      },
+      "minItems": 0,
+      "maxItems": 10
+    },
+    "routing_proposals": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:crm-sre:schemas:common#/$defs/routing"
+      },
+      "minItems": 0,
+      "maxItems": 3
+    }
+  },
+  "required": [
+    "task_id",
+    "status",
+    "blocked_reasons",
+    "evidence_refs",
+    "facts",
+    "candidates",
+    "pending",
+    "excluded",
+    "request_proposals",
+    "handoff_proposals",
+    "review_needs",
+    "routing_proposals"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "blocked"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "blocked_reasons": {
+            "minItems": 1
+          },
+          "evidence_refs": {
+            "maxItems": 0
+          },
+          "facts": {
+            "maxItems": 0
+          },
+          "candidates": {
+            "maxItems": 0
+          },
+          "pending": {
+            "maxItems": 0
+          },
+          "excluded": {
+            "maxItems": 0
+          },
+          "request_proposals": {
+            "maxItems": 0
+          },
+          "handoff_proposals": {
+            "maxItems": 0
+          },
+          "review_needs": {
+            "maxItems": 0
+          },
+          "routing_proposals": {
+            "maxItems": 0
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "task_id": {
+            "type": "string"
+          },
+          "blocked_reasons": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}

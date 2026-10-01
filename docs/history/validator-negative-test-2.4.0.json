@@ -1,0 +1,48 @@
+{
+  "version": "2.4.0",
+  "scope": "STATIC_VALIDATOR_FAULT_INJECTION_NOT_MODEL_TEST",
+  "passed": true,
+  "mutation": "Append inert marker to generated evidence-protocol in temporary copy",
+  "exit_code": 1,
+  "validator_result": "FAIL",
+  "failed_check_ids": [
+    "individual_zip_content:oracle-dba",
+    "reference_copy:oracle-dba/evidence-protocol.md",
+    "root_lock_hashes",
+    "skill_lock_hashes:oracle-dba"
+  ],
+  "detected_errors": [
+    "individual_zip_content:oracle-dba: ",
+    "reference_copy:oracle-dba/evidence-protocol.md: ",
+    "root_lock_hashes: ",
+    "skill_lock_hashes:oracle-dba: "
+  ],
+  "judgment_gate_negative_test": {
+    "mutation": "Remove NO_REFERENCE_AVAILABLE implication and rebuild all hashes",
+    "exit_code": 1,
+    "validator_result": "FAIL",
+    "failed_check_ids": [
+      "judgment_contract_unit_tests",
+      "judgment_matrix:reference_expectation_effect",
+      "judgment_matrix_unit_tests"
+    ],
+    "matrix_mismatches": 10,
+    "failed_unittest_cases": 9,
+    "root_lock_still_valid": true
+  },
+  "source_audit_negative_test": {
+    "mutation": "Increase max_specialists_per_batch in temporary source",
+    "exit_code": 1,
+    "pass": false,
+    "violations": [
+      {
+        "path": "policies/limits.json",
+        "reason": "Unplanned metadata or policy semantic change"
+      },
+      {
+        "path": "policies/limits.json",
+        "reason": "Existing authority, policy or metadata changed"
+      }
+    ]
+  }
+}

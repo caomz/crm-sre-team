@@ -1,0 +1,72 @@
+{
+  "skill_results": [
+    {
+      "skill": "telecom-crm-sre-expert-group",
+      "valid": true,
+      "entrypoint_lines": 51,
+      "reference_files": 16,
+      "templates": 9
+    },
+    {
+      "skill": "change-capacity-dr",
+      "valid": true,
+      "entrypoint_lines": 25,
+      "reference_files": 8,
+      "templates": 9
+    },
+    {
+      "skill": "crm-business-flow",
+      "valid": true,
+      "entrypoint_lines": 25,
+      "reference_files": 8,
+      "templates": 9
+    },
+    {
+      "skill": "java-runtime",
+      "valid": true,
+      "entrypoint_lines": 25,
+      "reference_files": 8,
+      "templates": 9
+    },
+    {
+      "skill": "k8s-platform",
+      "valid": true,
+      "entrypoint_lines": 25,
+      "reference_files": 8,
+      "templates": 9
+    },
+    {
+      "skill": "linux-infra",
+      "valid": true,
+      "entrypoint_lines": 25,
+      "reference_files": 8,
+      "templates": 9
+    },
+    {
+      "skill": "observability-diagnosis",
+      "valid": true,
+      "entrypoint_lines": 25,
+      "reference_files": 8,
+      "templates": 9
+    },
+    {
+      "skill": "oracle-dba",
+      "valid": true,
+      "entrypoint_lines": 25,
+      "reference_files": 8,
+      "templates": 9
+    },
+    {
+      "skill": "stability-director",
+      "valid": true,
+      "entrypoint_lines": 51,
+      "reference_files": 16,
+      "templates": 9
+    }
+  ],
+  "relative_links_checked": 151,
+  "role_definitions": 8,
+  "behavior_cases": 24,
+  "behavior_test_status": "NOT_RUN_IN_WORKBUDDY",
+  "errors": []
+}

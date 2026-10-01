@@ -1,0 +1,715 @@
+{
+  "version": "2.6.0-rc3.workbuddy.2",
+  "status": "PROMPT_ROUTING_ONLY_NOT_RUNTIME_ENFORCED",
+  "namespace": "course_tools",
+  "display_prefix": "course:",
+  "source": {
+    "file": "policy-source/thinking-tools/user-excerpt.json",
+    "numbering_independently_verified": false,
+    "sre_assignment_is_engineering_adaptation": true
+  },
+  "selection": {
+    "min_tools_per_task": 0,
+    "max_tools_per_task": 3,
+    "rule": "按当前材料缺口选一种主方法与必要校验，不机械跑全表；这是提示词约定，不是宿主已强制的额度。"
+  },
+  "bounds": {
+    "new_output_fields": false,
+    "new_data_access": false,
+    "new_agent_permissions": false,
+    "model_numeric_probability": false,
+    "model_prior_or_status_write": false,
+    "course_text_is_evidence": false,
+    "kelly_allocation_calculation": false,
+    "model_self_scoring": false
+  },
+  "result_schema_contract": "UNCHANGED_FROM_2.4.0",
+  "catalog": [
+    {
+      "id": "T005",
+      "name": "约束",
+      "source_summary": "明确预算、时间、能力和他人选择权等边界。",
+      "trigger": "数据、权限、时间、现场承受能力限制下一步",
+      "minimum_material": "明确授权、可分享范围、时限、可得材料与人工角色",
+      "judgment_question": "下一步是否越出已确认约束？",
+      "existing_output_target": "review_needs.missing_prerequisites",
+      "when_insufficient": "未知约束不是许可；不以紧急为由扩权",
+      "adaptation_boundary": "模型权限、角色阶段和请求额度保持原契约"
+    },
+    {
+      "id": "T021",
+      "name": "探索与利用",
+      "source_summary": "在尝试新方向和深耕已验证方向之间分配资源。",
+      "trigger": "多轮沿同一候选取证却无增益，或无理由切换所有方向",
+      "minimum_material": "已有取证结果、剩余预算、替代候选和已确认约束",
+      "judgment_question": "继续旧方向和验证关键替代解释哪个更有价值？",
+      "existing_output_target": "request_proposals.information_gain",
+      "when_insufficient": "不能假定预算或自增轮次，不为探索而凑专家",
+      "adaptation_boundary": "只提取证或路由优先理由，宿主决定分配"
+    },
+    {
+      "id": "T023",
+      "name": "无免费午餐定理",
+      "source_summary": "这个方法在什么条件下有效？不存在适合所有场景的最优方法。",
+      "trigger": "方法、指标或类比正被当作普适答案",
+      "minimum_material": "对象、时窗、版本、负载、采样方式及适用前提",
+      "judgment_question": "当前前提与方法的适用条件相符吗？",
+      "existing_output_target": "reference_basis.limitations",
+      "when_insufficient": "说明不适用或未知，不用方法名称当证据",
+      "adaptation_boundary": "不将用户给出的课程概括宣称为完整数学定理"
+    },
+    {
+      "id": "T024",
+      "name": "概率分布",
+      "source_summary": "除了平均结果，还有多大的波动、上限和下限？",
+      "trigger": "平均值掩盖尾部、突发或不同群体",
+      "minimum_material": "已提供的原始样本或分位、样本数、单位、时窗、分组和缺失情况",
+      "judgment_question": "相同窗口下尾部或少数对象是否与整体不同？",
+      "existing_output_target": "facts.statement",
+      "when_insufficient": "仅给均值就承认无法判断尾部；不补造分布",
+      "adaptation_boundary": "描述已提供指标分布，不生成候选数字概率，也不把样本最大值当真实上限"
+    },
+    {
+      "id": "T025",
+      "name": "颗粒度和因果中介",
+      "source_summary": "从行动到结果，中间通过哪些环节发生作用？",
+      "trigger": "把时间相邻或总体相关直接当根因",
+      "minimum_material": "链路环节、状态转移、时间先后、可能的中介和对照",
+      "judgment_question": "哪个环节先分叉，哪段机制缺证据？",
+      "existing_output_target": "candidates.judgment_questions",
+      "when_insufficient": "把缺环写为待验证，不填补因果链",
+      "adaptation_boundary": "按领域拆机制，跨域只转交，不因故事完整确认因果"
+    },
+    {
+      "id": "T026",
+      "name": "贝叶斯先验",
+      "source_summary": "我的初始判断依据是什么？新证据出现后应该怎么更新？",
+      "trigger": "新材料到来或原依据修订、失效",
+      "minimum_material": "宿主候选与本轮证据增量、授权参考及修订关系",
+      "judgment_question": "本轮哪条有效证据改变原判断，哪些旧依据不可再计？",
+      "existing_output_target": "candidates.evidence_effects",
+      "when_insufficient": "未知保持 UNKNOWN/INDETERMINATE；撤销不伪装新反证",
+      "adaptation_boundary": "沿用序数方向；模型不写 prior、状态或概率"
+    },
+    {
+      "id": "T027",
+      "name": "信息价值",
+      "source_summary": "再查这条信息，能改变我的选择吗？值得花多少时间？",
+      "trigger": "取证请求过多或阳性阴性都不影响选择",
+      "minimum_material": "竞争候选、缺口、已有材料、可得性和已知取证负担",
+      "judgment_question": "这份最小材料的不同结果分别改变什么判断或评审选择？",
+      "existing_output_target": "request_proposals.information_gain",
+      "when_insufficient": "无法改变判断则不发布；不借多个理论扩大额度",
+      "adaptation_boundary": "只在已有合法候选下提出请求；无候选启动缺口不由本次绕过"
+    },
+    {
+      "id": "T028",
+      "name": "凯利公式",
+      "source_summary": "在概率、赔率可估计等适用条件下，投入多大比例才合适？有优势也不等于应当全押。",
+      "trigger": "有人据有利判断建议扩大投入或一次覆盖全部对象",
+      "minimum_material": "是否具备可核概率、收益损失定义、可承受损失与适用前提",
+      "judgment_question": "计算前提是否具备；缺失时为何不能推出投入比例？",
+      "existing_output_target": "review_needs.missing_prerequisites",
+      "when_insufficient": "只登记缺失与人工评审；不计算或推荐投入比例",
+      "adaptation_boundary": "本包只做适用性警戒，不将金融下注公式映射为生产流量、节点或错误预算比例"
+    },
+    {
+      "id": "T029",
+      "name": "非遍历性",
+      "source_summary": "别人的平均收益，能代表我个人长期经历吗？一次失败会不会让我出局？",
+      "trigger": "平均改善掩盖单租户不可恢复损失或连续操作累积风险",
+      "minimum_material": "失败暴露对象、相关依赖、不可恢复后果和已确认承受边界",
+      "judgment_question": "整体平均向好时，哪个对象仍可能承受不可接受后果？",
+      "existing_output_target": "review_needs.purpose",
+      "when_insufficient": "承受边界或后果不明就交人工确认",
+      "adaptation_boundary": "只识别单路径损失风险，不自行估算毁灭概率"
+    },
+    {
+      "id": "T030",
+      "name": "脆弱和反脆弱",
+      "source_summary": "波动会伤害我，还是能让我在下行有限时获得好处？",
+      "trigger": "有波动或故障注入提议但下行界限未清楚",
+      "minimum_material": "隔离范围、共享故障点、回退前提、受影响群体与反馈证据",
+      "judgment_question": "波动的收益和伤害是否不对称，下行是否真的受限？",
+      "existing_output_target": "review_needs.missing_prerequisites",
+      "when_insufficient": "未知隔离与回退不视为安全",
+      "adaptation_boundary": "不因反脆弱概念授权生产试验，不把能回退当作下行已封顶"
+    },
+    {
+      "id": "T031",
+      "name": "期权",
+      "source_summary": "能不能先小额试验，保留继续、放弃或换方向的权利？",
+      "trigger": "需要比较一次性不可逆方案和分步评审方案",
+      "minimum_material": "阶段边界、停止条件、退出代价、恢复可行性与回传观测",
+      "judgment_question": "可否先获取信息并保留停止或换方向的权利？",
+      "existing_output_target": "review_needs.purpose",
+      "when_insufficient": "不能证明可逆就明确限制，不推荐执行",
+      "adaptation_boundary": "只提小范围验证的人工评审需求，不发起试验或写参数"
+    },
+    {
+      "id": "T032",
+      "name": "状态杠杆",
+      "source_summary": "先做哪一步，能降低后续成本、减少返工或解除瓶颈？",
+      "trigger": "多个请求、验证或方案有先后依赖",
+      "minimum_material": "目标、资源约束、依赖链、已完成材料与阻塞点",
+      "judgment_question": "哪个前提先确认能解除最多后续不确定性？",
+      "existing_output_target": "request_proposals.information_gain",
+      "when_insufficient": "依赖未知先说明阻塞；不自行改变阶段",
+      "adaptation_boundary": "前置、顺序、约束杠杆仍属 T032，不另造课程编号"
+    },
+    {
+      "id": "T033",
+      "name": "选择偏差",
+      "source_summary": "我看到的样本，是否漏掉了失败者、沉默者或未被选中的人？",
+      "trigger": "仅有成功请求、存活实例或已告警对象的样本",
+      "minimum_material": "采样规则、过滤条件、总量、缺失、退出对象与失败样本",
+      "judgment_question": "谁没有进入样本，缺失是否可能改变结论？",
+      "existing_output_target": "reference_basis.limitations",
+      "when_insufficient": "缺失与未发生分开，不把未采到写排除",
+      "adaptation_boundary": "检查取样覆盖，不强求收集全量材料或扩大访问"
+    },
+    {
+      "id": "T034",
+      "name": "回归均值",
+      "source_summary": "这次特别好或特别差，会不会包含随机波动，而非能力或趋势改变？",
+      "trigger": "峰值后下降被直接归功于人工动作",
+      "minimum_material": "动作前后多个同口径窗口、未受动作影响的对照及负载变化",
+      "judgment_question": "没有该动作时是否也可能从极端回落？",
+      "existing_output_target": "candidates.critical_alternatives",
+      "when_insufficient": "只列替代解释，不武断认定就是回归均值",
+      "adaptation_boundary": "自然回落可能性不是动作无效或根因排除的证明"
+    },
+    {
+      "id": "T035",
+      "name": "前景理论",
+      "source_summary": "我是在理性选择，还是被“不甘心损失”“一定要回本”推着走？",
+      "trigger": "继续原方案的理由主要是已投入、面子或回本表述",
+      "minimum_material": "原目标、当前边际代价、退出代价、备选与明确风险边界",
+      "judgment_question": "去掉已付出的成本后，下一步仍符合当前目标吗？",
+      "existing_output_target": "review_needs.purpose",
+      "when_insufficient": "缺成本或目标不猜测动机，要求人工明确",
+      "adaptation_boundary": "审查提案理由，不给个人贴心理标签；承认真实退出成本"
+    },
+    {
+      "id": "T036",
+      "name": "参考类",
+      "source_summary": "类似的人、项目和处境，过去通常是什么结果？",
+      "trigger": "需要判断现象是否常见或选择基线",
+      "minimum_material": "同对象历史、正常窗口或可比对象，连同对象负载版本口径",
+      "judgment_question": "类似材料可比到哪一层，哪些差异限制类比？",
+      "existing_output_target": "reference_basis.comparison_scope",
+      "when_insufficient": "无可核参考就用 NO_REFERENCE_AVAILABLE，不凭经验补基础率",
+      "adaptation_boundary": "沿用已有授权 E；课程内容和模型记忆不是现场参考数据"
+    },
+    {
+      "id": "T037",
+      "name": "超级预测",
+      "source_summary": "能否把判断写成有截止时间、判定标准和概率的预测，并长期评分？",
+      "trigger": "判断模糊、没有可核标准或只挑成功案例复盘",
+      "minimum_material": "可验证问题、观察截止或复核触发、判定材料、未决结果与最终人工裁决",
+      "judgment_question": "怎样的后续材料可判定这条具体判断，应何时复核？",
+      "existing_output_target": "candidates.judgment_questions",
+      "when_insufficient": "尚未裁决标未决，不自报准确率或评分",
+      "adaptation_boundary": "只落地费米化、时窗、判据与复核；数值概率和长期评分留给宿主/离线评估，不能称完整超级预测已实现"
+    },
+    {
+      "id": "T038",
+      "name": "OODA 环",
+      "source_summary": "观察到新情况后，我是否需要更新理解，再决定和行动？",
+      "trigger": "对象、时窗、影响、材料有效性或处置目标发生变化",
+      "minimum_material": "宿主有效证据增量、当前环境限定、旧计划与人工回传",
+      "judgment_question": "当前问题和原计划还成立吗，什么要保留、重评或转交？",
+      "existing_output_target": "pending.description",
+      "when_insufficient": "无新材料不自增；陈旧、撤销及目标变化明确限制",
+      "adaptation_boundary": "只是任务内判断，不能替代未实现的调度、状态和撤销闭环"
+    },
+    {
+      "id": "T053",
+      "name": "效果推理",
+      "source_summary": "目标尚不清楚时，从现有能力、资源和可承受损失出发做小尝试。",
+      "trigger": "目标尚不清楚但需要提出下一步澄清或评审需求",
+      "minimum_material": "现有授权材料、可用能力、现场明确的可承受损失",
+      "judgment_question": "在现有条件下能先澄清什么，不提前承诺整套方案？",
+      "existing_output_target": "review_needs.missing_prerequisites",
+      "when_insufficient": "目标或损失界限未知写待确认，不自行定义可承受",
+      "adaptation_boundary": "托管缺上下文仍 blocked；该工具不授权实验或执行"
+    },
+    {
+      "id": "T076",
+      "name": "古德哈特定律",
+      "source_summary": "防止为了提高指标，反而损害真正目标。",
+      "trigger": "错误率下降但样本分母、流量或业务结果已改变",
+      "minimum_material": "代理指标与业务目标、分母、失败样本、积压和正确性",
+      "judgment_question": "指标变好是否仍意味着真实业务改善？",
+      "existing_output_target": "facts.statement",
+      "when_insufficient": "不能把指标改善写作全局恢复，分别列未知",
+      "adaptation_boundary": "检查代理目标偏离，不新增未经用户确认的目标权重"
+    },
+    {
+      "id": "T087",
+      "name": "边际分析",
+      "source_summary": "不看已经投入多少，而看下一份投入还值不值得。",
+      "trigger": "重复取证或继续方案主要以沉没投入作理由",
+      "minimum_material": "下一份材料可能改变的判断、已知成本、退出成本与剩余时限",
+      "judgment_question": "新增投入的价值是否超过其负担，有无更小替代？",
+      "existing_output_target": "request_proposals.information_gain",
+      "when_insufficient": "无真实成本不伪造收益计算；不重复索取",
+      "adaptation_boundary": "与 T027 联动，最终停止由宿主或人工决定"
+    },
+    {
+      "id": "T091",
+      "name": "目标函数",
+      "source_summary": "明确到底追求什么：播放量、有效需求、收入，还是能力积累？",
+      "trigger": "各角色优化指标不同或恢复后目标发生变化",
+      "minimum_material": "用户/组织确认的目标、影响、正确性和不同结果的优先级",
+      "judgment_question": "现场当前最要保护什么，哪个局部指标不能替代目标？",
+      "existing_output_target": "pending.description",
+      "when_insufficient": "目标冲突列明并交权威主体决定，不自行赋权重",
+      "adaptation_boundary": "SRE 目标映射为在线业务、积压、正确性等；这是工程适配不是课程原话"
+    },
+    {
+      "id": "T096",
+      "name": "立题",
+      "source_summary": "检查问题是否问错了：必须二选一吗？有没有第三条路？",
+      "trigger": "被要求在没有依据时二选一或沿用已过时问题",
+      "minimum_material": "原问题、当前对象、目标变化与关键替代解释",
+      "judgment_question": "问题边界是否正确，是否遗漏并存机制或第三种解释？",
+      "existing_output_target": "candidates.judgment_questions",
+      "when_insufficient": "无证据不凑第三候选，只记录问题缺口",
+      "adaptation_boundary": "已有支持约束不变，无候选时不伪造 H/L 以满足请求结构"
+    }
+  ],
+  "roles": {
+    "telecom-crm-sre-team-lead": {
+      "skill_id": "stability-director",
+      "primary_tools": [
+        "T091",
+        "T005",
+        "T096",
+        "T032",
+        "T038"
+      ],
+      "secondary_tools": [
+        "T023",
+        "T021",
+        "T027",
+        "T035",
+        "T053",
+        "T087",
+        "T076"
+      ],
+      "flows": [
+        {
+          "trigger": "在线恢复但积压或正确性风险仍在",
+          "tools": [
+            "T091",
+            "T096",
+            "T038"
+          ],
+          "material": "当前业务、积压、正确性材料和已确认目标",
+          "judgment": "重新界定当前问题；汇编已接纳成员结论，标明过时目标与需要重评的请求；不自行改目标权重或状态。"
+        },
+        {
+          "trigger": "多项取证或路由争抢有限预算",
+          "tools": [
+            "T005",
+            "T027",
+            "T087"
+          ],
+          "material": "已满足请求、关键替代解释、剩余约束和取证负担",
+          "judgment": "说明下一份材料如何改变判断；无增益不追加，缺合法候选只写 pending，不伪造请求目标。"
+        },
+        {
+          "trigger": "需要先确认前提再分配专家",
+          "tools": [
+            "T032",
+            "T021",
+            "T023"
+          ],
+          "material": "依赖、当前问题边界、允许域与已接纳指向证据",
+          "judgment": "选择先解除约束的窄域任务；不默认全员出场，不代替成员提出专业根因。"
+        },
+        {
+          "trigger": "继续旧方案主要因为已经投入",
+          "tools": [
+            "T035",
+            "T053",
+            "T091"
+          ],
+          "material": "目标、真实退出成本与现场承受边界",
+          "judgment": "列明继续或停止的评审依据，目标不清先澄清，不猜测个人心理或自行批准。"
+        }
+      ]
+    },
+    "telecom-crm-crm-business-flow": {
+      "skill_id": "crm-business-flow",
+      "primary_tools": [
+        "T025",
+        "T091",
+        "T005",
+        "T076"
+      ],
+      "secondary_tools": [
+        "T096",
+        "T024",
+        "T033",
+        "T031",
+        "T027",
+        "T036"
+      ],
+      "flows": [
+        {
+          "trigger": "总体成功率与用户体验或积压不一致",
+          "tools": [
+            "T076",
+            "T033",
+            "T024"
+          ],
+          "material": "成功失败对象、总量、拒绝请求、积压和指标分母",
+          "judgment": "比较同口径分组，分别记录在线、积压、正确性；不能凭成功样本宣布恢复。"
+        },
+        {
+          "trigger": "CRM慢或订单异常没有明确断点",
+          "tools": [
+            "T025",
+            "T091",
+            "T005"
+          ],
+          "material": "业务对象、首个状态分叉、先后与确认目标",
+          "judgment": "将业务链路拆成可验证子问题；业务目标由用户确认，不确认数据库或主机机制。"
+        },
+        {
+          "trigger": "需要区分业务状态与下游问题",
+          "tools": [
+            "T027",
+            "T036",
+            "T096"
+          ],
+          "material": "同对象正常窗口、异常对象及关键替代解释",
+          "judgment": "提出一项区分状态分叉的最小材料；转交跨域现象，不给执行方案。"
+        }
+      ]
+    },
+    "telecom-crm-linux-infra": {
+      "skill_id": "linux-infra",
+      "primary_tools": [
+        "T024",
+        "T025",
+        "T034",
+        "T036"
+      ],
+      "secondary_tools": [
+        "T023",
+        "T005",
+        "T033",
+        "T030",
+        "T032"
+      ],
+      "flows": [
+        {
+          "trigger": "均值正常但个别时窗或节点异常",
+          "tools": [
+            "T024",
+            "T036",
+            "T025"
+          ],
+          "material": "逐窗或分组指标、样本覆盖、正常高峰与业务影响时序",
+          "judgment": "比较尾部和突发相对基线的变化；只有均值时不能补造尾部或认定无瓶颈。"
+        },
+        {
+          "trigger": "峰值后回落被归功于某动作",
+          "tools": [
+            "T034",
+            "T033",
+            "T036"
+          ],
+          "material": "动作前后多个同口径窗口、样本规则及对照",
+          "judgment": "把自然回落和负载变化作为替代解释，不直接宣布动作有效或无效。"
+        },
+        {
+          "trigger": "一种主机指标被当作跨域根因",
+          "tools": [
+            "T023",
+            "T025",
+            "T005"
+          ],
+          "material": "指标语义、观察范围、机制中介与授权材料",
+          "judgment": "列资源异常是原因、结果或伴随的区分条件；Oracle/JVM 因果转交。"
+        }
+      ]
+    },
+    "telecom-crm-oracle-dba": {
+      "skill_id": "oracle-dba",
+      "primary_tools": [
+        "T025",
+        "T024",
+        "T036",
+        "T027"
+      ],
+      "secondary_tools": [
+        "T023",
+        "T033",
+        "T034",
+        "T032",
+        "T005",
+        "T029"
+      ],
+      "flows": [
+        {
+          "trigger": "等待升高被直接写成数据库根因",
+          "tools": [
+            "T025",
+            "T036",
+            "T027"
+          ],
+          "material": "等待机制、活动对象、时序、正常负载和业务影响",
+          "judgment": "拆分锁、IO、连接等解释，提出能区分机制的一项最小材料；不输出查询或采集命令。"
+        },
+        {
+          "trigger": "只给聚合或经过筛选的等待摘要",
+          "tools": [
+            "T033",
+            "T024",
+            "T023"
+          ],
+          "material": "采样窗口、样本覆盖、分母和聚合口径",
+          "judgment": "标明看不到的对象和机制；无样本不构造分布，不将不可见当排除。"
+        },
+        {
+          "trigger": "容量改善伴随潜在正确性损失",
+          "tools": [
+            "T029",
+            "T005",
+            "T032"
+          ],
+          "material": "一致性边界、失败后果与依赖材料",
+          "judgment": "只标识本域风险与必要评审前提，不自行判定可接受损失或授权调整。"
+        }
+      ]
+    },
+    "telecom-crm-java-runtime": {
+      "skill_id": "java-runtime",
+      "primary_tools": [
+        "T025",
+        "T024",
+        "T034",
+        "T036"
+      ],
+      "secondary_tools": [
+        "T023",
+        "T033",
+        "T030",
+        "T032",
+        "T005"
+      ],
+      "flows": [
+        {
+          "trigger": "看到GC停顿就归因全部请求变慢",
+          "tools": [
+            "T025",
+            "T024",
+            "T036"
+          ],
+          "material": "请求耗时分布、停顿与线程等待时序及正常对照",
+          "judgment": "拆分GC、线程池、JDBC和下游等待，检查谁先发生；不以相关写成因果。"
+        },
+        {
+          "trigger": "重启后均值下降就宣布修复",
+          "tools": [
+            "T034",
+            "T033",
+            "T024"
+          ],
+          "material": "多个同口径窗口、失败/超时样本、流量与对照",
+          "judgment": "排查自然回落与样本选择，不能把均值改善当尾部恢复或根因确定。"
+        },
+        {
+          "trigger": "运行时改动被描述为无风险",
+          "tools": [
+            "T030",
+            "T005",
+            "T032"
+          ],
+          "material": "隔离、共享依赖、前置验证及回退材料",
+          "judgment": "列出未确认前提交人工评审，不输出调整参数或执行建议。"
+        }
+      ]
+    },
+    "telecom-crm-observability-diagnosis": {
+      "skill_id": "observability-diagnosis",
+      "primary_tools": [
+        "T033",
+        "T036",
+        "T026",
+        "T037",
+        "T076"
+      ],
+      "secondary_tools": [
+        "T024",
+        "T025",
+        "T034",
+        "T023",
+        "T027",
+        "T038"
+      ],
+      "flows": [
+        {
+          "trigger": "多份材料同源或参考不可比",
+          "tools": [
+            "T033",
+            "T036",
+            "T026"
+          ],
+          "material": "采样规则、分母、事件窗口、修订和授权参考",
+          "judgment": "核对独立性与比较口径，旧证据不跨轮重复推动；只否定不成立关联，不裁定跨域根因。"
+        },
+        {
+          "trigger": "判断不可检验或评估只挑成功项",
+          "tools": [
+            "T037",
+            "T027",
+            "T076"
+          ],
+          "material": "可观察判据、复核触发、未决案例及实际裁决来源",
+          "judgment": "在子问题和请求中写明判定材料与复核条件，未决保持未决；不自报概率、Brier或改进成绩。"
+        },
+        {
+          "trigger": "旧日志晚到、关键材料撤销或场景改变",
+          "tools": [
+            "T038",
+            "T026",
+            "T033"
+          ],
+          "material": "事件时间与接收顺序、撤销关系、宿主快照与候选",
+          "judgment": "分开历史解释和当前现场；撤销仅触发重评需求，不伪造 added/revised 支撑 DOWN。"
+        }
+      ]
+    },
+    "telecom-crm-change-capacity-dr": {
+      "skill_id": "change-capacity-dr",
+      "primary_tools": [
+        "T029",
+        "T030",
+        "T031",
+        "T028",
+        "T053",
+        "T035"
+      ],
+      "secondary_tools": [
+        "T005",
+        "T091",
+        "T021",
+        "T032",
+        "T087",
+        "T027"
+      ],
+      "flows": [
+        {
+          "trigger": "方案看似平均收益高但失败不可逆",
+          "tools": [
+            "T029",
+            "T030",
+            "T031"
+          ],
+          "material": "影响范围、共享依赖、失败后果、停止条件和回退证据",
+          "judgment": "优先列出下行与可逆性评审需求，不把可回退等同无损；不直接试验。"
+        },
+        {
+          "trigger": "要求按凯利计算生产投入或流量比例",
+          "tools": [
+            "T028",
+            "T005",
+            "T053"
+          ],
+          "material": "适用前提、明确损失界限和当前授权材料",
+          "judgment": "只检查前提缺失与可承受边界；不计算或推荐投入比例，未知转人工。"
+        },
+        {
+          "trigger": "继续方案主要因为已经花费很多",
+          "tools": [
+            "T035",
+            "T087",
+            "T091"
+          ],
+          "material": "下一步代价、真实退出成本、当前目标和替代方案",
+          "judgment": "把沉没投入与今后成本分开，列人工复核问题，不给个人心理定性。"
+        },
+        {
+          "trigger": "恢复路径和后续验证存在先后依赖",
+          "tools": [
+            "T021",
+            "T032",
+            "T027"
+          ],
+          "material": "已证实前提、信息增益、预算和待验证分支",
+          "judgment": "只提出验证先后与材料价值；不扩大 phase、请求额度或执行权限。"
+        }
+      ]
+    },
+    "telecom-crm-k8s-platform": {
+      "skill_id": "k8s-platform",
+      "primary_tools": [
+        "T025",
+        "T005",
+        "T032",
+        "T031"
+      ],
+      "secondary_tools": [
+        "T024",
+        "T033",
+        "T036",
+        "T029",
+        "T030",
+        "T023"
+      ],
+      "flows": [
+        {
+          "trigger": "尚未确认部署或没有平台相关材料",
+          "tools": [
+            "T005",
+            "T023"
+          ],
+          "material": "K8S_DEPLOYMENT_CONFIRMED 与 PLATFORM_EVIDENCE_RELEVANT",
+          "judgment": "两个前提须同时满足才分析；工具分工不成为默认调用理由。"
+        },
+        {
+          "trigger": "平台事件与业务异常时间接近",
+          "tools": [
+            "T025",
+            "T032",
+            "T036"
+          ],
+          "material": "调度、重启、资源限制与业务影响时序及正常对照",
+          "judgment": "检查先后和依赖，不将时间重合认定为因果，不读取集群。"
+        },
+        {
+          "trigger": "只看到存活实例或平均资源",
+          "tools": [
+            "T033",
+            "T024",
+            "T036"
+          ],
+          "material": "终止与存活对象、样本规则、分组和同口径时窗",
+          "judgment": "检查幸存样本遗漏，缺终止实例材料列未知而非排除。"
+        },
+        {
+          "trigger": "有小范围验证或回退设想",
+          "tools": [
+            "T031",
+            "T029",
+            "T030"
+          ],
+          "material": "隔离范围、共享故障域、退出条件和人工回传计划",
+          "judgment": "只列人工评审所缺前提；不发起灰度或给操作参数。"
+        }
+      ]
+    }
+  },
+  "known_runtime_gaps": [
+    "HARNESS_NOT_IMPLEMENTED",
+    "INVALIDATED_ONLY_REEVALUATION_NOT_IMPLEMENTED",
+    "NO_CANDIDATE_INTAKE_REQUEST_PATH_NOT_IMPLEMENTED",
+    "STALE_RESULT_ADMISSION_NOT_IMPLEMENTED",
+    "EFFECTIVE_HOST_TOOL_PERMISSIONS_NOT_VERIFIED"
+  ]
+}

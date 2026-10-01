@@ -1,0 +1,25 @@
+{
+  "scope": "PATCH_DRY_RUN_AND_TEMPORARY_APPLICATION_BYTE_COMPARISON",
+  "pass": true,
+  "original_version": "2.3.1",
+  "revised_version": "2.4.0",
+  "changed_agent_prompts": 8,
+  "changed_skill_entrypoints": 8,
+  "applied_to_original": false,
+  "temporary_forward_applied_files_equal_release": true,
+  "temporary_reverse_applied_files_equal_baseline": true,
+  "forward": {
+    "exit_code": 0,
+    "fuzz_or_offset": false,
+    "checked_files": 16,
+    "actual_apply_exit_code": 0,
+    "byte_match": true
+  },
+  "reverse": {
+    "exit_code": 0,
+    "fuzz_or_offset": false,
+    "checked_files": 16,
+    "actual_apply_exit_code": 0,
+    "byte_match": true
+  }
+}

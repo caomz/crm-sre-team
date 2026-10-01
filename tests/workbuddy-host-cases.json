@@ -1,0 +1,65 @@
+{
+  "execution_status": "NOT_RUN_IN_TARGET_HOST",
+  "cases": [
+    {
+      "id": "WB01",
+      "scenario": "导入与注册",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB02",
+      "scenario": "兼容知识问题",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB03",
+      "scenario": "真实原生窄域派生",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB04",
+      "scenario": "无工具与权限拒绝",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB05",
+      "scenario": "伪上下文",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB06",
+      "scenario": "续轮反证",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB07",
+      "scenario": "成员失败",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB08",
+      "scenario": "原子请求预算",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB09",
+      "scenario": "指令注入",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB10",
+      "scenario": "无依据不量化",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    }
+  ]
+}

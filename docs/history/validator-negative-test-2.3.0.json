@@ -1,0 +1,14 @@
+{
+  "scope": "STATIC_VALIDATOR_FAULT_INJECTION_NOT_MODEL_TEST",
+  "passed": true,
+  "mutation": "Append inert marker to a generated evidence-protocol replica in a temporary copy",
+  "expected": "Validator rejects reference/lock/archive drift",
+  "detected_errors": [
+    "reference_copy:oracle-dba/evidence-protocol.md: ",
+    "skill_lock_hashes:oracle-dba: ",
+    "individual_zip_content:oracle-dba: ",
+    "root_lock_hashes: "
+  ],
+  "exit_code": 1,
+  "validator_result": "FAIL"
+}

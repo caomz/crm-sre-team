@@ -1,0 +1,15 @@
+{
+  "evidence_refs": [],
+  "facts": [],
+  "candidates": [],
+  "pending": [],
+  "excluded": [],
+  "request_proposals": [],
+  "handoff_proposals": [],
+  "review_needs": [],
+  "task_id": null,
+  "status": "blocked",
+  "blocked_reasons": [
+    "未提供可信宿主上下文"
+  ]
+}

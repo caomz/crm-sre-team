@@ -1,0 +1,16 @@
+{
+  "scope": "DETERMINISTIC_LOCAL_REBUILD",
+  "pass": true,
+  "checked_files": 9,
+  "hashes": {
+    "prompt-bundles.lock": "86b9b83fe2976d6689f8484ba4ebc1b11555a6a8aee0f2a380b2c58447408b6e",
+    "individual-packages/change-capacity-dr/skill.zip": "d7eba773f11b646d2b81273544a260dba106be50dea6fe8375bcf61cfd9b80e6",
+    "individual-packages/crm-business-flow/skill.zip": "d60a1edc02c97a794addf6e226bf727c8c1c8b32f775ee5b1b3b58124b6ca2f6",
+    "individual-packages/java-runtime/skill.zip": "fa6c154dd2ca88c3a56f55f599faa9bc8cb70ce14aca468115a3e57b28cac035",
+    "individual-packages/k8s-platform/skill.zip": "9d1d5c7edfb0fc8395395cd0691d86cdd13e9720f8a47c6d03893c59891dbdac",
+    "individual-packages/linux-infra/skill.zip": "7361a81c895475bd47b1feda62d0427a665e3cbd27ee2eb64bede8e7d22d3e45",
+    "individual-packages/observability-diagnosis/skill.zip": "b1f7327439165bfff91858e6adaf7d43f78ab14c25b069303f95a6ab9efddf49",
+    "individual-packages/oracle-dba/skill.zip": "61711d3202939645f60461682ba1a79a6ec1f3f431d6c3496e5907e6f4956a68",
+    "individual-packages/stability-director/skill.zip": "b2c1d1192ed51f6b9a199a22f42728b06a7a282ad1c5268354cc8e5371ab0827"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "version": "2.6.0-rc3.workbuddy.2",
+  "max_specialists_per_batch": 3,
+  "max_member_requests_per_logical_task": 2,
+  "max_user_requests_per_collection_round": 3,
+  "max_format_repairs_per_task": 1,
+  "max_no_gain_completed_rounds": 2,
+  "quotas_reset_on_model_retry": false,
+  "quotas_reset_on_continue_message": false,
+  "raw_streaming_allowed": false,
+  "defaults_not_service_limits": true,
+  "initial_context_chars_budget": 18000,
+  "initial_accepted_excerpt_chars_budget": 6000,
+  "note": "上下文字符预算是本包起始配置，应在目标模型验收后调整；不是厂商 token 限制。"
+}

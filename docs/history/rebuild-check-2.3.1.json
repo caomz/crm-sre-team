@@ -1,0 +1,80 @@
+{
+  "scope": "TEMPORARY_RELEASE_COPY_SAME_ENVIRONMENT_NO_MODEL_OR_HOST_CALLS",
+  "version": "2.3.1",
+  "transient_exclusions": [
+    "__pycache__",
+    "*.pyc",
+    ".DS_Store"
+  ],
+  "checked_files": 9,
+  "hashes": {
+    "prompt-bundles.lock": "57a6be3aa1fc1ad510ff4576a59267f875206250c82e43b94b2b0d77121e35a0",
+    "individual-packages/change-capacity-dr/skill.zip": "07b0b4f9c0d73056ad5a2b85168b428ba4f0f7d7fb670ecc54fb11db901d8474",
+    "individual-packages/crm-business-flow/skill.zip": "75cda4a9b404538fda5af049bcafffd47624bd0edf6ca1db4041e9d1148e9d13",
+    "individual-packages/java-runtime/skill.zip": "78ecbda6b226e1708a0443e1939e7975dcaec95e958f6028130347f7ee0e36ee",
+    "individual-packages/k8s-platform/skill.zip": "2c6de6172ee4eb9c27afc2d7385fb88a1c26c954c4bbded65891876f7f16143f",
+    "individual-packages/linux-infra/skill.zip": "6747f3b3d250f6c5f204d31bd746129709e7088260100bc04e07b62671c5deed",
+    "individual-packages/observability-diagnosis/skill.zip": "561569aed1969a7f6b8dbec3b063ab491985bb86778d2fe74ff22196278acd2e",
+    "individual-packages/oracle-dba/skill.zip": "3402aa6efa6ea2b1ac584d19cc1db6e965a3707d9a57a185629a613879baac01",
+    "individual-packages/stability-director/skill.zip": "510ce9ba1d06b8e6afe3b3bf139b5cdeebf25a65a2f63b367b32848f950f7c2c"
+  },
+  "generated_artifacts_deterministic": true,
+  "release_tree_deterministic": true,
+  "input_release_already_built": true,
+  "release_tree_file_count": 411,
+  "build_input_to_first": {
+    "added": [],
+    "deleted": [],
+    "modified": []
+  },
+  "build_first_to_second": {
+    "added": [],
+    "deleted": [],
+    "modified": []
+  },
+  "validation_output_deterministic": true,
+  "validation_tree_deterministic": true,
+  "validation_first_to_second": {
+    "added": [],
+    "deleted": [],
+    "modified": []
+  },
+  "validation_normal_to_reversed_traversal": {
+    "added": [],
+    "deleted": [],
+    "modified": []
+  },
+  "validation_report_hashes": {
+    "tests/static-checks.json": "1469297870f758dc56f78104d3852deaed243ecd8a5e9cb0156f742e833a0bb3",
+    "tests/contract-test-results.txt": "03d47e3c5a4cf9925c10cea2b972b1b8991690c768ae9aeb20c5621448165a40",
+    "tests/reasoning-matrix-results.json": "251118698e7c6c440b879d772de4561c8a785c2dba61f394049852901a57f5cd"
+  },
+  "reversed_filesystem_iterators_tested": [
+    "Path.glob",
+    "Path.rglob",
+    "Path.iterdir"
+  ],
+  "hash_seeds_tested": [
+    "23",
+    "731"
+  ],
+  "build_exit_codes": [
+    0,
+    0
+  ],
+  "validation_exit_codes": [
+    0,
+    0,
+    0
+  ],
+  "sorting_guard_negative_test": {
+    "exit_code": 1,
+    "detected": true,
+    "failed_check_ids": [
+      "validator_sorted_filesystem_traversal"
+    ]
+  },
+  "source_tree_unchanged_during_comparisons": true,
+  "report_scope_note": "Whole-tree comparisons apply to temporary snapshots around each operation, not to a self-referential hash of this report or the final outer ZIP.",
+  "pass": true
+}

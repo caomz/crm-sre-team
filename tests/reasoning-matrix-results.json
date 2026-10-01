@@ -1,0 +1,1215 @@
+{
+  "version": "2.6.0-rc3.workbuddy.2",
+  "scope": "LISTED_DIMENSIONS_SHARED_CANDIDATE_SCHEMA_ONLY_NOT_HOST_SEMANTICS",
+  "validator": "jsonschema.Draft202012Validator",
+  "expected_outcome_source": "Independent documented-rule functions; not Schema condition introspection",
+  "matrices": {
+    "effect_mapping": {
+      "dimensions": {
+        "expected_if_true": [
+          "COMMON",
+          "UNCOMMON",
+          "UNKNOWN"
+        ],
+        "expected_if_false": [
+          "COMMON",
+          "UNCOMMON",
+          "UNKNOWN"
+        ],
+        "effect": [
+          "STRONGLY_SUPPORTS",
+          "SUPPORTS",
+          "NEUTRAL",
+          "WEAKENS",
+          "STRONGLY_WEAKENS",
+          "UNKNOWN"
+        ]
+      },
+      "isolation": "H01/INDETERMINATE; counterevidence status and refs follow effect, isolating expectation mapping.",
+      "cases": 54,
+      "expected_accepts": 11,
+      "expected_rejects": 43,
+      "passed": 54,
+      "mismatches": 0,
+      "results": [
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        }
+      ]
+    },
+    "direction_minimum_evidence": {
+      "dimensions": {
+        "posterior_direction": [
+          "UP",
+          "DOWN",
+          "UNCHANGED",
+          "INDETERMINATE"
+        ],
+        "effect_profile": [
+          "positive",
+          "negative",
+          "neutral",
+          "unknown"
+        ]
+      },
+      "isolation": "H01; expectation pairs and counterevidence refs/status are consistent. Implication is not equivalence.",
+      "cases": 16,
+      "expected_accepts": 10,
+      "expected_rejects": 6,
+      "passed": 16,
+      "mismatches": 0,
+      "results": [
+        {
+          "input": {
+            "posterior_direction": "UP",
+            "effect_profile": "positive"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "UP",
+            "effect_profile": "negative"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "UP",
+            "effect_profile": "neutral"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "UP",
+            "effect_profile": "unknown"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "DOWN",
+            "effect_profile": "positive"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "DOWN",
+            "effect_profile": "negative"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "DOWN",
+            "effect_profile": "neutral"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "DOWN",
+            "effect_profile": "unknown"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "UNCHANGED",
+            "effect_profile": "positive"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "UNCHANGED",
+            "effect_profile": "negative"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "UNCHANGED",
+            "effect_profile": "neutral"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "UNCHANGED",
+            "effect_profile": "unknown"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "INDETERMINATE",
+            "effect_profile": "positive"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "INDETERMINATE",
+            "effect_profile": "negative"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "INDETERMINATE",
+            "effect_profile": "neutral"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "INDETERMINATE",
+            "effect_profile": "unknown"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        }
+      ]
+    },
+    "candidate_reference": {
+      "dimensions": {
+        "candidate_ref": [
+          "H01",
+          "H99",
+          "L01",
+          "L12",
+          "X01",
+          "H1",
+          "h01",
+          "L1"
+        ],
+        "posterior_direction": [
+          "UP",
+          "DOWN",
+          "UNCHANGED",
+          "INDETERMINATE"
+        ]
+      },
+      "isolation": "Both SUPPORTS and WEAKENS are present so direction minimum-evidence gates do not mask ref rules. Existence remains host-owned.",
+      "cases": 32,
+      "expected_accepts": 10,
+      "expected_rejects": 22,
+      "passed": 32,
+      "mismatches": 0,
+      "results": [
+        {
+          "input": {
+            "candidate_ref": "H01",
+            "posterior_direction": "UP"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "H01",
+            "posterior_direction": "DOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "H01",
+            "posterior_direction": "UNCHANGED"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "H01",
+            "posterior_direction": "INDETERMINATE"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "H99",
+            "posterior_direction": "UP"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "H99",
+            "posterior_direction": "DOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "H99",
+            "posterior_direction": "UNCHANGED"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "H99",
+            "posterior_direction": "INDETERMINATE"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L01",
+            "posterior_direction": "UP"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L01",
+            "posterior_direction": "DOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L01",
+            "posterior_direction": "UNCHANGED"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L01",
+            "posterior_direction": "INDETERMINATE"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L12",
+            "posterior_direction": "UP"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L12",
+            "posterior_direction": "DOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L12",
+            "posterior_direction": "UNCHANGED"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L12",
+            "posterior_direction": "INDETERMINATE"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "X01",
+            "posterior_direction": "UP"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "X01",
+            "posterior_direction": "DOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "X01",
+            "posterior_direction": "UNCHANGED"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "X01",
+            "posterior_direction": "INDETERMINATE"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "H1",
+            "posterior_direction": "UP"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "H1",
+            "posterior_direction": "DOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "H1",
+            "posterior_direction": "UNCHANGED"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "H1",
+            "posterior_direction": "INDETERMINATE"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "h01",
+            "posterior_direction": "UP"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "h01",
+            "posterior_direction": "DOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "h01",
+            "posterior_direction": "UNCHANGED"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "h01",
+            "posterior_direction": "INDETERMINATE"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L1",
+            "posterior_direction": "UP"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L1",
+            "posterior_direction": "DOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L1",
+            "posterior_direction": "UNCHANGED"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "candidate_ref": "L1",
+            "posterior_direction": "INDETERMINATE"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        }
+      ]
+    },
+    "counterevidence_consistency": {
+      "dimensions": {
+        "counterevidence_status": [
+          "PRESENT",
+          "NOT_OBTAINED"
+        ],
+        "effect_profile": [
+          "positive",
+          "negative",
+          "neutral",
+          "unknown"
+        ]
+      },
+      "isolation": "H01/INDETERMINATE; counterevidence_refs follows status so the old refs constraint does not mask the new effect constraint.",
+      "cases": 8,
+      "expected_accepts": 4,
+      "expected_rejects": 4,
+      "passed": 8,
+      "mismatches": 0,
+      "results": [
+        {
+          "input": {
+            "counterevidence_status": "PRESENT",
+            "effect_profile": "positive"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "counterevidence_status": "PRESENT",
+            "effect_profile": "negative"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "counterevidence_status": "PRESENT",
+            "effect_profile": "neutral"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "counterevidence_status": "PRESENT",
+            "effect_profile": "unknown"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "counterevidence_status": "NOT_OBTAINED",
+            "effect_profile": "positive"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "counterevidence_status": "NOT_OBTAINED",
+            "effect_profile": "negative"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "counterevidence_status": "NOT_OBTAINED",
+            "effect_profile": "neutral"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "counterevidence_status": "NOT_OBTAINED",
+            "effect_profile": "unknown"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        }
+      ]
+    },
+    "mixed_evidence_direction": {
+      "dimensions": {
+        "posterior_direction": [
+          "UP",
+          "DOWN",
+          "UNCHANGED",
+          "INDETERMINATE"
+        ],
+        "effect_profile": [
+          "SUPPORTS+WEAKENS"
+        ]
+      },
+      "isolation": "Both signs satisfy the respective minima; conservative UNCHANGED/INDETERMINATE is allowed, not forced to pick a sign.",
+      "cases": 4,
+      "expected_accepts": 4,
+      "expected_rejects": 0,
+      "passed": 4,
+      "mismatches": 0,
+      "results": [
+        {
+          "input": {
+            "posterior_direction": "UP",
+            "effect_profile": "SUPPORTS+WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "DOWN",
+            "effect_profile": "SUPPORTS+WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "UNCHANGED",
+            "effect_profile": "SUPPORTS+WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "posterior_direction": "INDETERMINATE",
+            "effect_profile": "SUPPORTS+WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        }
+      ]
+    }
+  },
+  "cases_total": 114,
+  "mismatches_total": 0
+}

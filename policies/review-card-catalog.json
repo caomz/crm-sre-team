@@ -1,0 +1,92 @@
+{
+  "version": "2.6.0-rc3.workbuddy.2",
+  "status": "INITIAL_CATALOG_REQUIRES_ORGANIZATION_REVIEW",
+  "unknown_action": "INCOMPLETE_MANUAL_DEFINITION_REQUIRED",
+  "executor": null,
+  "executable_fields_allowed": false,
+  "entries": [
+    {
+      "key": "existing_material",
+      "minimum_risk": "R0",
+      "title": "复用已授权脱敏材料",
+      "requires_human_review": true,
+      "template": "action-review.md"
+    },
+    {
+      "key": "bounded_readonly_collection",
+      "minimum_risk": "R1",
+      "title": "现场有限只读材料采集评审",
+      "requires_human_review": true,
+      "template": "action-review.md"
+    },
+    {
+      "key": "diagnostic_overhead",
+      "minimum_risk": "R2",
+      "title": "可能有开销或数据暴露的诊断评审",
+      "requires_human_review": true,
+      "template": "action-review.md"
+    },
+    {
+      "key": "service_restart_review",
+      "minimum_risk": "R3",
+      "title": "服务重启评审",
+      "requires_human_review": true,
+      "template": "action-review.md"
+    },
+    {
+      "key": "rollback_review",
+      "minimum_risk": "R3",
+      "title": "变更回退评审",
+      "requires_human_review": true,
+      "template": "action-review.md"
+    },
+    {
+      "key": "business_compensation_review",
+      "minimum_risk": "R3",
+      "title": "业务补偿/批次重跑评审",
+      "requires_human_review": true,
+      "template": "action-review.md"
+    },
+    {
+      "key": "capacity_change_review",
+      "minimum_risk": "R3",
+      "title": "容量变更评审",
+      "requires_human_review": true,
+      "template": "action-review.md"
+    },
+    {
+      "key": "database_change_review",
+      "minimum_risk": "R3",
+      "title": "数据库状态或数据变更评审",
+      "requires_human_review": true,
+      "template": "action-review.md"
+    },
+    {
+      "key": "disaster_recovery_review",
+      "minimum_risk": "R3",
+      "title": "容灾切换/恢复评审",
+      "requires_human_review": true,
+      "template": "action-review.md"
+    }
+  ],
+  "required_card_fields": [
+    "action_id",
+    "revision",
+    "purpose",
+    "evidence_refs",
+    "counterevidence",
+    "object_scope",
+    "prerequisites",
+    "prohibited_conditions",
+    "impact",
+    "irreversible_effects",
+    "stop_conditions",
+    "rollback_or_recovery_plan",
+    "verification_criteria",
+    "human_roles",
+    "advice_state",
+    "approval_report",
+    "execution_report",
+    "outcome_evidence"
+  ]
+}

@@ -1,0 +1,61 @@
+test_01_valid_member (contract_tests.ContractTests.test_01_valid_member) ... ok
+test_02_valid_lead (contract_tests.ContractTests.test_02_valid_lead) ... ok
+test_03_valid_blocked (contract_tests.ContractTests.test_03_valid_blocked) ... ok
+test_04_valid_feedback (contract_tests.ContractTests.test_04_valid_feedback) ... ok
+test_05_authority_fields_rejected (contract_tests.ContractTests.test_05_authority_fields_rejected) ... ok
+test_06_four_quadrants_required (contract_tests.ContractTests.test_06_four_quadrants_required) ... ok
+test_07_member_max_two (contract_tests.ContractTests.test_07_member_max_two) ... ok
+test_08_lead_max_three (contract_tests.ContractTests.test_08_lead_max_three) ... ok
+test_09_nested_command_field_rejected (contract_tests.ContractTests.test_09_nested_command_field_rejected) ... ok
+test_10_fact_requires_reference (contract_tests.ContractTests.test_10_fact_requires_reference) ... ok
+test_11_invalid_e_id_format (contract_tests.ContractTests.test_11_invalid_e_id_format) ... ok
+test_12_revision_positive (contract_tests.ContractTests.test_12_revision_positive) ... ok
+test_13_counterevidence_status_required (contract_tests.ContractTests.test_13_counterevidence_status_required) ... ok
+test_14_present_requires_counterevidence (contract_tests.ContractTests.test_14_present_requires_counterevidence) ... ok
+test_15_not_obtained_cannot_have_counterevidence (contract_tests.ContractTests.test_15_not_obtained_cannot_have_counterevidence) ... ok
+test_16_falsification_required (contract_tests.ContractTests.test_16_falsification_required) ... ok
+test_17_alternative_not_empty (contract_tests.ContractTests.test_17_alternative_not_empty) ... ok
+test_18_exclusion_requires_scope (contract_tests.ContractTests.test_18_exclusion_requires_scope) ... ok
+test_19_blocked_cannot_have_facts (contract_tests.ContractTests.test_19_blocked_cannot_have_facts) ... ok
+test_20_ok_requires_task_id (contract_tests.ContractTests.test_20_ok_requires_task_id) ... ok
+test_21_self_route_not_in_enum (contract_tests.ContractTests.test_21_self_route_not_in_enum) ... ok
+test_22_routing_max_three (contract_tests.ContractTests.test_22_routing_max_three) ... ok
+test_23_feedback_cannot_write_approved (contract_tests.ContractTests.test_23_feedback_cannot_write_approved) ... ok
+test_24_action_report_requires_revision_when_bound (contract_tests.ContractTests.test_24_action_report_requires_revision_when_bound) ... ok
+test_25_policy_declares_no_executor (contract_tests.ContractTests.test_25_policy_declares_no_executor) ... ok
+test_26_policy_declares_no_p2_to_p5 (contract_tests.ContractTests.test_26_policy_declares_no_p2_to_p5) ... ok
+test_27_policy_declares_k8s_both_conditions (contract_tests.ContractTests.test_27_policy_declares_k8s_both_conditions) ... ok
+test_28_policy_declares_limits_not_bypassed (contract_tests.ContractTests.test_28_policy_declares_limits_not_bypassed) ... ok
+test_29_schema_alone_does_not_enforce_role_semantics (contract_tests.ContractTests.test_29_schema_alone_does_not_enforce_role_semantics) ... ok
+test_30_schema_alone_does_not_prove_evidence_exists (contract_tests.ContractTests.test_30_schema_alone_does_not_prove_evidence_exists) ... ok
+test_31_new_fields_valid (contract_tests.ContractTests.test_31_new_fields_valid) ... ok
+test_32_posterior_direction_required_and_enum (contract_tests.ContractTests.test_32_posterior_direction_required_and_enum) ... ok
+test_33_candidate_ref_required_and_pattern (contract_tests.ContractTests.test_33_candidate_ref_required_and_pattern) ... ok
+test_34_local_candidate_direction (contract_tests.ContractTests.test_34_local_candidate_direction) ... ok
+test_35_direction_requires_corresponding_effect (contract_tests.ContractTests.test_35_direction_requires_corresponding_effect) ... ok
+test_36_effect_rules_positive_and_negative (contract_tests.ContractTests.test_36_effect_rules_positive_and_negative) ... ok
+test_37_evidence_effects_bounds_and_closed_items (contract_tests.ContractTests.test_37_evidence_effects_bounds_and_closed_items) ... ok
+test_38_host_owned_fields_rejected (contract_tests.ContractTests.test_38_host_owned_fields_rejected) ... ok
+test_39_request_required_fields_and_bounds (contract_tests.ContractTests.test_39_request_required_fields_and_bounds) ... ok
+test_40_reasoning_policy_and_context (contract_tests.ContractTests.test_40_reasoning_policy_and_context) ... ok
+test_41_schema_cannot_resolve_candidate_registry (contract_tests.ContractTests.test_41_schema_cannot_resolve_candidate_registry) ... ok
+test_42_schema_cannot_prove_expectations_or_delta (contract_tests.ContractTests.test_42_schema_cannot_prove_expectations_or_delta) ... ok
+test_43_counterevidence_effect_consistency (contract_tests.ContractTests.test_43_counterevidence_effect_consistency) ... ok
+test_44_legacy_nonempty_candidate_requires_new_fields (contract_tests.ContractTests.test_44_legacy_nonempty_candidate_requires_new_fields) ... ok
+test_45_legacy_nonempty_request_requires_new_fields (contract_tests.ContractTests.test_45_legacy_nonempty_request_requires_new_fields) ... ok
+test_46_empty_candidate_blocked_shape_remains_schema_compatible (contract_tests.ContractTests.test_46_empty_candidate_blocked_shape_remains_schema_compatible) ... ok
+
+----------------------------------------------------------------------
+Ran 46 tests (elapsed time omitted for deterministic artifact)
+
+OK
+test_candidate_reference (reasoning_matrix_tests.MatrixTests.test_candidate_reference) ... ok
+test_counterevidence_consistency (reasoning_matrix_tests.MatrixTests.test_counterevidence_consistency) ... ok
+test_direction_minimum_evidence (reasoning_matrix_tests.MatrixTests.test_direction_minimum_evidence) ... ok
+test_effect_mapping (reasoning_matrix_tests.MatrixTests.test_effect_mapping) ... ok
+test_mixed_evidence_direction (reasoning_matrix_tests.MatrixTests.test_mixed_evidence_direction) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests (elapsed time omitted for deterministic artifact)
+
+OK
