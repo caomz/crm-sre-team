@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0-rc3.workbuddy.2",
+  "version": "2.6.1",
   "skill_id": "oracle-dba",
   "agent_id": "telecom-crm-oracle-dba",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
@@ -34,6 +34,6 @@
     "schemas/lead-result.schema.json": "c23e03010242ba352ed7df547deba13c7c72e58bba26e10fcc76395fe4632ec1",
     "schemas/member-result.schema.json": "741bcbfb11371d54b0535f4d473d81ce21b1eddf55624537d669660b741d88c9",
     "SKILL.md": "f9dfcc31adb7cfd9179714011b616f4a110991b6fef23f9a5ad93b7ce061107c",
-    "VERSION": "e1cf5c925ac9a09e88515f501a2c349049ede4146beab98af32579ea0379c031"
+    "VERSION": "a3fbebb0fe4c012038eceff3148b1602c7da8942fcfe1d563c1de6d377558ae5"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0-rc3.workbuddy.2",
+  "version": "2.6.1",
   "implementation_status": "NOT_IMPLEMENTED",
   "mode": "USER_PROVIDED_EVIDENCE_NO_PRODUCTION_ACCESS",
   "production_executor": false,

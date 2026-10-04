@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0-rc3.workbuddy.2",
+  "version": "2.6.1",
   "status": "PROMPT_ROUTING_ONLY_NOT_RUNTIME_ENFORCED",
   "namespace": "course_tools",
   "display_prefix": "course:",

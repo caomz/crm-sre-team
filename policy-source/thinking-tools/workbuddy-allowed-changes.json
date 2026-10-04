@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0-rc3.workbuddy.2",
+  "version": "2.6.1",
   "scope": "EXPLICIT_OFFLINE_CHANGE_REVIEW_NOT_SOURCE_AUTHENTICITY",
   "immutable_files": {
     "policy-source/roles-source.json": {

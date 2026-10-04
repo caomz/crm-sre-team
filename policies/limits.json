@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0-rc3.workbuddy.2",
+  "version": "2.6.1",
   "max_specialists_per_batch": 3,
   "max_member_requests_per_logical_task": 2,
   "max_user_requests_per_collection_round": 3,

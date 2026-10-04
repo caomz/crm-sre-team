@@ -2,7 +2,6 @@
 """Validate ZIP order, uniqueness, path safety, exact manifest set, metadata and bytes."""
 from __future__ import annotations
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import stat
@@ -11,6 +10,7 @@ from zipfile import ZipFile, BadZipFile, ZIP_DEFLATED
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from release_rules import PREFIX, ZIP_TIME, release_files, safe_relative
+from validate_individual_zip import sha256_file_bounded, stream_member_compare
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_FILES = 5000
@@ -46,10 +46,16 @@ def validate(root: Path, archive: Path) -> dict:
                 bad_crc = z.testzip()
                 if bad_crc is not None: errors.append("crc:" + bad_crc)
                 for entry in entries:
-                    if z.read(entry) != expected[entry.filename].read_bytes(): errors.append("content_mismatch:" + entry.filename)
-    except (OSError, ValueError, BadZipFile, RuntimeError) as exc:
+                    crc = stream_member_compare(z, entry.filename, expected[entry.filename])
+                    if crc is None: errors.append("content_mismatch:" + entry.filename)
+                    elif crc != entry.CRC: errors.append("crc:" + entry.filename)
+    except (OSError, ValueError, KeyError, BadZipFile, RuntimeError) as exc:
         errors.append(type(exc).__name__ + ":" + str(exc))
-    return {"pass": not errors, "errors": errors, "scope": "ZIP_INTEGRITY_NOT_RUNTIME", "sha256": hashlib.sha256(archive.read_bytes()).hexdigest() if archive.is_file() else None}
+    sha = None
+    if archive.is_file():
+        try: sha = sha256_file_bounded(archive)
+        except (OSError, RuntimeError): pass
+    return {"pass": not errors, "errors": errors, "scope": "ZIP_INTEGRITY_NOT_RUNTIME", "sha256": sha}
 
 
 if __name__ == "__main__":

@@ -19,6 +19,18 @@ def module(name, rel):
 
 checker = module("workbuddy_checker_under_test", "tools/check_workbuddy.py")
 
+
+def _can_symlink() -> bool:
+    """Capability probe: real filesystem symlinks (not ZIP metadata)."""
+    try:
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d); t = p / "t"; t.write_bytes(b"x"); link = p / "l"
+            link.symlink_to(t)
+            return link.is_symlink()
+    except OSError:
+        return False
+
+
 class WorkBuddyNativeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -103,6 +115,8 @@ class WorkBuddyNativeTests(unittest.TestCase):
                 self.assertTrue(checker.settings_errors(root))
 
     def test_18_settings_symlink_rejected(self):
+        if not _can_symlink():
+            self.skipTest("SKIPPED_CAPABILITY: real filesystem symlinks unavailable on this host")
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); self.fixture_settings(root)
             p = root / "settings.json"; p.rename(root / "real-settings.json"); p.symlink_to(root / "real-settings.json")

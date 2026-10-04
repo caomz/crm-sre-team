@@ -11,7 +11,6 @@ from pathlib import Path
 import re
 import sys
 import unittest
-from zipfile import ZipFile
 import yaml
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -33,6 +32,8 @@ def run(root: Path) -> dict:
     check("plugin_skills",set(plugin["skills"])=={"./skills/"+sid for sid in roles})
     spec=importlib.util.spec_from_file_location("wb_checker",root/"tools/check_workbuddy.py")
     wb=importlib.util.module_from_spec(spec);spec.loader.exec_module(wb)
+    iv_spec=importlib.util.spec_from_file_location("individual_zip_validator",root/"tools/validate_individual_zip.py")
+    iv=importlib.util.module_from_spec(iv_spec);iv_spec.loader.exec_module(iv)
     wb_report=wb.run(root)
     check("workbuddy_mode_consistency", wb_report["pass"], wb_report["errors"])
     check("entry_prompt_consistency",plugin.get("defaultInitPrompt")==plugin.get("quickPrompts",[None])[0])
@@ -74,12 +75,13 @@ def run(root: Path) -> dict:
         files={p.relative_to(skill).as_posix():p for p in sorted(skill.rglob("*")) if p.is_file() and p.name!="BUNDLE-LOCK.json" and "__pycache__" not in p.parts}
         check("skill_lock_set:"+sid,set(lock["files"])==set(files))
         check("skill_lock_hashes:"+sid,all(rel in files and digest(files[rel])==h for rel,h in lock["files"].items()))
-        zpath=root/"individual-packages"/sid/"skill.zip"
-        with ZipFile(zpath) as z:
-            check("individual_zip_crc:"+sid,z.testzip() is None)
-            expected_files={f"{sid}/{p.relative_to(skill).as_posix()}":p.read_bytes() for p in sorted(skill.rglob("*")) if p.is_file() and "__pycache__" not in p.parts}
-            check("individual_zip_file_set:"+sid,set(z.namelist())==set(expected_files))
-            check("individual_zip_content:"+sid,all(z.read(n)==b for n,b in expected_files.items()))
+        iv_report=iv.validate(root,sid)
+        iv_ok=not iv_report["errors"]
+        iv_detail=";".join(iv_report["errors"])
+        check("individual_zip_crc:"+sid,iv_ok,iv_detail)
+        check("individual_zip_file_set:"+sid,iv_ok,iv_detail)
+        check("individual_zip_content:"+sid,iv_ok,iv_detail)
+        for e in iv_report["errors"]:check("individual_zip_strict:"+sid+":"+e,False,e)
         runtime_md.extend(p for p in sorted(skill.rglob("*.md")) if "tests" not in p.relative_to(skill).parts)
         runtime_md.append(agent)
     for p in sorted((root/"templates").glob("*.md")):

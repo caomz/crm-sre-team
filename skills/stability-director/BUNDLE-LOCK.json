@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0-rc3.workbuddy.2",
+  "version": "2.6.1",
   "skill_id": "stability-director",
   "agent_id": "telecom-crm-sre-team-lead",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
@@ -47,6 +47,6 @@
     "tests/behavior-cases.md": "c730cf37be28102a9bdfae4ccdc8ae6de0fb2694a9c28a398224921c32f0e71b",
     "tests/harness-acceptance-cases.json": "c7bb70c47329653a25027c025e2981dd7b6798523aa5c0a3c354a1f66a4db10c",
     "tests/harness-acceptance-checklist.md": "bce1222fb3db2243ba958e41f35f1e59b09f594f82923dd9a9825df7835cf2c8",
-    "VERSION": "e1cf5c925ac9a09e88515f501a2c349049ede4146beab98af32579ea0379c031"
+    "VERSION": "a3fbebb0fe4c012038eceff3148b1602c7da8942fcfe1d563c1de6d377558ae5"
   }
 }

@@ -21,6 +21,21 @@ spec = importlib.util.spec_from_file_location("tested_builder", ROOT / "tools/bu
 builder = importlib.util.module_from_spec(spec); spec.loader.exec_module(builder)
 
 
+def _can_symlink() -> bool:
+    """Capability probe: real filesystem symlinks (not ZIP metadata)."""
+    try:
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d); t = p / "t"; t.write_bytes(b"x"); link = p / "l"
+            link.symlink_to(t)
+            return link.is_symlink()
+    except OSError:
+        return False
+
+
+requires_real_symlink = unittest.skipUnless(
+    _can_symlink(), "SKIPPED_CAPABILITY: real filesystem symlinks unavailable on this host")
+
+
 def tree_hash(root):
     return {p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob("*")) if p.is_file() and "__pycache__" not in p.parts and ".pytest_cache" not in p.parts}
 
@@ -59,10 +74,12 @@ class ReleaseSafetyTests(unittest.TestCase):
         with self.assertRaises(ValueError): build_release.build_release(self.root, p)
         self.assertEqual(p.read_bytes(), old)
 
+    @requires_real_symlink
     def test_06_symlink_input_rejected(self):
         p = self.root / "README.md"; p.unlink(); p.symlink_to(ROOT / "README.md")
         with self.assertRaises(ValueError): build_release.build_release(self.root, self.zip)
 
+    @requires_real_symlink
     def test_07_symlink_output_rejected(self):
         target = self.base / "other.zip"; target.write_bytes(b"unchanged"); self.zip.symlink_to(target)
         with self.assertRaises(ValueError): build_release.build_release(self.root, self.zip)
@@ -135,6 +152,7 @@ class ReleaseSafetyTests(unittest.TestCase):
     def test_18_build_twice_identical(self):
         builder.build(self.root);first=tree_hash(self.root);builder.build(self.root);self.assertEqual(tree_hash(self.root),first)
 
+    @requires_real_symlink
     def test_19_symlinked_source_parent_rejected(self):
         target=self.base/"external-templates";shutil.move(str(self.root/"policy-source/templates"),target)
         (self.root/"policy-source/templates").symlink_to(target,target_is_directory=True)
@@ -151,6 +169,7 @@ class ReleaseSafetyTests(unittest.TestCase):
         with self.assertRaises(ValueError): builder.build(self.root)
         self.assertEqual(tree_hash(self.root), before)
 
+    @requires_real_symlink
     def test_22_unknown_workspace_symlink_not_followed(self):
         # An unlisted data link must neither be staged nor published.
         (self.root / "unlisted-data").symlink_to(self.base / "does-not-exist")

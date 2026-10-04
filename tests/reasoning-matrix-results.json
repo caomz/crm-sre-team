@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0-rc3.workbuddy.2",
+  "version": "2.6.1",
   "scope": "LISTED_DIMENSIONS_SHARED_CANDIDATE_SCHEMA_ONLY_NOT_HOST_SEMANTICS",
   "validator": "jsonschema.Draft202012Validator",
   "expected_outcome_source": "Independent documented-rule functions; not Schema condition introspection",

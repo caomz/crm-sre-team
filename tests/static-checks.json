@@ -1,9 +1,9 @@
 {
-  "version": "2.6.0-rc3.workbuddy.2",
+  "version": "2.6.1",
   "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
-  "result": "FAIL",
-  "checks_total": 1787,
-  "checks_passed": 1786,
+  "result": "PASS_STATIC_ONLY",
+  "checks_total": 1793,
+  "checks_passed": 1793,
   "relative_links_checked": 221,
   "offline_contract_tests_run": 46,
   "offline_contract_test_failures": 0,
@@ -31,9 +31,7 @@
   "offline_unit_tests_total": 132,
   "model_or_host_runtime_test_status": "NOT_RUN_IN_TARGET_HOST",
   "production_access": "NONE",
-  "errors": [
-    "static_regression:test_workbuddy_native: 26 tests; failures=1; errors=0"
-  ],
+  "errors": [],
   "checks": [
     {
       "id": "B_case_count",
@@ -191,6 +189,11 @@
       "detail": []
     },
     {
+      "id": "explicit_read_encoding:tests/test_individual_zip_safety.py",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "explicit_read_encoding:tests/test_judgment_contracts.py",
       "passed": true,
       "detail": []
@@ -211,6 +214,16 @@
       "detail": []
     },
     {
+      "id": "explicit_read_encoding:tests/test_release_integration.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tests/test_release_pipeline.py",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "explicit_read_encoding:tests/test_release_safety.py",
       "passed": true,
       "detail": []
@@ -227,6 +240,11 @@
     },
     {
       "id": "explicit_read_encoding:tests/test_validation_determinism.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tests/test_version_consistency.py",
       "passed": true,
       "detail": []
     },
@@ -266,12 +284,22 @@
       "detail": []
     },
     {
+      "id": "explicit_read_encoding:tools/release.py",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "explicit_read_encoding:tools/release_rules.py",
       "passed": true,
       "detail": []
     },
     {
       "id": "explicit_read_encoding:tools/validate_bundle.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tools/validate_individual_zip.py",
       "passed": true,
       "detail": []
     },
@@ -7292,8 +7320,8 @@
     },
     {
       "id": "static_regression:test_workbuddy_native",
-      "passed": false,
-      "detail": "26 tests; failures=1; errors=0"
+      "passed": true,
+      "detail": "26 tests; failures=0; errors=0"
     },
     {
       "id": "template_copy:change-capacity-dr/action-review.md",
