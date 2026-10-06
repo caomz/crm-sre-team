@@ -507,6 +507,7 @@
     "tools/check_release_diff.py",
     "tools/check_thinking_tools.py",
     "tools/check_workbuddy.py",
+    "tools/make_probe_build.py",
     "tools/release.py",
     "tools/release_rules.py",
     "tools/validate_bundle.py",

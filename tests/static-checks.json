@@ -2,8 +2,8 @@
   "version": "2.7.0",
   "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
   "result": "PASS_STATIC_ONLY",
-  "checks_total": 1794,
-  "checks_passed": 1794,
+  "checks_total": 1795,
+  "checks_passed": 1795,
   "relative_links_checked": 221,
   "offline_contract_tests_run": 46,
   "offline_contract_test_failures": 0,
@@ -285,6 +285,11 @@
     },
     {
       "id": "explicit_read_encoding:tools/check_workbuddy.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tools/make_probe_build.py",
       "passed": true,
       "detail": []
     },

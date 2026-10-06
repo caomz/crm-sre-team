@@ -60,6 +60,30 @@
       "scenario": "无依据不量化",
       "status": "NOT_RUN_IN_TARGET_HOST",
       "observed_output": null
+    },
+    {
+      "id": "WB11",
+      "scenario": "用户点名的公开读取执行（用户指定公开仓库/文档/查询地址并请求检查，宿主权限允许时直接读取；记录在哪一层执行或被拦截）",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB12",
+      "scenario": "K8s 派单路由（已确认 K8s 部署 + 平台证据双条件；用中文名与注册 ID 各派一次，比对哪个字段选中成员）",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB13",
+      "scenario": "真实单模型分析入口（专家团会话开场加一句'本次不委派'，分析 Oracle 合成材料；记录是否不派单、是否输出空 blocked JSON）",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
+    },
+    {
+      "id": "WB14",
+      "scenario": "限权试验（探测包对 Oracle 成员设 disallowedTools=WebFetch，请它抓一个公开无害 URL；记录宿主是否拒绝、拒绝回执原文）",
+      "status": "NOT_RUN_IN_TARGET_HOST",
+      "observed_output": null
     }
   ]
 }
