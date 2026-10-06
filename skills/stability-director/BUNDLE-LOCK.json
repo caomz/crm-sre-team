@@ -42,7 +42,7 @@
     "schemas/feedback.schema.json": "2039466b720222f58fcf9c4d6ebf249a069b67e3d42f253907d6a65ffd303103",
     "schemas/lead-result.schema.json": "c23e03010242ba352ed7df547deba13c7c72e58bba26e10fcc76395fe4632ec1",
     "schemas/member-result.schema.json": "741bcbfb11371d54b0535f4d473d81ce21b1eddf55624537d669660b741d88c9",
-    "SKILL.md": "531e314beda7b452112e19cbdd6e0d7b8bac7cf755dd8d30abe15f6a5b0d382a",
+    "SKILL.md": "18359d53098ab97b1914026969885ef4b0b588792eb4842b5bd336ffd08bf55d",
     "tests/behavior-cases.json": "3a1b20719e421e5a11ea14bbc5d5465ce7233f2b0674d0237f54fb5ea0f9b69d",
     "tests/behavior-cases.md": "c730cf37be28102a9bdfae4ccdc8ae6de0fb2694a9c28a398224921c32f0e71b",
     "tests/harness-acceptance-cases.json": "c7bb70c47329653a25027c025e2981dd7b6798523aa5c0a3c354a1f66a4db10c",

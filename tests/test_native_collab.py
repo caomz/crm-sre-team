@@ -131,5 +131,95 @@ class RosterRenderingTests(unittest.TestCase):
             self.assertNotIn("{{TEAM_ROSTER}}", text, rel)
 
 
+class T6CollabTextTests(unittest.TestCase):
+    """T6/M13+M16: collaboration protocol text checks on built artifacts,
+    plus parameterized mutation negatives (runtime artifacts AND source render)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.roles = json.loads((ROOT / "policy-source/roles-source.json").read_text(encoding="utf-8"))
+        cls.lead_artifact = (ROOT / "agents/telecom-crm-sre-team-lead.md").read_text(encoding="utf-8")
+        cls.member_artifact = (ROOT / "agents/telecom-crm-oracle-dba.md").read_text(encoding="utf-8")
+
+    def test_01_evidence_numbering_rules_present(self):
+        for text, label in [(self.lead_artifact, "lead"), (self.member_artifact, "member")]:
+            with self.subTest(entry=label):
+                self.assertIn("不自行编号", text)
+                self.assertIn("映射回原编号", text)
+                self.assertIn("不是宿主认证编号", text)
+                self.assertIn("成员未给出依据", text)
+
+    def test_02_dispatch_five_fields_present(self):
+        self.assertIn("派单模板与证据索引", self.lead_artifact)
+        for field in ["任务（一个窄域问题）", "范围（对象、时间窗口与已授权边界）",
+                      "材料（统一证据编号", "要求（返回格式与关键未知）", "剩余额度"]:
+            self.assertIn(field, self.lead_artifact)
+        self.assertIn("不写“参考上文”", self.lead_artifact)
+        self.assertIn("8000 字符封顶", self.lead_artifact)
+
+    def test_03_refute_rules_present(self):
+        self.assertIn("反证派发（REFUTE）", self.lead_artifact)
+        self.assertIn("排名第一、至少引用一条支持编号、无并列对手", self.lead_artifact)
+        self.assertIn("冲突照实列出", self.lead_artifact)
+        self.assertIn("反证派单（REFUTE）", self.member_artifact)
+        self.assertIn("若它是错的，这条证据是否仍自然出现", self.member_artifact)
+
+    def test_04_no_material_re_asking(self):
+        self.assertIn("不索取已随派单提供的材料", self.member_artifact)
+        self.assertIn("随派单已提供的材料不得重复索取", self.lead_artifact)
+
+    def test_05_d18_legacy_quadrant_names_kept(self):
+        for q in ["已确认事实", "高概率候选", "待验证", "已排除"]:
+            self.assertIn(q, self.member_artifact)
+
+    def test_06_member_role_skill_blocks_verbatim_equal(self):
+        """Pairing check, re-asserted at T6: role-source and skill-source blocks byte equal."""
+        for sid, role in sorted(self.roles.items()):
+            role_src = (ROOT / "policy-source/prompts/roles" / (role["agent"] + ".md")).read_text(encoding="utf-8")
+            skill_src = (ROOT / "policy-source/skills" / (sid + ".md")).read_text(encoding="utf-8")
+            labels = (["NATIVE_LEAD", "COMPAT_LEAD"] if sid == "stability-director"
+                      else ["NATIVE_MEMBER", "COMPAT_MEMBER"])
+            for label in labels:
+                with self.subTest(sid=sid, label=label):
+                    rb = checker.split_modes(role_src)[0]
+                    sb = checker.split_modes(skill_src)[0]
+                    a = [p for mode, p in rb if mode == label]
+                    b = [p for mode, p in sb if mode == label]
+                    self.assertTrue(a and a == b, f"{sid}:{label} blocks differ")
+
+    def test_07_mutation_negatives_parameterized(self):
+        """M16: negatives must be rejected on BOTH runtime artifacts (runtime=True)
+        and source-rendered full text (runtime=False). Managed-marker mutations
+        stay source-render only (artifacts have no MANAGED block by design).
+        Block-scoped negatives (native_lead_delegation_contradiction) must be
+        injected INSIDE the mode block, matching check_workbuddy's scoping."""
+        # Shared-area negative: unscoped managed rule appended after the last block.
+        for surface in ("artifact", "render_full"):
+            with self.subTest(kind="unscoped_managed_rule", surface=surface):
+                if surface == "artifact":
+                    base = self.lead_artifact
+                    poisoned = base + "\nObserve：只读 evidence_delta"
+                    ok = checker.check_prompt(poisoned, True, runtime=True)
+                else:
+                    base = checker.render_full(ROOT, "stability-director", self.roles["stability-director"])
+                    poisoned = base + "\nObserve：只读 evidence_delta"
+                    ok = checker.check_prompt(poisoned, True, runtime=False)
+                self.assertTrue(ok, "unscoped_managed_rule not rejected")
+        # Block-scoped negative: delegation contradiction inside NATIVE_LEAD.
+        for surface in ("artifact", "render_full"):
+            with self.subTest(kind="native_lead_delegation_contradiction", surface=surface):
+                if surface == "artifact":
+                    base = self.lead_artifact
+                    poisoned = base.replace("<!-- MODE:NATIVE_LEAD:END -->",
+                                            "禁止调用所有成员\n<!-- MODE:NATIVE_LEAD:END -->")
+                    ok = checker.check_prompt(poisoned, True, runtime=True)
+                else:
+                    base = checker.render_full(ROOT, "stability-director", self.roles["stability-director"])
+                    poisoned = base.replace("<!-- MODE:NATIVE_LEAD:END -->",
+                                            "禁止调用所有成员\n<!-- MODE:NATIVE_LEAD:END -->")
+                    ok = checker.check_prompt(poisoned, True, runtime=False)
+                self.assertTrue(ok, "native_lead_delegation_contradiction not rejected")
+
+
 if __name__ == "__main__":
     unittest.main()
