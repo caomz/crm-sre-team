@@ -4,7 +4,7 @@
   "scope": "INTEGRITY_ONLY_NOT_AUTHENTICITY_OR_RUNTIME_PROOF",
   "files": {
     ".codebuddy-plugin/plugin.json": "8a9a57624b92abd9b1496af2bf39b2fe44445987ceb78181fd6d6070aeeeb5ea",
-    ".gitignore": "c56788409ebcdc1403bcf7740d5a0992dd5579f5c2f3fefcdc947cde4d3c5772",
+    ".gitignore": "afd004b1ac320462f61ed142e7736bbc93253a3bab93e93c0ecf1ad65d191031",
     "agents/telecom-crm-change-capacity-dr.md": "baf2619ee24188994e381fec44758b55c0abd9de16c0ce4a68126c28f7d60885",
     "agents/telecom-crm-crm-business-flow.md": "59cf74789aee3504add0c97f3f143ce4396f59c758d03f2d024ce1ef1171136a",
     "agents/telecom-crm-java-runtime.md": "5244722948a961b459278bfc64e76352542ae0cfd42497c6bbcf3149bf2f5b7a",
