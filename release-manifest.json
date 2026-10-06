@@ -492,6 +492,7 @@
     "tests/test_judgment_contracts.py",
     "tests/test_judgment_matrix.py",
     "tests/test_knowledge_docs.py",
+    "tests/test_native_collab.py",
     "tests/test_read_only_boundary.py",
     "tests/test_reasoning_matrix.py",
     "tests/test_release_integration.py",
