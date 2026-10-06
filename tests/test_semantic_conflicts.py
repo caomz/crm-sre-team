@@ -25,8 +25,11 @@ MUTATION_STAGE_REQUIREMENT = "在原生模式下必须先提交 task_id 和 phas
 class SemanticConflictTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.lead = (ROOT / "agents/telecom-crm-sre-team-lead.md").read_text(encoding="utf-8")
-        cls.member = (ROOT / "agents/telecom-crm-oracle-dba.md").read_text(encoding="utf-8")
+        cls.roles = __import__("json").loads((ROOT / "policy-source/roles-source.json").read_text(encoding="utf-8"))
+        # Slice 1: runtime artifacts have MANAGED stripped; tests mutate scoped
+        # rules, so they use the source-rendered full text (with MANAGED).
+        cls.lead = checker.render_full(ROOT, "stability-director", cls.roles["stability-director"])
+        cls.member = checker.render_full(ROOT, "oracle-dba", cls.roles["oracle-dba"])
 
     def test_delegation_ban_synonym_rejected(self):
         self.assertTrue(checker.check_prompt(self.lead + "\n" + MUTATION_DELEGATION_BAN, True))

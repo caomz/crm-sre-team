@@ -36,8 +36,10 @@ class WorkBuddyNativeTests(unittest.TestCase):
     def setUpClass(cls):
         cls.roles = json.loads((ROOT / "policy-source/roles-source.json").read_text(encoding="utf-8"))
         cls.policy = json.loads((ROOT / "policies/runtime-contract.json").read_text(encoding="utf-8"))
-        cls.lead = (ROOT / "agents/telecom-crm-sre-team-lead.md").read_text(encoding="utf-8")
-        cls.member = (ROOT / "agents/telecom-crm-oracle-dba.md").read_text(encoding="utf-8")
+        # Slice 1: runtime artifacts have MANAGED stripped; tests mutate the
+        # managed block, so they use the source-rendered full text (with MANAGED).
+        cls.lead = checker.render_full(ROOT, "stability-director", cls.roles["stability-director"])
+        cls.member = checker.render_full(ROOT, "oracle-dba", cls.roles["oracle-dba"])
 
     def test_01_entire_mode_bundle_is_consistent(self):
         self.assertEqual(checker.run(ROOT)["errors"], [])
@@ -133,7 +135,8 @@ class WorkBuddyNativeTests(unittest.TestCase):
         for sid, role in self.roles.items():
             for rel in [f"agents/{role['agent']}.md", f"skills/{sid}/SKILL.md"]:
                 with self.subTest(path=rel):
-                    self.assertEqual(checker.check_prompt((ROOT / rel).read_text(encoding="utf-8"), sid == "stability-director"), [])
+                    # Slice 1: built artifacts carry runtime=True (MANAGED stripped).
+                    self.assertEqual(checker.check_prompt((ROOT / rel).read_text(encoding="utf-8"), sid == "stability-director", runtime=True), [])
 
     def test_21_no_unsupported_tools_field(self):
         for role in self.roles.values():

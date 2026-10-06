@@ -9,10 +9,26 @@ import shutil
 import os
 import tempfile
 import importlib.util
+import re
 import yaml
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 ZIP_TIME=(2026,9,21,0,0,0)
+
+# Slice 1: strip MANAGED_HARNESS blocks (markers + body) from runtime artifacts.
+# policy-source/ keeps the full common.md with MANAGED_HARNESS for design/source
+# validation; only built agents/skills/individual-packages drop it.
+_MANAGED_BLOCK_RE = re.compile(
+    r"<!-- MODE:MANAGED_HARNESS:BEGIN -->.*?<!-- MODE:MANAGED_HARNESS:END -->\n?",
+    re.DOTALL,
+)
+
+def strip_managed(text: str) -> str:
+    """Remove every MANAGED_HARNESS mode block (markers + body) from a built
+    artifact. Other MODE blocks (NON_MANAGED, NATIVE_*, COMPAT_*) and all
+    non-mode text are preserved verbatim so the diff vs 2.7.0 baseline is
+    exactly the MANAGED block deletion."""
+    return _MANAGED_BLOCK_RE.sub("", text)
 
 def read_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
@@ -63,11 +79,11 @@ def _build_in_place(root: Path) -> dict:
     canonical_templates=list((source/"templates").glob("*.md"))
     for sid,role in roles.items():
         agent_source=source/"prompts/roles"/(role["agent"]+".md")
-        agent_text=agent_source.read_text(encoding="utf-8").replace("{{COMMON_CONTRACT}}",common)
+        agent_text=strip_managed(agent_source.read_text(encoding="utf-8").replace("{{COMMON_CONTRACT}}",common))
         (root/"agents"/(role["agent"]+".md")).write_text(agent_text,encoding="utf-8", newline="\n")
         skill=root/"skills"/sid
         skill.mkdir(parents=True,exist_ok=True)
-        skill_text=(source/"skills"/(sid+".md")).read_text(encoding="utf-8").replace("{{COMMON_CONTRACT}}",common)
+        skill_text=strip_managed((source/"skills"/(sid+".md")).read_text(encoding="utf-8").replace("{{COMMON_CONTRACT}}",common))
         (skill/"SKILL.md").write_text(skill_text,encoding="utf-8", newline="\n")
         (skill/"VERSION").write_text(version+"\n",encoding="utf-8", newline="\n")
         copy(source/"manual"/(sid+".md"),skill/"MANUAL-MODE.md")

@@ -493,6 +493,7 @@
     "tests/test_release_integration.py",
     "tests/test_release_pipeline.py",
     "tests/test_release_safety.py",
+    "tests/test_runtime_render.py",
     "tests/test_semantic_conflicts.py",
     "tests/test_thinking_tools.py",
     "tests/test_validation_determinism.py",

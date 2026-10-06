@@ -44,7 +44,14 @@ def run(root: Path) -> dict:
         if "__pycache__" in p.parts: continue
         try: read(p);check("json:"+p.relative_to(root).as_posix(),True)
         except (OSError,ValueError) as exc:check("json:"+p.name,False,str(exc))
-    common=(root/"policy-source/prompts/common.md").read_text(encoding="utf-8").strip()
+    common_full=(root/"policy-source/prompts/common.md").read_text(encoding="utf-8").strip()
+    # Slice 1: runtime artifacts have MANAGED_HARNESS stripped, so the contract
+    # comparison uses the stripped common.md. Source-level full-contract checks
+    # are handled by check_workbuddy.render_full + check_prompt(runtime=False).
+    import importlib.util as _ilu
+    _spec=_ilu.spec_from_file_location("bb",root/"tools/build_bundle.py")
+    _bb=_ilu.module_from_spec(_spec);_spec.loader.exec_module(_bb)
+    common=_bb.strip_managed(common_full)
     canonical=root/"policy-source/references"
     domains={r["runbook"] for r in roles.values() if r["runbook"]}
     all_refs={p.name for p in sorted(canonical.glob("*.md"))}
