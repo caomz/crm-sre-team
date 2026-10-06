@@ -1,0 +1,48 @@
+#!/bin/sh
+# Pre-commit gate: regenerate build-owned outputs from policy-source and refuse the
+# commit if that regeneration changes anything.
+#
+# Enforced capability, not a prompt claim: if generated trees drift from the
+# canonical source, the commit is blocked until the rebuilt files are staged.
+# Install with:  git config core.hooksPath tools/git-hooks
+# Bypass (deliberately):  git commit --no-verify
+#
+# No extension on this filename is intentional: git resolves hooks by exact name.
+# This file is a local dev tool and is deliberately absent from
+# release-manifest.json, which only governs packaged release contents.
+
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+if ! command -v python3 >/dev/null 2>&1; then
+    if command -v python >/dev/null 2>&1; then
+        python3() { python "$@"; }
+    else
+        echo "pre-commit: SKIPPED - no python3/python on PATH" >&2
+        exit 0
+    fi
+fi
+
+if ! python3 tools/build_bundle.py >/dev/null 2>&1; then
+    echo "pre-commit: FAILED - tools/build_bundle.py exited non-zero." >&2
+    echo "pre-commit: run it manually to see the error; commit aborted." >&2
+    exit 1
+fi
+
+# Only the build-owned outputs are allowed to have been rewritten by the rebuild.
+staged=$(git diff --name-only)
+generated=$(printf '%s\n' "$staged" | grep -E '^(agents/|skills/|templates/|manual-mode/|individual-packages/|prompt-bundles\.lock$)' || true)
+
+if [ -n "$generated" ]; then
+    echo "pre-commit: FAILED - build output was stale and has now been regenerated." >&2
+    echo "pre-commit: review the changes below, stage them, and commit again:" >&2
+    printf '%s\n' "$generated" | sed 's/^/pre-commit:   /' >&2
+    exit 1
+fi
+
+# The check above is sufficient and is the only gate. A second "not staged"
+# check here would also match `M ` (staged-and-modified), which the rebuild
+# legitimately leaves behind, deadlocking the commit forever.
+exit 0

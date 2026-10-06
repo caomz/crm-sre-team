@@ -2,8 +2,8 @@
   "version": "2.7.0",
   "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
   "result": "PASS_STATIC_ONLY",
-  "checks_total": 1802,
-  "checks_passed": 1802,
+  "checks_total": 1806,
+  "checks_passed": 1806,
   "relative_links_checked": 223,
   "offline_contract_tests_run": 46,
   "offline_contract_test_failures": 0,
@@ -189,6 +189,16 @@
       "detail": []
     },
     {
+      "id": "explicit_read_encoding:tests/test_git_hooks.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tests/test_git_sync.py",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "explicit_read_encoding:tests/test_individual_zip_safety.py",
       "passed": true,
       "detail": []
@@ -299,6 +309,11 @@
       "detail": []
     },
     {
+      "id": "explicit_read_encoding:tools/install_git_hooks.py",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "explicit_read_encoding:tools/make_comparison_build.py",
       "passed": true,
       "detail": []
@@ -320,6 +335,11 @@
     },
     {
       "id": "explicit_read_encoding:tools/release_rules.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tools/sync_git.py",
       "passed": true,
       "detail": []
     },
