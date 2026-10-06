@@ -41,13 +41,13 @@ def write_skill_tree(root: Path, files=None) -> None:
 def canonical_members(root: Path) -> list:
     """(name, data) pairs in the builder's canonical order.
 
-    deterministic_zip sorts Path objects, whose ordering is case-insensitive on
-    Windows; the test mirrors that derivation so a normal ZIP is accepted and
-    only the deliberately injected defect fails.
+    deterministic_zip sorts by p.as_posix() string order (N1: platform-stable
+    across Windows/POSIX); the test mirrors that derivation so a normal ZIP is
+    accepted and only the deliberately injected defect fails.
     """
     skill = root / "skills" / SID
     return [(f"{SID}/{p.relative_to(skill).as_posix()}", p.read_bytes())
-            for p in sorted(skill.rglob("*"))
+            for p in sorted(skill.rglob("*"), key=lambda p: p.as_posix())
             if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"]
 
 

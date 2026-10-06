@@ -35,7 +35,7 @@ class BudgetExceeded(RuntimeError):
 
 def expected_files(root: Path, sid: str) -> dict:
     skill = root / "skills" / sid
-    return {f"{sid}/{p.relative_to(skill).as_posix()}": p for p in sorted(skill.rglob("*"))
+    return {f"{sid}/{p.relative_to(skill).as_posix()}": p for p in sorted(skill.rglob("*"), key=lambda p: p.as_posix())
             if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"}
 
 
@@ -85,10 +85,9 @@ def validate(root: Path, sid: str) -> dict:
             entries = z.infolist()
             names = [e.filename for e in entries]
             # Order must match the canonical build order derived from the disk
-            # tree: deterministic_zip sorts Path objects, whose ordering is
-            # case-insensitive on Windows, so sorting name strings here would
-            # flag every archive this builder produces. Only meaningful when
-            # the file set itself is correct.
+            # tree: deterministic_zip sorts by p.as_posix() string order (N1),
+            # which is stable across Windows/POSIX, so the zip entries must be
+            # in that exact string-sorted sequence.
             if set(names) == set(expected) and names != list(expected): errors.append("entries_not_sorted")
             if len(names) != len(set(names)): errors.append("duplicate_entries")
             if len({n.casefold() for n in names}) != len(names): errors.append("case_colliding_entries")

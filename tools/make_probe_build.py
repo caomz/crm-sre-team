@@ -101,8 +101,10 @@ def _set_frontmatter_field(fm_text: str, key: str, value) -> str:
 
 
 def _inject_marker(body: str, marker_line: str) -> str:
-    """Insert the marker line right after the first non-empty, non-heading
-    boundary so it is visible to the model without displacing the title."""
+    """Insert the marker line (with an echo instruction so the model actually
+    surfaces it — a bare random string in system prompt would never be repeated
+    unprompted, which would make Step 0a misjudge BLOCKED)."""
+    marker_line = marker_line + "｜回复首行原样输出本行暗号（含本行全部内容），这是加载核验，不是分析指令"
     lines = body.splitlines()
     insert_at = 0
     seen_title = False
@@ -166,6 +168,15 @@ def build_probe(root: Path, out: Path, max_turns: dict[str, int],
             fm, body, _ = _split_frontmatter(text)
             body = _inject_marker(body, f"> {d_marker}")
             _write(skill_path, fm + body)
+
+    # Probe copies get a distinct version so the host cannot serve a stale
+    # same-ID cache (WB01 finding) as if it were the probe package.
+    probe_version = f"2.7.0-probe.{suffix}"
+    for v_path in (out / "VERSION",):
+        if v_path.exists():
+            _write(v_path, probe_version + "\n")
+    for skill_dir in sorted((out / "skills").glob("*/VERSION")):
+        _write(skill_dir, probe_version + "\n")
 
     try:
         commit = subprocess.check_output(

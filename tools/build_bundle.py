@@ -80,12 +80,12 @@ def lock_files(root: Path) -> list[Path]:
     manifest = read_json(root / "release-manifest.json")
     excluded = {"prompt-bundles.lock"}
     names = [n for n in manifest["files"] if n not in excluded and not n.startswith("individual-packages/")]
-    return sorted(root / name for name in names)
+    return sorted((root / name for name in names), key=lambda p: p.as_posix())
 
 def deterministic_zip(base: Path, files: list[Path], output: Path, prefix: str) -> None:
     output.parent.mkdir(parents=True,exist_ok=True)
     with ZipFile(output,"w",compression=ZIP_DEFLATED,compresslevel=9) as z:
-        for path in sorted(files):
+        for path in sorted(files, key=lambda p: p.as_posix()):
             if path.is_symlink():
                 raise ValueError(f"Symlink not allowed in release: {path}")
             name=f"{prefix}/{path.relative_to(base).as_posix()}"
@@ -135,7 +135,7 @@ def _build_in_place(root: Path) -> dict:
         if sid == "stability-director":
             for path in sorted((source / "team-knowledge").glob("*.md")):
                 copy(path, skill / "references/team-knowledge" / path.name)
-        skill_hashes={p.relative_to(skill).as_posix():digest(p) for p in sorted(skill.rglob("*")) if p.is_file() and p.name!="BUNDLE-LOCK.json" and "__pycache__" not in p.parts}
+        skill_hashes={p.relative_to(skill).as_posix():digest(p) for p in sorted(skill.rglob("*"), key=lambda p: p.as_posix()) if p.is_file() and p.name!="BUNDLE-LOCK.json" and "__pycache__" not in p.parts}
         write_json(skill/"BUNDLE-LOCK.json",{"version":version,"skill_id":sid,"agent_id":role["agent"],"verification_scope":"CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR","files":skill_hashes})
     for path in canonical_templates: copy(path,root/"templates"/path.name)
     manual=(source/"manual/stability-director.md").read_text(encoding="utf-8").replace("](references/","](../skills/stability-director/references/")
@@ -189,7 +189,7 @@ def build(root: Path) -> dict:
         directory = root / folder
         if directory.is_symlink(): raise ValueError("Symlink generated directory: " + folder)
         if directory.exists():
-            for p in sorted(directory.rglob("*")):
+            for p in sorted(directory.rglob("*"), key=lambda p: p.as_posix()):
                 if "__pycache__" in p.parts or p.suffix == ".pyc": continue
                 if p.is_symlink(): raise ValueError("Symlink generated output: " + str(p))
                 if p.is_file() and p.relative_to(root).as_posix() not in declared:

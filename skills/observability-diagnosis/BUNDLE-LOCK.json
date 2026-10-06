@@ -4,6 +4,9 @@
   "agent_id": "telecom-crm-observability-diagnosis",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
+    "MANUAL-MODE.md": "faa9d452d7306cad64cd1412850f3ec171b4329543fb7e2aec55ddcbd99fc0cc",
+    "SKILL.md": "c31f5eae348b36b8517e3003759c701bacdee624c52fc74309d32be5e238daa5",
+    "VERSION": "362148d7721ad4a1bb64981ff8d604ef7f4d22267ea8845042f54f90940f24fd",
     "agents/openai.yaml": "fa543e39b95a80ef85a6ca82a8b9756e1caa7a6863a627a5a4d7159a91a326a4",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",
     "assets/templates/environment-profile.md": "78e08de517192293f5b584e4038873226e026ebc75ff43da6dbdd843b21a2153",
@@ -14,7 +17,6 @@
     "assets/templates/internal-case-card.md": "4c84475f26abb07c3bdf46cf18d668d0fa0269f53ed0ccf7d2472a068bd3b47e",
     "assets/templates/rca.md": "9de15d10b8d6ed22d7c1858ef8d6bcd970dfcc7ef5a14654e64e9918bc9deff0",
     "assets/templates/recovery-check.md": "ff35e41d13bebd905acd83ae28c0e092d459fbf535675eb344bacdf4c81e42b7",
-    "MANUAL-MODE.md": "faa9d452d7306cad64cd1412850f3ec171b4329543fb7e2aec55ddcbd99fc0cc",
     "references/data-handling.md": "c94572d0f44e28457fa07a3563db1a4c722b2c9f63f7defb3df6c5844d35424c",
     "references/evidence-protocol.md": "328fa0f06dee572c0094ae330dc083a5569557ba0186f835f130725b8deea4a6",
     "references/harness-contract.md": "f5ae570143a807fb5f86636fa00259378ad30767483e5cf944c810b363970c24",
@@ -32,8 +34,6 @@
     "schemas/common.schema.json": "c0bc6a5ff501d20bcd4df5630b5f72d4619e113f7e1a1ddd9a5d5018821fc201",
     "schemas/feedback.schema.json": "2039466b720222f58fcf9c4d6ebf249a069b67e3d42f253907d6a65ffd303103",
     "schemas/lead-result.schema.json": "c23e03010242ba352ed7df547deba13c7c72e58bba26e10fcc76395fe4632ec1",
-    "schemas/member-result.schema.json": "741bcbfb11371d54b0535f4d473d81ce21b1eddf55624537d669660b741d88c9",
-    "SKILL.md": "ef11a3820368f5f8ac9d7e58ac49f8fd2e4645d2418e11f2d50a0181323ce43c",
-    "VERSION": "362148d7721ad4a1bb64981ff8d604ef7f4d22267ea8845042f54f90940f24fd"
+    "schemas/member-result.schema.json": "741bcbfb11371d54b0535f4d473d81ce21b1eddf55624537d669660b741d88c9"
   }
 }

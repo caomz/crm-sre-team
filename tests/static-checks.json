@@ -1,9 +1,9 @@
 {
   "version": "2.7.0",
   "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
-  "result": "FAIL",
-  "checks_total": 1801,
-  "checks_passed": 1800,
+  "result": "PASS_STATIC_ONLY",
+  "checks_total": 1802,
+  "checks_passed": 1802,
   "relative_links_checked": 223,
   "offline_contract_tests_run": 46,
   "offline_contract_test_failures": 0,
@@ -31,9 +31,7 @@
   "offline_unit_tests_total": 132,
   "model_or_host_runtime_test_status": "NOT_RUN_IN_TARGET_HOST",
   "production_access": "NONE",
-  "errors": [
-    "root_lock_hashes: "
-  ],
+  "errors": [],
   "checks": [
     {
       "id": "B_case_count",
@@ -297,6 +295,11 @@
     },
     {
       "id": "explicit_read_encoding:tools/check_workbuddy.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tools/make_comparison_build.py",
       "passed": true,
       "detail": []
     },
@@ -6837,7 +6840,7 @@
     },
     {
       "id": "root_lock_hashes",
-      "passed": false,
+      "passed": true,
       "detail": ""
     },
     {

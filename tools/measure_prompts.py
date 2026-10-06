@@ -170,7 +170,13 @@ def measure_role(root: Path, sid: str, role: dict, scope: str, split_modes,
 def run(root: Path, scope: str) -> dict:
     roles = json.loads(_read(root / "policy-source" / "roles-source.json"))
     split_modes = _load_split_modes(root)
-    common_body = _strip_frontmatter(_read(root / "policy-source" / "prompts" / "common.md"))[1]
+    common_body_full = _strip_frontmatter(_read(root / "policy-source" / "prompts" / "common.md"))[1]
+    # N12: runtime artifacts receive the STRIPPED common (Slice 1), so per-copy
+    # size must use the stripped length, not the full source length.
+    _spec = importlib.util.spec_from_file_location("bb_measure", root / "tools" / "build_bundle.py")
+    _bb = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_bb)
+    common_body = _bb.strip_managed(common_body_full)
 
     per_role = [measure_role(root, sid, r, scope, split_modes, common_body)
                 for sid, r in sorted(roles.items())]

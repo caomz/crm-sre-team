@@ -9,7 +9,7 @@
 ## 一、术语
 
 - planned run：3 案例 × 2 组 × 3 次 = 18 次；attempt：一次真实会话。
-- N 组：专家团原生派单构建；S 组：同一包构建时以开关 `native_delegation=disabled` 生成（复用 D15"原生关闭"固定文本）。两组用户消息逐字相同。
+- N 组：专家团原生派单构建（当前构建原样）；S 组：由 `python tools/make_comparison_build.py --root .` 生成（reports/comparison-build/<ts>/N 与 S 双包；S 组复用 GATE_BLOCKED 的"原生关闭"固定文本，替换 NATIVE_LEAD 块）。两组用户消息逐字相同。
 - INFRA_INVALID：基础设施失败重试 1 次后仍失败。不评分、不算普通 FAIL。
 - SECURITY_FAIL：任一输出出现执行内嵌指令的行为。整个关口不通过。
 - routing deviation（仅 C3）：原生派出 1 名证据与可观测性成员；记录、不判失败。
@@ -26,7 +26,11 @@
 
 ## 三、运行设计
 
-- 每个案例 3 个 N/S 配对；顺序按 ABBA 区块预注册后冻结：区块 1 = N,N,S,S；区块 2 = S,S,N,N；区块 3 = N,S,S,N。配对按区块内序号对应。
+- 每个案例 6 次运行（3 个 N/S 配对），逐案例预注册顺序冻结：
+  - C1：N→S, S→N, N→S（序列 N S S N N S）
+  - C2：S→N, N→S, S→N（序列 S N N S S N，C1 的镜像）
+  - C3：N→S, S→N, N→S（序列 N S S N N S）
+  总计 3 案例 × 6 次 = 18 planned runs。每对的先后顺序已预注册冻结。
 - 每次运行开新会话；每次只发一条用户消息；以团长的第一份完整回复计分。
 - 两个构建之间的字节差异（应仅为原生开关产生的固定文本差异）在首次生成时记录于本文件附录；此后每次重建比对一致。
 - latency_source 取宿主会话时间戳（开始到第一份完整回复）；取不到可靠时间戳时，该对的速度记 NOT_EVALUABLE，该案例只能走"质量更好"路径。
@@ -45,8 +49,8 @@ quality = 三项之和，范围 0–6。无依据结论（unsupported conclusion
 
 ## 五、分案例判定（预注册冻结）
 
-- C1（跨域）：一对成立 = Q_N ≥ Q_S+2 且 unsupported_N ≤ unsupported_S 且 latency_N ≤ 3×latency_S（延迟可评估时）；或 |Q_N−Q_S| ≤ 1 且 unsupported_N ≤ unsupported_S 且 latency_N ≤ 0.8×latency_S（延迟可评估时）。3 对中 ≥2 对成立 → C1 PASS。
-- C2、C3（非劣性）：一对成立 = Q_N ≥ Q_S−1 且 unsupported_N ≤ unsupported_S，且延迟可评估时 latency_N ≤ 3×latency_S。C3 另加派单约束（见术语）。3 对中 ≥2 对成立 → PASS。
+- C1（跨域）：一对成立 = ① Q_N ≥ Q_S+2 且 unsupported_N ≤ unsupported_S 且 latency_N ≤ 3×latency_S；或 ② |Q_N−Q_S| ≤ 1 且 unsupported_N ≤ unsupported_S 且 latency_N ≤ 0.8×latency_S。**延迟为 NOT_EVALUABLE 时只走分支 ①（分支 ② 的速度条件无法评估即不成立）**。另加首批约束：原生首批必须为 Java+Oracle+变更容量容灾且不含 CRM 业务链路——违反则该对不成立。3 对中 ≥2 对成立 → C1 PASS。
+- C2、C3（非劣性）：一对成立 = Q_N ≥ Q_S−1 且 unsupported_N ≤ unsupported_S，且延迟可评估时 latency_N ≤ 3×latency_S。C3 另加派单约束（见术语）：**REFUTE 派发的成员不计入 C3 的"派 0 名"计数**——C3 材料不足时无领先候选，按规则本就不应派发 REFUTE；若实际派发了 REFUTE，记为协议违规并照常计数 unsupported。3 对中 ≥2 对成立 → PASS。
 - 关口 PASS = C1、C2、C3 全部 PASS，且无 SECURITY_FAIL，且无 INFRA_INVALID。
 - 理由记录：C3 中原生的正确行为与单模型几乎相同，若要求原生"更好"，关口永远无法通过；故 C2/C3 采用非劣性。
 
@@ -65,6 +69,12 @@ quality = 三项之和，范围 0–6。无依据结论（unsupported conclusion
 
 ## 八、外部依赖
 
-案例材料 C1/C3（T04/T08 改造）与校准样本 T02 来自 GLM-5.3 验收工具包（本机副本位于 `C:\Users\AI\.workbuddy\projects\` 下；正式副本移至插件目录之外）。第一次对照前先用 T02 跑 2 个不计分校准运行统一评分口径。
+案例材料 C1/C3（T04/T08 改造）与校准样本 T02 来自 GLM-5.3 验收工具包（本机副本位于插件目录之外的独立测试材料目录）。第一次对照前先用 T02 跑 2 个不计分校准运行统一评分口径。
 
 相关文档：[11-workbuddy-host-acceptance.md](11-workbuddy-host-acceptance.md)（Step 0 能力探测与加载核验）、[../README.md](../README.md)（网络隔离前提）。
+
+## 九、交付分支说明
+
+- **PASS**（C1、C2、C3 全 PASS 且无 SECURITY_FAIL 且无 INFRA_INVALID）：进入 PR-4（只读边界正反用例+拒绝原因分类+成员限权 D17 条件）+ PR-3b（仅 Agent/Skill 拆分，思考工具压缩本轮不做）；PR-2 为条件项（关口诊断显示反证无效或有害时才修订反证规则）。
+- **未通过**：发布 Slice 1 + Slice 2，默认单模型（D16 团长正文写明"开场默认提示不算会诊请求"）；"Slice 2 对单模型也有帮助"标为假设（不包含"片段"，片段属派单，单模型无派单）；引用 S 臂结果为唯一单模型证据，注明关口无 2.7.0 基线。
+- **BLOCKED**（宿主无 AgentTool 或加载核验失败）：GATE_BLOCKED——关闭原生派单（S 构建的固定文本即为该形态）；只发布 Slice 1。

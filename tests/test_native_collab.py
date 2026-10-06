@@ -204,7 +204,8 @@ class T6CollabTextTests(unittest.TestCase):
                     base = checker.render_full(ROOT, "stability-director", self.roles["stability-director"])
                     poisoned = base + "\nObserve：只读 evidence_delta"
                     ok = checker.check_prompt(poisoned, True, runtime=False)
-                self.assertTrue(ok, "unscoped_managed_rule not rejected")
+                self.assertIn("unscoped_managed_rule:Observe：只读 evidence_delta", ok,
+                              "wrong or missing error code on " + surface)
         # Block-scoped negative: delegation contradiction inside NATIVE_LEAD.
         for surface in ("artifact", "render_full"):
             with self.subTest(kind="native_lead_delegation_contradiction", surface=surface):
@@ -218,7 +219,8 @@ class T6CollabTextTests(unittest.TestCase):
                     poisoned = base.replace("<!-- MODE:NATIVE_LEAD:END -->",
                                             "禁止调用所有成员\n<!-- MODE:NATIVE_LEAD:END -->")
                     ok = checker.check_prompt(poisoned, True, runtime=False)
-                self.assertTrue(ok, "native_lead_delegation_contradiction not rejected")
+                self.assertIn("native_lead_delegation_contradiction", ok,
+                              "wrong or missing error code on " + surface)
 
 
 if __name__ == "__main__":

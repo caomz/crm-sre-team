@@ -85,15 +85,27 @@ class RuntimeRenderTests(unittest.TestCase):
             self.assertEqual(checker.check_prompt(text, sid == "stability-director", runtime=False), [],
                               f"render_full({sid}) failed source check")
 
-    def test_07_stripped_common_is_verbatim_subset_of_full(self):
-        """Stripped common.md must equal full common.md minus exactly the MANAGED
-        block (no other bytes changed)."""
-        # Reconstruct: stripped = full with MANAGED block removed.
-        import re
-        managed_re = re.compile(r"<!-- MODE:MANAGED_HARNESS:BEGIN -->.*?<!-- MODE:MANAGED_HARNESS:END -->\n?", re.DOTALL)
-        reconstructed = managed_re.sub("", self.common_full)
-        self.assertEqual(self.common_stripped, reconstructed,
-                          "strip_managed changed bytes outside the MANAGED block")
+    def test_07_stripped_diff_is_exactly_managed_block(self):
+        """N10: verify the strip diff by position (index-located boundaries),
+        not by re-applying the same regex — a greedy/overmatching pattern in
+        strip_managed would shift the boundary and fail the prefix/suffix
+        comparisons here."""
+        begin_idx = self.common_full.index("<!-- MODE:MANAGED_HARNESS:BEGIN -->")
+        end_marker = "<!-- MODE:MANAGED_HARNESS:END -->"
+        end_idx = self.common_full.index(end_marker) + len(end_marker)
+        if self.common_full[end_idx:end_idx + 1] == "\n":
+            end_idx += 1
+        # prefix before the block must be byte-identical
+        self.assertEqual(self.common_stripped[:begin_idx], self.common_full[:begin_idx])
+        # suffix after the block must be byte-identical
+        self.assertEqual(self.common_stripped[begin_idx:], self.common_full[end_idx:])
+        # the removed span contains exactly the two markers and no other marker
+        removed = self.common_full[begin_idx:end_idx]
+        self.assertIn("<!-- MODE:MANAGED_HARNESS:BEGIN -->", removed)
+        self.assertIn("<!-- MODE:MANAGED_HARNESS:END -->", removed)
+        self.assertNotIn("<!-- MODE:NATIVE_", removed)
+        self.assertNotIn("<!-- MODE:COMPAT_", removed)
+        self.assertNotIn("<!-- MODE:NON_MANAGED", removed)
 
 
 if __name__ == "__main__":
