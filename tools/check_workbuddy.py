@@ -193,6 +193,7 @@ def policy_errors(policy: dict) -> list[str]:
 
 def run(root: Path) -> dict:
     errors = settings_errors(root)
+    errors += routing_errors(root)
     roles = json.loads((root / "policy-source/roles-source.json").read_text(encoding="utf-8"))
     policy = json.loads((root / "policies/runtime-contract.json").read_text(encoding="utf-8"))
     errors += policy_errors(policy)
@@ -218,13 +219,90 @@ def run(root: Path) -> dict:
 
 def render_full(root: Path, sid: str, role: dict) -> str:
     """Render a source prompt with the FULL common.md injected (MANAGED_HARNESS
-    block included). Used by source-level checks and tests that mutate the
-    managed block (test_07, test_read_only_boundary.test_04) so they keep
-    exercising the source contract after runtime artifacts were stripped."""
+    block included) plus the team roster if the source carries the placeholder.
+    Used by source-level checks and tests that mutate the managed block
+    (test_07, test_read_only_boundary.test_04) so they keep exercising the
+    source contract after runtime artifacts were stripped."""
     source = root / "policy-source"
     common = (source / "prompts/common.md").read_text(encoding="utf-8").strip()
     agent_src = source / "prompts/roles" / (role["agent"] + ".md")
-    return agent_src.read_text(encoding="utf-8").replace("{{COMMON_CONTRACT}}", common)
+    text = agent_src.read_text(encoding="utf-8").replace("{{COMMON_CONTRACT}}", common)
+    if "{{TEAM_ROSTER}}" in text:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("bb_render", root / "tools/build_bundle.py")
+        bb = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bb)
+        roster = bb.render_team_roster(
+            json.loads((source / "roles-source.json").read_text(encoding="utf-8")),
+            json.loads((source / "routing-source.json").read_text(encoding="utf-8")),
+        )
+        text = text.replace("{{TEAM_ROSTER}}", roster)
+    return text
+
+
+def routing_errors(root: Path) -> list[str]:
+    """T5/M15: routing-source.json roster consistency.
+
+    Three-way: roster keys == roles-source member agents == plugin.json member
+    ids. Field non-emptiness, alias global uniqueness, K8s dual condition and
+    the K8s per-demand alias are checked. Chinese formal names are read from
+    roles-source.json (single protected source); plugin.json zh-name mismatch is
+    only tolerated for the recorded K8s deviation (hash-locked file)."""
+    errors = []
+    try:
+        routing = json.loads((root / "policy-source/routing-source.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ["routing_source_missing_or_invalid"]
+    roles = json.loads((root / "policy-source/roles-source.json").read_text(encoding="utf-8"))
+    by_agent = {r["agent"]: r for r in roles.values()}
+    members = {a: r for a, r in by_agent.items() if a != "telecom-crm-sre-team-lead"}
+    keys = {k for k in routing if not k.startswith("_")}
+    if keys != set(members):
+        for k in sorted(keys - set(members)):
+            errors.append("routing_unknown_id:" + k)
+        for k in sorted(set(members) - keys):
+            errors.append("routing_missing_id:" + k)
+        return sorted(set(errors))
+    seen_alias: dict[str, str] = {}
+    for agent_id, r in sorted(routing.items()):
+        if agent_id.startswith("_"):
+            continue
+        for field in ("route_when", "do_not_route_when", "expected_output", "aliases"):
+            v = r.get(field)
+            if not v or (isinstance(v, list) and not [x for x in v if str(x).strip()]):
+                errors.append(f"routing_empty_field:{agent_id}:{field}")
+        for a in r.get("aliases", []):
+            if a in seen_alias and seen_alias[a] != agent_id:
+                errors.append("routing_alias_conflict:" + a)
+            seen_alias[a] = agent_id
+        if agent_id == "telecom-crm-k8s-platform":
+            joined = "；".join(r.get("route_when", []))
+            if not ("部署" in joined and ("调度" in joined or "Pod" in joined or "节点" in joined or "网络" in joined)):
+                errors.append("routing_k8s_dual_condition_missing")
+            if "K8s按需辅助专家" not in r.get("aliases", []):
+                errors.append("routing_k8s_alias_missing")
+    # Three-way id consistency with plugin.json (read-only; plugin.json is
+    # version-locked, so only id sets are compared here).
+    try:
+        plugin = json.loads((root / ".codebuddy-plugin/plugin.json").read_text(encoding="utf-8"))
+        plugin_ids = {m.get("id") for m in plugin.get("members", [])}
+        plugin_member_ids = {m.get("id") for m in plugin.get("members", []) if m.get("role") == "member"}
+        if plugin_member_ids != set(members):
+            errors.append("plugin_member_ids_mismatch")
+        # zh-name consistency vs roles-source; K8s deviation is recorded/allowed.
+        for m in plugin.get("members", []):
+            mid = m.get("id")
+            if mid in by_agent:
+                zh = (m.get("name") or {}).get("zh", "")
+                title = by_agent[mid]["title"]
+                if zh != title and not (mid == "telecom-crm-k8s-platform" and zh == "K8s辅助专家"):
+                    errors.append(f"plugin_zh_name_mismatch:{mid}")
+        if plugin.get("agentName") != by_agent.get("telecom-crm-sre-team-lead", {}).get("agent"):
+            errors.append("plugin_lead_agent_mismatch")
+        _ = plugin_ids
+    except (OSError, ValueError):
+        errors.append("plugin_json_missing_or_invalid")
+    return sorted(set(errors))
 
 
 if __name__ == "__main__":

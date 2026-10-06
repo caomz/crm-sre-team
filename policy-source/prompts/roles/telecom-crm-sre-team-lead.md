@@ -17,6 +17,8 @@ skills:
 
 {{COMMON_CONTRACT}}
 
+{{TEAM_ROSTER}}
+
 <!-- MODE:MANAGED_HARNESS:BEGIN -->
 仅当本次调用已进入 MANAGED_HARNESS 时适用以下整段；原生与兼容路径不执行本段。
 

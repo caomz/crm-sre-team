@@ -30,6 +30,37 @@ def strip_managed(text: str) -> str:
     exactly the MANAGED block deletion."""
     return _MANAGED_BLOCK_RE.sub("", text)
 
+
+def render_team_roster(roles: dict, routing: dict) -> str:
+    """T5/M15: render the natural-language member roster from routing-source.json.
+    Chinese formal names come from roles-source.json (single protected source).
+    Internal routing fields never become host tool parameters."""
+    by_agent = {r["agent"]: r for r in roles.values()}
+    lines = [
+        "## 成员名册（何时派给谁）",
+        "",
+        "按注册 ID 字典序；中文正式名来自角色定义源。",
+        "",
+        "| 注册 ID | 中文名 | 何时派（触发证据） | 何时不该派 | 期望返回 |",
+        "|---|---|---|---|---|",
+    ]
+    for agent_id in sorted(routing):
+        if agent_id.startswith("_"):
+            continue
+        role = by_agent.get(agent_id)
+        if role is None or agent_id == "telecom-crm-sre-team-lead":
+            continue
+        r = routing[agent_id]
+        rw = "；".join(r["route_when"])
+        dn = "；".join(r["do_not_route_when"])
+        eo = r["expected_output"]
+        lines.append(f"| {agent_id} | {role['title']} | {rw} | {dn} | {eo} |")
+    lines.append("")
+    lines.append("中间件证据初步归属：消费端线程、连接池与调用异常由 Java 成员先分析；订单积压与补偿语义由 CRM 业务链路成员处理；跨服务时延与链路时间线由证据与可观测性成员处理；超出上述 Runbook 范围的中间件服务端问题，在报告中标注为专业覆盖缺口，不冒充已完成专项诊断。")
+    lines.append("")
+    lines.append("本表只说明“何时该派给谁”；成员工具名与参数以当前宿主提供的 Schema 为准，不据本文猜测。注册 ID 不因中文名变化而改变。")
+    return "\n".join(lines)
+
 def read_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -77,9 +108,13 @@ def _build_in_place(root: Path) -> dict:
     domain_names={r["runbook"] for r in roles.values() if r["runbook"]}
     canonical_refs={p.name:p for p in (source/"references").glob("*.md")}
     canonical_templates=list((source/"templates").glob("*.md"))
+    routing_path = source / "routing-source.json"
+    team_roster = ""
+    if routing_path.exists():
+        team_roster = render_team_roster(roles, read_json(routing_path))
     for sid,role in roles.items():
         agent_source=source/"prompts/roles"/(role["agent"]+".md")
-        agent_text=strip_managed(agent_source.read_text(encoding="utf-8").replace("{{COMMON_CONTRACT}}",common))
+        agent_text=strip_managed(agent_source.read_text(encoding="utf-8").replace("{{COMMON_CONTRACT}}",common).replace("{{TEAM_ROSTER}}",team_roster))
         (root/"agents"/(role["agent"]+".md")).write_text(agent_text,encoding="utf-8", newline="\n")
         skill=root/"skills"/sid
         skill.mkdir(parents=True,exist_ok=True)

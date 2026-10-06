@@ -63,7 +63,7 @@ def run(root: Path) -> dict:
             text=p.read_text(encoding="utf-8");fm=yaml.safe_load(text.split("---",2)[1])
             check("frontmatter:"+p.relative_to(root).as_posix(),fm["name"]==expected)
             check("common_contract:"+p.relative_to(root).as_posix(),common in text)
-            check("no_unrendered_placeholder:"+p.relative_to(root).as_posix(),"{{COMMON_CONTRACT}}" not in text)
+            check("no_unrendered_placeholder:"+p.relative_to(root).as_posix(),"{{COMMON_CONTRACT}}" not in text and "{{TEAM_ROSTER}}" not in text)
         expected_interface={"interface":r["interface"]}
         check("canonical_interface:"+sid,yaml.safe_load((skill/"agents/openai.yaml").read_text(encoding="utf-8"))==expected_interface)
         if sid=="stability-director":
