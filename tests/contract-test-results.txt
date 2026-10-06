@@ -1,0 +1,167 @@
+test_01_valid_member (contract_tests.ContractTests.test_01_valid_member) ... ok
+test_02_valid_lead (contract_tests.ContractTests.test_02_valid_lead) ... ok
+test_03_valid_blocked (contract_tests.ContractTests.test_03_valid_blocked) ... ok
+test_04_valid_feedback (contract_tests.ContractTests.test_04_valid_feedback) ... ok
+test_05_authority_fields_rejected (contract_tests.ContractTests.test_05_authority_fields_rejected) ... ok
+test_06_four_quadrants_required (contract_tests.ContractTests.test_06_four_quadrants_required) ... ok
+test_07_member_max_two (contract_tests.ContractTests.test_07_member_max_two) ... ok
+test_08_lead_max_three (contract_tests.ContractTests.test_08_lead_max_three) ... ok
+test_09_nested_command_field_rejected (contract_tests.ContractTests.test_09_nested_command_field_rejected) ... ok
+test_10_fact_requires_reference (contract_tests.ContractTests.test_10_fact_requires_reference) ... ok
+test_11_invalid_e_id_format (contract_tests.ContractTests.test_11_invalid_e_id_format) ... ok
+test_12_revision_positive (contract_tests.ContractTests.test_12_revision_positive) ... ok
+test_13_counterevidence_status_required (contract_tests.ContractTests.test_13_counterevidence_status_required) ... ok
+test_14_present_requires_counterevidence (contract_tests.ContractTests.test_14_present_requires_counterevidence) ... ok
+test_15_not_obtained_cannot_have_counterevidence (contract_tests.ContractTests.test_15_not_obtained_cannot_have_counterevidence) ... ok
+test_16_falsification_required (contract_tests.ContractTests.test_16_falsification_required) ... ok
+test_17_alternative_not_empty (contract_tests.ContractTests.test_17_alternative_not_empty) ... ok
+test_18_exclusion_requires_scope (contract_tests.ContractTests.test_18_exclusion_requires_scope) ... ok
+test_19_blocked_cannot_have_facts (contract_tests.ContractTests.test_19_blocked_cannot_have_facts) ... ok
+test_20_ok_requires_task_id (contract_tests.ContractTests.test_20_ok_requires_task_id) ... ok
+test_21_self_route_not_in_enum (contract_tests.ContractTests.test_21_self_route_not_in_enum) ... ok
+test_22_routing_max_three (contract_tests.ContractTests.test_22_routing_max_three) ... ok
+test_23_feedback_cannot_write_approved (contract_tests.ContractTests.test_23_feedback_cannot_write_approved) ... ok
+test_24_action_report_requires_revision_when_bound (contract_tests.ContractTests.test_24_action_report_requires_revision_when_bound) ... ok
+test_25_policy_declares_no_executor (contract_tests.ContractTests.test_25_policy_declares_no_executor) ... ok
+test_26_policy_declares_no_p2_to_p5 (contract_tests.ContractTests.test_26_policy_declares_no_p2_to_p5) ... ok
+test_27_policy_declares_k8s_both_conditions (contract_tests.ContractTests.test_27_policy_declares_k8s_both_conditions) ... ok
+test_28_policy_declares_limits_not_bypassed (contract_tests.ContractTests.test_28_policy_declares_limits_not_bypassed) ... ok
+test_29_schema_alone_does_not_enforce_role_semantics (contract_tests.ContractTests.test_29_schema_alone_does_not_enforce_role_semantics) ... ok
+test_30_schema_alone_does_not_prove_evidence_exists (contract_tests.ContractTests.test_30_schema_alone_does_not_prove_evidence_exists) ... ok
+test_31_new_fields_valid (contract_tests.ContractTests.test_31_new_fields_valid) ... ok
+test_32_posterior_direction_required_and_enum (contract_tests.ContractTests.test_32_posterior_direction_required_and_enum) ... ok
+test_33_candidate_ref_required_and_pattern (contract_tests.ContractTests.test_33_candidate_ref_required_and_pattern) ... ok
+test_34_local_candidate_direction (contract_tests.ContractTests.test_34_local_candidate_direction) ... ok
+test_35_direction_requires_corresponding_effect (contract_tests.ContractTests.test_35_direction_requires_corresponding_effect) ... ok
+test_36_effect_rules_positive_and_negative (contract_tests.ContractTests.test_36_effect_rules_positive_and_negative) ... ok
+test_37_evidence_effects_bounds_and_closed_items (contract_tests.ContractTests.test_37_evidence_effects_bounds_and_closed_items) ... ok
+test_38_host_owned_fields_rejected (contract_tests.ContractTests.test_38_host_owned_fields_rejected) ... ok
+test_39_request_required_fields_and_bounds (contract_tests.ContractTests.test_39_request_required_fields_and_bounds) ... ok
+test_40_reasoning_policy_and_context (contract_tests.ContractTests.test_40_reasoning_policy_and_context) ... ok
+test_41_schema_cannot_resolve_candidate_registry (contract_tests.ContractTests.test_41_schema_cannot_resolve_candidate_registry) ... ok
+test_42_schema_cannot_prove_expectations_or_delta (contract_tests.ContractTests.test_42_schema_cannot_prove_expectations_or_delta) ... ok
+test_43_counterevidence_effect_consistency (contract_tests.ContractTests.test_43_counterevidence_effect_consistency) ... ok
+test_44_legacy_nonempty_candidate_requires_new_fields (contract_tests.ContractTests.test_44_legacy_nonempty_candidate_requires_new_fields) ... ok
+test_45_legacy_nonempty_request_requires_new_fields (contract_tests.ContractTests.test_45_legacy_nonempty_request_requires_new_fields) ... ok
+test_46_empty_candidate_blocked_shape_remains_schema_compatible (contract_tests.ContractTests.test_46_empty_candidate_blocked_shape_remains_schema_compatible) ... ok
+
+----------------------------------------------------------------------
+Ran 46 tests in <elapsed>
+
+OK
+test_candidate_reference (reasoning_matrix_tests.MatrixTests.test_candidate_reference) ... ok
+test_counterevidence_consistency (reasoning_matrix_tests.MatrixTests.test_counterevidence_consistency) ... ok
+test_direction_minimum_evidence (reasoning_matrix_tests.MatrixTests.test_direction_minimum_evidence) ... ok
+test_effect_mapping (reasoning_matrix_tests.MatrixTests.test_effect_mapping) ... ok
+test_mixed_evidence_direction (reasoning_matrix_tests.MatrixTests.test_mixed_evidence_direction) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in <elapsed>
+
+OK
+test_01_enriched_member_and_lead (judgment_contract_tests.JudgmentContractTests.test_01_enriched_member_and_lead) ... ok
+test_02_questions_required_and_array_bounds (judgment_contract_tests.JudgmentContractTests.test_02_questions_required_and_array_bounds) ... ok
+test_03_question_all_fields_required_and_closed (judgment_contract_tests.JudgmentContractTests.test_03_question_all_fields_required_and_closed) ... ok
+test_04_question_id_and_enums (judgment_contract_tests.JudgmentContractTests.test_04_question_id_and_enums) ... ok
+test_05_question_answer_needs_basis (judgment_contract_tests.JudgmentContractTests.test_05_question_answer_needs_basis) ... ok
+test_06_question_target_bounds_patterns_and_uniqueness (judgment_contract_tests.JudgmentContractTests.test_06_question_target_bounds_patterns_and_uniqueness) ... ok
+test_07_reference_basis_required (judgment_contract_tests.JudgmentContractTests.test_07_reference_basis_required) ... ok
+test_08_reference_fields_required_and_closed (judgment_contract_tests.JudgmentContractTests.test_08_reference_fields_required_and_closed) ... ok
+test_09_reference_type_enum (judgment_contract_tests.JudgmentContractTests.test_09_reference_type_enum) ... ok
+test_10_reference_refs_condition_and_bounds (judgment_contract_tests.JudgmentContractTests.test_10_reference_refs_condition_and_bounds) ... ok
+test_11_no_reference_forces_both_unknown (judgment_contract_tests.JudgmentContractTests.test_11_no_reference_forces_both_unknown) ... ok
+test_12_reference_does_not_force_nonunknown_expectations (judgment_contract_tests.JudgmentContractTests.test_12_reference_does_not_force_nonunknown_expectations) ... ok
+test_13_specific_factors_required_and_bounds (judgment_contract_tests.JudgmentContractTests.test_13_specific_factors_required_and_bounds) ... ok
+test_14_specific_factor_fields_and_directions (judgment_contract_tests.JudgmentContractTests.test_14_specific_factor_fields_and_directions) ... ok
+test_15_specific_story_cannot_bypass_no_reference_gate (judgment_contract_tests.JudgmentContractTests.test_15_specific_story_cannot_bypass_no_reference_gate) ... ok
+test_16_request_discrimination_required_bounds_and_format (judgment_contract_tests.JudgmentContractTests.test_16_request_discrimination_required_bounds_and_format) ... ok
+test_17_new_objects_reject_probability_scores_and_state (judgment_contract_tests.JudgmentContractTests.test_17_new_objects_reject_probability_scores_and_state) ... ok
+test_18_new_definitions_closed_and_old_schema_valid (judgment_contract_tests.JudgmentContractTests.test_18_new_definitions_closed_and_old_schema_valid) ... ok
+test_19_judgment_policy_ownership (judgment_contract_tests.JudgmentContractTests.test_19_judgment_policy_ownership) ... ok
+test_20_reference_context_is_trusted_but_not_required (judgment_contract_tests.JudgmentContractTests.test_20_reference_context_is_trusted_but_not_required) ... ok
+test_21_231_objects_rejected_but_empty_blocked_allowed (judgment_contract_tests.JudgmentContractTests.test_21_231_objects_rejected_but_empty_blocked_allowed) ... ok
+test_22_residual_question_identity_and_parent_are_host_checks (judgment_contract_tests.JudgmentContractTests.test_22_residual_question_identity_and_parent_are_host_checks) ... ok
+test_23_residual_reference_authenticity_and_comparability (judgment_contract_tests.JudgmentContractTests.test_23_residual_reference_authenticity_and_comparability) ... ok
+test_24_residual_discrimination_subset_and_registry (judgment_contract_tests.JudgmentContractTests.test_24_residual_discrimination_subset_and_registry) ... ok
+test_25_residual_free_text_requires_semantic_gate (judgment_contract_tests.JudgmentContractTests.test_25_residual_free_text_requires_semantic_gate) ... ok
+test_26_evaluation_design_is_not_scored_results (judgment_contract_tests.JudgmentContractTests.test_26_evaluation_design_is_not_scored_results) ... ok
+test_27_behavior_acceptance_designs_not_run (judgment_contract_tests.JudgmentContractTests.test_27_behavior_acceptance_designs_not_run) ... ok
+test_28_string_and_evidence_ref_bounds (judgment_contract_tests.JudgmentContractTests.test_28_string_and_evidence_ref_bounds) ... ok
+
+----------------------------------------------------------------------
+Ran 28 tests in <elapsed>
+
+OK
+test_discrimination_shape (judgment_matrix_tests.JudgmentMatrixTests.test_discrimination_shape) ... ok
+test_question_answer_basis (judgment_matrix_tests.JudgmentMatrixTests.test_question_answer_basis) ... ok
+test_reference_expectation_effect (judgment_matrix_tests.JudgmentMatrixTests.test_reference_expectation_effect) ... ok
+test_reference_ref_count (judgment_matrix_tests.JudgmentMatrixTests.test_reference_ref_count) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in <elapsed>
+
+OK
+test_01_assignment_valid (thinking_tool_tests.ThinkingToolTests.test_01_assignment_valid) ... ok
+test_02_unknown_course_id_rejected (thinking_tool_tests.ThinkingToolTests.test_02_unknown_course_id_rejected) ... ok
+test_03_source_name_not_silently_changed (thinking_tool_tests.ThinkingToolTests.test_03_source_name_not_silently_changed) ... ok
+test_04_source_summary_not_silently_changed (thinking_tool_tests.ThinkingToolTests.test_04_source_summary_not_silently_changed) ... ok
+test_05_missing_role_rejected (thinking_tool_tests.ThinkingToolTests.test_05_missing_role_rejected) ... ok
+test_06_wrong_skill_binding_rejected (thinking_tool_tests.ThinkingToolTests.test_06_wrong_skill_binding_rejected) ... ok
+test_07_unassigned_flow_tool_rejected (thinking_tool_tests.ThinkingToolTests.test_07_unassigned_flow_tool_rejected) ... ok
+test_08_more_than_three_selected_rejected (thinking_tool_tests.ThinkingToolTests.test_08_more_than_three_selected_rejected) ... ok
+test_09_no_forced_tool_checklist (thinking_tool_tests.ThinkingToolTests.test_09_no_forced_tool_checklist) ... ok
+test_10_missing_material_rejected (thinking_tool_tests.ThinkingToolTests.test_10_missing_material_rejected) ... ok
+test_11_missing_uncertainty_fallback_rejected (thinking_tool_tests.ThinkingToolTests.test_11_missing_uncertainty_fallback_rejected) ... ok
+test_12_every_bound_cannot_be_enabled (thinking_tool_tests.ThinkingToolTests.test_12_every_bound_cannot_be_enabled) ... ok
+test_13_unknown_output_field_rejected (thinking_tool_tests.ThinkingToolTests.test_13_unknown_output_field_rejected) ... ok
+test_14_catalog_verification_not_claimed (thinking_tool_tests.ThinkingToolTests.test_14_catalog_verification_not_claimed) ... ok
+test_15_declared_runtime_gap_cannot_disappear (thinking_tool_tests.ThinkingToolTests.test_15_declared_runtime_gap_cannot_disappear) ... ok
+test_16_duplicate_assignment_rejected (thinking_tool_tests.ThinkingToolTests.test_16_duplicate_assignment_rejected) ... ok
+test_17_all_static_protection_checks (thinking_tool_tests.ThinkingToolTests.test_17_all_static_protection_checks) ... ok
+test_18_manual_keeps_four_quadrants_and_caveat (thinking_tool_tests.ThinkingToolTests.test_18_manual_keeps_four_quadrants_and_caveat) ... ok
+test_19_tools_are_not_extra_model_fields (thinking_tool_tests.ThinkingToolTests.test_19_tools_are_not_extra_model_fields) ... ok
+test_20_case_specs_have_no_fabricated_results (thinking_tool_tests.ThinkingToolTests.test_20_case_specs_have_no_fabricated_results) ... ok
+test_21_schema_cannot_verify_reasoning_quality (thinking_tool_tests.ThinkingToolTests.test_21_schema_cannot_verify_reasoning_quality) ... ok
+
+----------------------------------------------------------------------
+Ran 21 tests in <elapsed>
+
+OK
+test_knowledge_generated_from_canonical_source (test_knowledge_docs.KnowledgeDocumentationTests.test_knowledge_generated_from_canonical_source) ... ok
+test_reference_basis_documentation_examples_match_schema (test_knowledge_docs.KnowledgeDocumentationTests.test_reference_basis_documentation_examples_match_schema) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in <elapsed>
+
+OK
+test_01_entire_mode_bundle_is_consistent (test_workbuddy_native.WorkBuddyNativeTests.test_01_entire_mode_bundle_is_consistent) ... ok
+test_02_unscoped_routing_ban_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_02_unscoped_routing_ban_is_rejected) ... ok
+test_03_unscoped_delta_only_rule_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_03_unscoped_delta_only_rule_is_rejected) ... ok
+test_04_unscoped_member_stage_block_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_04_unscoped_member_stage_block_is_rejected) ... ok
+test_05_native_dispatch_contradiction_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_05_native_dispatch_contradiction_is_rejected) ... ok
+test_06_native_member_harness_requirement_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_06_native_member_harness_requirement_is_rejected) ... ok
+test_07_unclosed_scope_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_07_unclosed_scope_is_rejected) ... ok
+test_08_nested_scope_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_08_nested_scope_is_rejected) ... ok
+test_09_missing_selector_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_09_missing_selector_is_rejected) ... ok
+test_10_downgrade_bypass_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_10_downgrade_bypass_is_rejected) ... ok
+test_11_no_fake_harness_implementation (test_workbuddy_native.WorkBuddyNativeTests.test_11_no_fake_harness_implementation) ... ok
+test_12_member_recursive_dispatch_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_12_member_recursive_dispatch_is_rejected) ... ok
+test_13_request_budget_increase_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_13_request_budget_increase_is_rejected) ... ok
+test_14_global_managed_requirement_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_14_global_managed_requirement_is_rejected) ... ok
+test_15_production_tool_escalation_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_15_production_tool_escalation_is_rejected) ... ok
+test_16_additional_user_settings_are_allowed (test_workbuddy_native.WorkBuddyNativeTests.test_16_additional_user_settings_are_allowed) ... ok
+test_17_settings_missing_invalid_nonobject_wrong_lead_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_17_settings_missing_invalid_nonobject_wrong_lead_rejected) ... ok
+test_18_settings_symlink_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_18_settings_symlink_rejected) ... skipped 'SKIPPED_CAPABILITY: real filesystem symlinks unavailable on this host'
+test_19_lead_path_must_exist (test_workbuddy_native.WorkBuddyNativeTests.test_19_lead_path_must_exist) ... ok
+test_20_all_seven_members_and_skill_pairs (test_workbuddy_native.WorkBuddyNativeTests.test_20_all_seven_members_and_skill_pairs) ... ok
+test_21_no_unsupported_tools_field (test_workbuddy_native.WorkBuddyNativeTests.test_21_no_unsupported_tools_field) ... ok
+test_22_no_schema_mode_extension (test_workbuddy_native.WorkBuddyNativeTests.test_22_no_schema_mode_extension) ... ok
+test_23_oracle_no_evidence_no_numbers_boundary (test_workbuddy_native.WorkBuddyNativeTests.test_23_oracle_no_evidence_no_numbers_boundary) ... ok
+test_24_no_private_knowledge_autoload (test_workbuddy_native.WorkBuddyNativeTests.test_24_no_private_knowledge_autoload) ... ok
+test_25_historical_schema_and_tests_hashes_unchanged (test_workbuddy_native.WorkBuddyNativeTests.test_25_historical_schema_and_tests_hashes_unchanged) ... ok
+test_26_old_patch_script_not_shipped (test_workbuddy_native.WorkBuddyNativeTests.test_26_old_patch_script_not_shipped) ... ok
+
+----------------------------------------------------------------------
+Ran 26 tests in <elapsed>
+
+OK (skipped=1)

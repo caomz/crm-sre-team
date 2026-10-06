@@ -1,0 +1,153 @@
+{
+  "scope": "LOCAL_UPGRADE_AUDIT_NOT_HOST_OR_MODEL_ACCEPTANCE",
+  "date": "2026-09-21",
+  "environment": {
+    "python": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+    "PyYAML": "6.0.3",
+    "jsonschema": "4.26.0",
+    "referencing": "0.37.0"
+  },
+  "original_zip_sha256": "679518abfb96aa0a4c603f4ec51603a1bb6bc4e89599bd3cebe160fa2f284ea7",
+  "baseline": {
+    "version": "2.2.0",
+    "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
+    "result": "PASS_STATIC_ONLY",
+    "checks_total": 811,
+    "checks_passed": 811,
+    "relative_links_checked": 192,
+    "offline_contract_tests_run": 30,
+    "offline_contract_test_failures": 0,
+    "offline_contract_test_errors": 0,
+    "model_or_host_runtime_test_status": "NOT_RUN_IN_TARGET_HOST",
+    "production_access": "NONE",
+    "errors": []
+  },
+  "source_safeguards": {
+    "schema_original_constraints_preserved": true,
+    "new_if_required": true,
+    "object_schemas_closed": true,
+    "unchanged_files": [
+      "schemas/member-result.schema.json",
+      "schemas/lead-result.schema.json",
+      "schemas/feedback.schema.json",
+      "tests/fixtures/member-blocked.json",
+      "tests/fixtures/feedback-valid.json",
+      "requirements-build.txt",
+      "policy-source/roles-source.json",
+      "avatars/telecom-crm-observability-diagnosis.png",
+      "avatars/telecom-crm-change-capacity-dr.png",
+      "avatars/telecom-crm-sre-team-lead.png",
+      "avatars/telecom-crm-linux-infra.png",
+      "avatars/telecom-crm-k8s-platform.png",
+      "avatars/telecom-crm-java-runtime.png",
+      "avatars/telecom-crm-oracle-dba.png",
+      "avatars/telecom-crm-crm-business-flow.png",
+      "avatars/team.png"
+    ],
+    "original_tests_ast_unchanged": 30,
+    "current_test_methods": 43,
+    "metadata_only_version_changed": true,
+    "existing_policy_changes_limited_to_version_and_context": true,
+    "settings_not_created": true
+  },
+  "independent_candidate_matrix": {
+    "cases": 1024,
+    "expected_rejections": 739,
+    "mismatches": 0,
+    "official_validator": "jsonschema.Draft202012Validator",
+    "old_output_shapes_rejected": true
+  },
+  "runtime_scan": {
+    "markdown_files": 209,
+    "findings": [],
+    "rules": [
+      "fence",
+      "sql_statement",
+      "executable_line",
+      "numeric_probability",
+      "unrendered_common"
+    ],
+    "scope": "Finite static pattern checks; not an arbitrary-output safety proof",
+    "generated_runtime_old_current_version_absent": true,
+    "ooda_reference_copies": 8
+  },
+  "original_files_unchanged": true,
+  "file_set_counts": {
+    "original": 374,
+    "release_files": 392,
+    "added": 18,
+    "modified": 241,
+    "deleted": 0,
+    "unchanged": 133
+  },
+  "rebuild": {
+    "scope": "DETERMINISTIC_LOCAL_REBUILD",
+    "pass": true,
+    "checked_files": 9,
+    "hashes": {
+      "prompt-bundles.lock": "86b9b83fe2976d6689f8484ba4ebc1b11555a6a8aee0f2a380b2c58447408b6e",
+      "individual-packages/change-capacity-dr/skill.zip": "d7eba773f11b646d2b81273544a260dba106be50dea6fe8375bcf61cfd9b80e6",
+      "individual-packages/crm-business-flow/skill.zip": "d60a1edc02c97a794addf6e226bf727c8c1c8b32f775ee5b1b3b58124b6ca2f6",
+      "individual-packages/java-runtime/skill.zip": "fa6c154dd2ca88c3a56f55f599faa9bc8cb70ce14aca468115a3e57b28cac035",
+      "individual-packages/k8s-platform/skill.zip": "9d1d5c7edfb0fc8395395cd0691d86cdd13e9720f8a47c6d03893c59891dbdac",
+      "individual-packages/linux-infra/skill.zip": "7361a81c895475bd47b1feda62d0427a665e3cbd27ee2eb64bede8e7d22d3e45",
+      "individual-packages/observability-diagnosis/skill.zip": "b1f7327439165bfff91858e6adaf7d43f78ab14c25b069303f95a6ab9efddf49",
+      "individual-packages/oracle-dba/skill.zip": "61711d3202939645f60461682ba1a79a6ec1f3f431d6c3496e5907e6f4956a68",
+      "individual-packages/stability-director/skill.zip": "b2c1d1192ed51f6b9a199a22f42728b06a7a282ad1c5268354cc8e5371ab0827"
+    }
+  },
+  "negative_test": {
+    "scope": "STATIC_VALIDATOR_FAULT_INJECTION_NOT_MODEL_TEST",
+    "passed": true,
+    "mutation": "Append inert marker to a generated evidence-protocol replica in a temporary copy",
+    "expected": "Validator rejects reference/lock/archive drift",
+    "detected_errors": [
+      "reference_copy:oracle-dba/evidence-protocol.md: ",
+      "skill_lock_hashes:oracle-dba: ",
+      "individual_zip_content:oracle-dba: ",
+      "root_lock_hashes: "
+    ],
+    "exit_code": 1,
+    "validator_result": "FAIL"
+  },
+  "patch": {
+    "scope": "PATCH_APPLICABILITY_ONLY",
+    "pass": true,
+    "changed_agent_prompts": 8,
+    "changed_skill_entrypoints": 8,
+    "original_version": "2.2.0",
+    "revised_version": "2.3.0",
+    "applied_to_original": false,
+    "forward": {
+      "exit_code": 0,
+      "fuzz_or_offset": false,
+      "checked_files": 16
+    },
+    "reverse": {
+      "exit_code": 0,
+      "fuzz_or_offset": false,
+      "checked_files": 16
+    }
+  },
+  "platform_io_simulation": {
+    "scope": "SIMULATED_PATHLIB_DEFAULT_GBK_AND_CRLF_NOT_WINDOWS_NATIVE",
+    "exit_code": 0,
+    "build_and_validator_pass": true,
+    "tracked_hashes_unchanged": true,
+    "tracked_files": 9
+  },
+  "final_validation": {
+    "version": "2.3.0",
+    "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
+    "result": "PASS_STATIC_ONLY",
+    "checks_total": 1353,
+    "checks_passed": 1353,
+    "relative_links_checked": 200,
+    "offline_contract_tests_run": 43,
+    "offline_contract_test_failures": 0,
+    "offline_contract_test_errors": 0,
+    "model_or_host_runtime_test_status": "NOT_RUN_IN_TARGET_HOST",
+    "production_access": "NONE",
+    "errors": []
+  }
+}

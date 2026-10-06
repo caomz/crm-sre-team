@@ -1,0 +1,18 @@
+{
+  "incident_id": "I001",
+  "client_message_id": "MSG-001",
+  "feedback_type": "RECOVERY_REPORT",
+  "reported_at": "2026-09-21T10:00:00+09:00",
+  "event_time": null,
+  "action_id": null,
+  "action_revision": null,
+  "evidence_refs": [],
+  "request_ids": [],
+  "structured_observations": [
+    {
+      "field": "recovery",
+      "value": "用户报告恢复，尚未取得验证材料"
+    }
+  ],
+  "source_attribution": "合成用户报告"
+}

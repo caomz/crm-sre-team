@@ -1,0 +1,83 @@
+{
+  "format": "manual-configuration-guide-not-workbuddy-import-schema",
+  "version": "2.6.0-rc3.workbuddy.2",
+  "mode": "USER_PROVIDED_EVIDENCE_NO_PRODUCTION_ACCESS",
+  "purpose": "人工配置参考，不是官方导入 Schema；托管模式需独立 Harness，实现情况见 policies/runtime-contract.json",
+  "production_connections": "Do not configure; enforce in host permissions, not only prompts",
+  "lead_agent": "telecom-crm-sre-team-lead",
+  "members": [
+    {
+      "skill_id": "stability-director",
+      "agent_name": "telecom-crm-sre-team-lead",
+      "display_name": "稳定性总指挥",
+      "role": "lead",
+      "agent_file": "agents/telecom-crm-sre-team-lead.md",
+      "skill_directory": "skills/stability-director",
+      "individual_package": "individual-packages/stability-director/skill.zip"
+    },
+    {
+      "skill_id": "crm-business-flow",
+      "agent_name": "telecom-crm-crm-business-flow",
+      "display_name": "CRM业务链路专家",
+      "role": "member",
+      "agent_file": "agents/telecom-crm-crm-business-flow.md",
+      "skill_directory": "skills/crm-business-flow",
+      "individual_package": "individual-packages/crm-business-flow/skill.zip"
+    },
+    {
+      "skill_id": "linux-infra",
+      "agent_name": "telecom-crm-linux-infra",
+      "display_name": "Linux基础设施专家",
+      "role": "member",
+      "agent_file": "agents/telecom-crm-linux-infra.md",
+      "skill_directory": "skills/linux-infra",
+      "individual_package": "individual-packages/linux-infra/skill.zip"
+    },
+    {
+      "skill_id": "oracle-dba",
+      "agent_name": "telecom-crm-oracle-dba",
+      "display_name": "Oracle数据库专家",
+      "role": "member",
+      "agent_file": "agents/telecom-crm-oracle-dba.md",
+      "skill_directory": "skills/oracle-dba",
+      "individual_package": "individual-packages/oracle-dba/skill.zip"
+    },
+    {
+      "skill_id": "java-runtime",
+      "agent_name": "telecom-crm-java-runtime",
+      "display_name": "Java应用与JVM专家",
+      "role": "member",
+      "agent_file": "agents/telecom-crm-java-runtime.md",
+      "skill_directory": "skills/java-runtime",
+      "individual_package": "individual-packages/java-runtime/skill.zip"
+    },
+    {
+      "skill_id": "observability-diagnosis",
+      "agent_name": "telecom-crm-observability-diagnosis",
+      "display_name": "证据与可观测性专家",
+      "role": "member",
+      "agent_file": "agents/telecom-crm-observability-diagnosis.md",
+      "skill_directory": "skills/observability-diagnosis",
+      "individual_package": "individual-packages/observability-diagnosis/skill.zip"
+    },
+    {
+      "skill_id": "change-capacity-dr",
+      "agent_name": "telecom-crm-change-capacity-dr",
+      "display_name": "变更容量容灾专家",
+      "role": "member",
+      "agent_file": "agents/telecom-crm-change-capacity-dr.md",
+      "skill_directory": "skills/change-capacity-dr",
+      "individual_package": "individual-packages/change-capacity-dr/skill.zip"
+    },
+    {
+      "skill_id": "k8s-platform",
+      "agent_name": "telecom-crm-k8s-platform",
+      "display_name": "K8s辅助专家",
+      "role": "member",
+      "agent_file": "agents/telecom-crm-k8s-platform.md",
+      "skill_directory": "skills/k8s-platform",
+      "individual_package": "individual-packages/k8s-platform/skill.zip"
+    }
+  ],
+  "runtime_status": "NOT_INSTALLED_NOT_TESTED_HARNESS_NOT_IMPLEMENTED"
+}

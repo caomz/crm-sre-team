@@ -1,0 +1,82 @@
+{
+  "stability-director": {
+    "agent": "telecom-crm-sre-team-lead",
+    "title": "稳定性总指挥",
+    "domain": "coordination",
+    "runbook": null,
+    "interface": {
+      "display_name": "稳定性总指挥（离线取证）",
+      "short_description": "基于用户提供的证据分析，不接入或操作生产"
+    }
+  },
+  "crm-business-flow": {
+    "agent": "telecom-crm-crm-business-flow",
+    "title": "CRM业务链路专家",
+    "domain": "business",
+    "runbook": "telecom-crm-knowledge.md",
+    "interface": {
+      "display_name": "CRM业务链路专家（离线取证）",
+      "short_description": "基于用户提供的证据分析，不接入或操作生产"
+    }
+  },
+  "linux-infra": {
+    "agent": "telecom-crm-linux-infra",
+    "title": "Linux基础设施专家",
+    "domain": "linux",
+    "runbook": "linux-runbook.md",
+    "interface": {
+      "display_name": "Linux基础设施专家（离线取证）",
+      "short_description": "基于用户提供的证据分析，不接入或操作生产"
+    }
+  },
+  "oracle-dba": {
+    "agent": "telecom-crm-oracle-dba",
+    "title": "Oracle数据库专家",
+    "domain": "oracle",
+    "runbook": "oracle-runbook.md",
+    "interface": {
+      "display_name": "Oracle数据库专家（离线取证）",
+      "short_description": "基于用户提供的证据分析，不接入或操作生产"
+    }
+  },
+  "java-runtime": {
+    "agent": "telecom-crm-java-runtime",
+    "title": "Java应用与JVM专家",
+    "domain": "java",
+    "runbook": "app-jvm-runbook.md",
+    "interface": {
+      "display_name": "Java应用与JVM专家（离线取证）",
+      "short_description": "基于用户提供的证据分析，不接入或操作生产"
+    }
+  },
+  "observability-diagnosis": {
+    "agent": "telecom-crm-observability-diagnosis",
+    "title": "证据与可观测性专家",
+    "domain": "observability",
+    "runbook": "observability-runbook.md",
+    "interface": {
+      "display_name": "证据与可观测性专家（离线取证）",
+      "short_description": "基于用户提供的证据分析，不接入或操作生产"
+    }
+  },
+  "change-capacity-dr": {
+    "agent": "telecom-crm-change-capacity-dr",
+    "title": "变更容量容灾专家",
+    "domain": "change",
+    "runbook": "change-capacity-dr.md",
+    "interface": {
+      "display_name": "变更容量容灾专家（离线取证）",
+      "short_description": "基于用户提供的证据分析，不接入或操作生产"
+    }
+  },
+  "k8s-platform": {
+    "agent": "telecom-crm-k8s-platform",
+    "title": "K8s按需辅助专家",
+    "domain": "k8s",
+    "runbook": "k8s-platform-runbook.md",
+    "interface": {
+      "display_name": "K8s辅助专家（离线取证）",
+      "short_description": "基于用户提供的证据分析，不接入或操作生产"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "version": "2.7.0",
+  "scope": "EXPLICIT_OFFLINE_CHANGE_REVIEW_NOT_SOURCE_AUTHENTICITY",
+  "immutable_files": {
+    "policy-source/roles-source.json": {
+      "baseline_sha256": "12d764aaf772b0aeda55b9f0ce5ffd908709702e49bf105541f85c9743013c16",
+      "revised_sha256": "4220cfb96e2dd7ac4c027ce8f7fd41482a43a750fe81b086498b2fd6888862bd",
+      "reason": "Canonicalize existing Skill interface metadata; all Agent/Skill IDs preserved."
+    },
+    "tools/check_determinism.py": {
+      "baseline_sha256": "d95fa30df8a0244b8bfaeb8da723cd678c5a09cb3d53d8e05894e54532ca425f",
+      "revised_sha256": "169a5951b8e24c70fac4e2c87519f681b53c68e47c61f6dee756ec14fa81435e",
+      "reason": "Exclude local cache, Git, venv, dist and report directories from isolated comparisons."
+    }
+  },
+  "version_only_json": {
+    "policies/runtime-contract.json": {
+      "baseline_sha256": "2ab91101b41d9ecdf0a1106816a030911210c2b704aaf786e4ed09870efe5fad",
+      "revised_sha256": "0eff58f628a8dd3ce00bdec57ecd94c6053297f75ec01bfc894e833c8ef39fce",
+      "reason": "Add scoped read_only_boundary: read-only query generation and user-named public reads for non-managed entries; production read still NOT_IMPLEMENTED and production write still requires separate change approval."
+    },
+    ".codebuddy-plugin/plugin.json": {
+      "baseline_sha256": "46b33a4bc5e3865781e5b854df89fe8a593d5f158162c897a7e5dd55444b1acb",
+      "revised_sha256": "3b2f627d581f853b5e89406889798b6a271831b51e5f4d7b2782554fe4d8f264",
+      "reason": "Publish the truthful read-only boundary in init/quick prompts; production writes still get a human review card only."
+    }
+  }
+}

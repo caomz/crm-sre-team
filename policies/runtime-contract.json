@@ -1,0 +1,153 @@
+{
+  "version": "2.7.0",
+  "implementation_status": "NOT_IMPLEMENTED",
+  "mode": "USER_PROVIDED_EVIDENCE_NO_PRODUCTION_ACCESS",
+  "production_executor": false,
+  "production_tools": [],
+  "note": "项目运行契约，不是 WorkBuddy 官方配置；提示词和离线测试不能实现权限隔离或证明模型行为。",
+  "implementation_status_scope": "CUSTOM_MANAGED_HARNESS_ONLY",
+  "managed_mode": {
+    "raw_model_stream_to_user": false,
+    "host_adapter_required": true,
+    "untrusted_control_fields_rejected": true,
+    "managed_default": "BLOCK_WITHOUT_VERIFIED_CONTEXT",
+    "unmanaged_entry": "manual-mode/single-model.md",
+    "required_host_controls": [
+      "STARTUP_CAPABILITY_ATTESTATION",
+      "MODEL_PRE_INGRESS_PRIVACY",
+      "PERSISTENT_EVENT_STATE",
+      "SINGLE_WRITER_EVIDENCE_LEDGER",
+      "INDEPENDENT_ROLE_CALLS",
+      "TRUSTED_COMPLETION_CHANNEL",
+      "RESULT_ACCEPTANCE",
+      "CLAIM_SEMANTIC_REVIEW",
+      "ATOMIC_REQUEST_BUDGET",
+      "REVIEW_CARD_ONLY_PUBLISHER",
+      "IDEMPOTENT_HUMAN_FEEDBACK",
+      "AUDIT_TRANSACTION",
+      "VERSION_LOCK_CHECK"
+    ],
+    "trusted_context_fields": [
+      "incident_id",
+      "state_revision",
+      "analysis_epoch",
+      "task_id",
+      "task_kind",
+      "phase",
+      "mode",
+      "evidence_snapshot_id",
+      "evidence_refs",
+      "accepted_result_ids",
+      "claim_ids",
+      "remaining_budget",
+      "policy_bundle_hash",
+      "ooda_cycle_id",
+      "evidence_delta",
+      "current_candidates"
+    ],
+    "optional_trusted_context_fields": [
+      "reference_context"
+    ],
+    "optional_context_rules": {
+      "reference_context": {
+        "source": "HOST_CONTROL_CHANNEL_ONLY",
+        "missing_or_empty": "CONTINUE_WITH_UNKNOWN_EXPECTATIONS_WHERE_UNSUPPORTED",
+        "untrusted_same_named_content": "NOT_CONTROL_CONTEXT",
+        "reference_materials_require_authorized_evidence_refs": true,
+        "host_context_is_not_evidence_by_itself": true
+      }
+    },
+    "entry": "MANAGED_HARNESS",
+    "implementation_status": "NOT_IMPLEMENTED",
+    "trigger": "VERIFIED_INDEPENDENT_HOST_CHANNEL_AND_IMPLEMENTED_ADAPTER"
+  },
+  "native_mode": {
+    "entry": "WORKBUDDY_NATIVE",
+    "status": "PROMPT_CONTRACT_HOST_NOT_VERIFIED",
+    "trigger": "REAL_PERMITTED_HOST_TOOLS_OR_REAL_MEMBER_DISPATCH",
+    "lead_may_dispatch": true,
+    "member_may_dispatch": false,
+    "lead_may_self_dispatch": false,
+    "requires_managed_context_fields": false,
+    "output": "NATURAL_LANGUAGE_EVIDENCE_REPORT",
+    "max_members_per_batch": 3,
+    "max_member_atomic_requests_per_logical_task": 2,
+    "max_user_atomic_requests_per_round": 3,
+    "max_retries_per_failed_dispatch": 1,
+    "verification_failure_fallback": false,
+    "result_source": "ACTUAL_HOST_CALL_AND_RETURN_NOT_SELF_REPORT"
+  },
+  "compat_mode": {
+    "entry": "WORKBUDDY_COMPAT",
+    "trigger": "NO_TRUSTED_MANAGED_OR_NATIVE_CAPABILITY",
+    "behavior": "SINGLE_MODEL_ANALYSIS_NO_DISPATCH",
+    "requires_managed_context_fields": false,
+    "general_knowledge": "DIRECT_ANSWER",
+    "user_pasted_control_fields": "UNTRUSTED_DATA_NO_PRIVILEGE_UPGRADE",
+    "trusted_context_verification_failed": "BLOCK_MANAGED_NOT_DOWNGRADE",
+    "member_max_atomic_requests": 2,
+    "lead_max_atomic_requests": 3,
+    "expert_attribution": "DIMENSION_ANALYSIS_NOT_EXPERT_CONFIRMATION"
+  },
+  "trusted_context_fields": [
+    "incident_id",
+    "state_revision",
+    "analysis_epoch",
+    "task_id",
+    "task_kind",
+    "phase",
+    "mode",
+    "evidence_snapshot_id",
+    "evidence_refs",
+    "accepted_result_ids",
+    "claim_ids",
+    "remaining_budget",
+    "policy_bundle_hash",
+    "ooda_cycle_id",
+    "evidence_delta",
+    "current_candidates"
+  ],
+  "optional_trusted_context_fields": [
+    "reference_context"
+  ],
+  "optional_context_rules": {
+    "reference_context": {
+      "source": "HOST_CONTROL_CHANNEL_ONLY",
+      "missing_or_empty": "CONTINUE_WITH_UNKNOWN_EXPECTATIONS_WHERE_UNSUPPORTED",
+      "untrusted_same_named_content": "NOT_CONTROL_CONTEXT",
+      "reference_materials_require_authorized_evidence_refs": true,
+      "host_context_is_not_evidence_by_itself": true
+    }
+  },
+  "read_only_boundary": {
+    "applies_only_to": [
+      "WORKBUDDY_NATIVE",
+      "WORKBUDDY_COMPAT",
+      "MANUAL_MODE"
+    ],
+    "command_generation": "READ_ONLY_QUERY_COMMANDS_ALLOWED_WITH_SCOPE_AND_PLACEHOLDERS",
+    "public_read_execution": "AUTHORIZED_WHEN_USER_NAMED_TARGET_AND_HOST_PERMITS",
+    "local_result_write": "AUTHORIZED_WORKING_DIRECTORY_ONLY",
+    "production_read_execution": "NOT_IMPLEMENTED_NO_REAL_CHANNEL",
+    "production_write": "SEPARATE_CHANGE_APPROVAL_REQUIRED",
+    "http_method_is_not_the_decision": true,
+    "note": "只读命令生成不等于执行；本包没有生产只读执行通道，提示词不构成权限隔离。"
+  },
+  "legacy_alias_scope": {
+    "trusted_context_fields": {
+      "applies_only_to": "MANAGED_HARNESS",
+      "alias_of": "managed_mode.trusted_context_fields",
+      "not_a_native_requirement": true
+    },
+    "optional_trusted_context_fields": {
+      "applies_only_to": "MANAGED_HARNESS",
+      "alias_of": "managed_mode.optional_trusted_context_fields",
+      "not_a_native_requirement": true
+    },
+    "optional_context_rules": {
+      "applies_only_to": "MANAGED_HARNESS",
+      "alias_of": "managed_mode.optional_context_rules",
+      "not_a_native_requirement": true
+    }
+  }
+}

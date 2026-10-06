@@ -1,0 +1,150 @@
+{
+  "task_id": "TASK-001",
+  "status": "ok",
+  "blocked_reasons": [],
+  "evidence_refs": [
+    {
+      "evidence_id": "E001",
+      "revision": 1,
+      "locator": "消息 1，脱敏摘要第 1 段"
+    }
+  ],
+  "facts": [
+    {
+      "claim_type": "accepted_claim_summary",
+      "domain": "coordination",
+      "statement": "合成线程材料显示 JDBC 等待；数据库机制尚未核验。",
+      "scope": {
+        "object_alias": "APP_A",
+        "event_window": "合成窗口 W1",
+        "timezone": null,
+        "limitations": "合成测试材料，非现场观测"
+      },
+      "evidence_refs": [
+        {
+          "evidence_id": "E001",
+          "revision": 1,
+          "locator": "消息 1，脱敏摘要第 1 段"
+        }
+      ],
+      "source_kind": "ACCEPTED_RESULT",
+      "basis_claim_ids": [
+        "CLAIM-001"
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "domain": "java",
+      "hypothesis": "连接长期占用可能导致应用排队。",
+      "scope": {
+        "object_alias": "APP_A",
+        "event_window": "合成窗口 W1",
+        "timezone": null,
+        "limitations": "合成测试材料，非现场观测"
+      },
+      "support_refs": [
+        {
+          "evidence_id": "E001",
+          "revision": 1,
+          "locator": "消息 1，脱敏摘要第 1 段"
+        }
+      ],
+      "counterevidence_refs": [],
+      "counterevidence_status": "NOT_OBTAINED",
+      "falsification_condition": "若同窗连接借出时长正常且队列在其他位置，当前解释应下调。",
+      "critical_alternatives": [
+        "下游响应延迟，尚待对应域验证。"
+      ],
+      "next_validation": "比较同窗等待位置与借出时长是否一致，不新增隐藏取证请求。",
+      "ordinal_rank": 1,
+      "rank_reason": "合成材料只支持应用等待这一有限解释。",
+      "basis_claim_ids": [
+        "CLAIM-002"
+      ],
+      "candidate_ref": "H01",
+      "posterior_direction": "UP",
+      "evidence_effects": [
+        {
+          "evidence_ref": {
+            "evidence_id": "E001",
+            "revision": 1,
+            "locator": "消息 1，脱敏摘要第 1 段"
+          },
+          "effect": "SUPPORTS",
+          "expected_if_true": "COMMON",
+          "expected_if_false": "UNCOMMON",
+          "reason": "合成理由",
+          "reference_basis": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "basis_refs": [
+              {
+                "evidence_id": "E001",
+                "revision": 1,
+                "locator": "消息 1，脱敏摘要第 1 段"
+              }
+            ],
+            "comparison_scope": {
+              "object_alias": "APP_A",
+              "event_window": "合成窗口 W1",
+              "timezone": null,
+              "limitations": "合成测试材料，非现场观测"
+            },
+            "baseline_relation": "合成字段示例，假设 E001 同时包含允许比较的摘要；仅供 Schema 测试，不是实际基线或机制证据。",
+            "limitations": "合成构造；预期标注的真实性和适用性未由本测试验证。"
+          },
+          "case_specific_factors": []
+        }
+      ],
+      "judgment_questions": [
+        {
+          "question_ref": "Q01",
+          "question": "合成窗口内连接借出时长的变化是否早于应用排队？",
+          "target_candidate_refs": [
+            "H01"
+          ],
+          "answer_type": "ORDERING",
+          "observable": "合成 APP_A 的同窗连接借出时长与排队起点，按统一时区比对先后。",
+          "decision_relevance": "HIGH",
+          "current_answer": "UNKNOWN",
+          "basis_refs": []
+        }
+      ]
+    }
+  ],
+  "pending": [],
+  "excluded": [],
+  "request_proposals": [
+    {
+      "artifact_kind": "existing_pool_summary",
+      "purpose": "区分连接长期占用与其他排队位置",
+      "related_evidence_refs": [
+        {
+          "evidence_id": "E001",
+          "revision": 1,
+          "locator": "消息 1，脱敏摘要第 1 段"
+        }
+      ],
+      "object_alias": "APP_A",
+      "event_window": "合成窗口 W1",
+      "is_new_collection": false,
+      "risk_floor": "R0",
+      "content_limit": "一个已有摘要",
+      "stop_conditions": "超出允许分享范围时不提供",
+      "redaction_requirements": "仅匿名对象，不含客户标识",
+      "alternative_material": "允许分享的人工计数摘要",
+      "information_gain": "核对等待持续时间与连接占用是否同窗",
+      "target_candidate_refs": [
+        "H01"
+      ],
+      "if_positive": "合成：若同窗借出时长异常且先于排队，增加对 H01 的支持。",
+      "if_negative": "合成：若借出时长正常而其他等待先出现，削弱 H01 并检查替代解释。",
+      "discriminates_between": [
+        "H01"
+      ]
+    }
+  ],
+  "handoff_proposals": [],
+  "review_needs": [],
+  "routing_proposals": []
+}

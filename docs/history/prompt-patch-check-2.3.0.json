@@ -1,0 +1,19 @@
+{
+  "scope": "PATCH_APPLICABILITY_ONLY",
+  "pass": true,
+  "changed_agent_prompts": 8,
+  "changed_skill_entrypoints": 8,
+  "original_version": "2.2.0",
+  "revised_version": "2.3.0",
+  "applied_to_original": false,
+  "forward": {
+    "exit_code": 0,
+    "fuzz_or_offset": false,
+    "checked_files": 16
+  },
+  "reverse": {
+    "exit_code": 0,
+    "fuzz_or_offset": false,
+    "checked_files": 16
+  }
+}

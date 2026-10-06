@@ -1,0 +1,1265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:crm-sre:schemas:common",
+  "title": "共享结构；不承担身份、事实或风险语义验收",
+  "$defs": {
+    "evidence_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^E[0-9]{3,}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        }
+      },
+      "required": [
+        "evidence_id",
+        "revision",
+        "locator"
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "object_alias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "event_window": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "timezone": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "limitations": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 1500
+        }
+      },
+      "required": [
+        "object_alias",
+        "event_window",
+        "timezone",
+        "limitations"
+      ]
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "claim_type": {
+          "type": "string",
+          "enum": [
+            "accepted_claim_summary",
+            "association_refutation",
+            "business_mechanism_candidate",
+            "business_observation",
+            "business_verification",
+            "capacity_candidate",
+            "change_observation",
+            "conflict_summary",
+            "database_mechanism_candidate",
+            "database_observation",
+            "database_verification",
+            "host_mechanism_candidate",
+            "host_observation",
+            "host_verification",
+            "impact_observation",
+            "metric_semantics",
+            "platform_mechanism_candidate",
+            "platform_observation",
+            "platform_verification",
+            "restore_readiness",
+            "review_material_status",
+            "runtime_mechanism_candidate",
+            "runtime_observation",
+            "runtime_verification",
+            "source_quality",
+            "timeline_observation"
+          ]
+        },
+        "domain": {
+          "type": "string",
+          "enum": [
+            "coordination",
+            "business",
+            "linux",
+            "oracle",
+            "java",
+            "observability",
+            "change",
+            "k8s"
+          ]
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "scope": {
+          "$ref": "urn:crm-sre:schemas:common#/$defs/scope"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 1,
+          "maxItems": 30
+        },
+        "source_kind": {
+          "type": "string",
+          "enum": [
+            "DIRECT_MATERIAL",
+            "USER_REPORT",
+            "HUMAN_SUMMARY",
+            "ACCEPTED_RESULT"
+          ]
+        },
+        "basis_claim_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "minItems": 0,
+          "maxItems": 30
+        }
+      },
+      "required": [
+        "claim_type",
+        "domain",
+        "statement",
+        "scope",
+        "evidence_refs",
+        "source_kind",
+        "basis_claim_ids"
+      ]
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "coordination",
+            "business",
+            "linux",
+            "oracle",
+            "java",
+            "observability",
+            "change",
+            "k8s"
+          ]
+        },
+        "hypothesis": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "scope": {
+          "$ref": "urn:crm-sre:schemas:common#/$defs/scope"
+        },
+        "support_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 1,
+          "maxItems": 30
+        },
+        "counterevidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 0,
+          "maxItems": 30
+        },
+        "counterevidence_status": {
+          "type": "string",
+          "enum": [
+            "PRESENT",
+            "NOT_OBTAINED"
+          ]
+        },
+        "falsification_condition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "critical_alternatives": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "next_validation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "ordinal_rank": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "rank_reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "basis_claim_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "minItems": 0,
+          "maxItems": 30
+        },
+        "candidate_ref": {
+          "type": "string",
+          "pattern": "^[HL][0-9]{2,}$"
+        },
+        "posterior_direction": {
+          "type": "string",
+          "enum": [
+            "UP",
+            "DOWN",
+            "UNCHANGED",
+            "INDETERMINATE"
+          ]
+        },
+        "evidence_effects": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_effect"
+          }
+        },
+        "judgment_questions": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/judgment_question"
+          },
+          "minItems": 1,
+          "maxItems": 6
+        }
+      },
+      "required": [
+        "domain",
+        "hypothesis",
+        "scope",
+        "support_refs",
+        "counterevidence_refs",
+        "counterevidence_status",
+        "falsification_condition",
+        "critical_alternatives",
+        "next_validation",
+        "ordinal_rank",
+        "rank_reason",
+        "basis_claim_ids",
+        "candidate_ref",
+        "posterior_direction",
+        "evidence_effects",
+        "judgment_questions"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "counterevidence_status": {
+                "const": "PRESENT"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "counterevidence_refs": {
+                "minItems": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "counterevidence_refs": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "candidate_ref"
+            ],
+            "properties": {
+              "candidate_ref": {
+                "pattern": "^L"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "posterior_direction": {
+                "const": "INDETERMINATE"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "posterior_direction"
+            ],
+            "properties": {
+              "posterior_direction": {
+                "const": "UP"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_effects": {
+                "contains": {
+                  "required": [
+                    "effect"
+                  ],
+                  "properties": {
+                    "effect": {
+                      "enum": [
+                        "SUPPORTS",
+                        "STRONGLY_SUPPORTS"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "posterior_direction"
+            ],
+            "properties": {
+              "posterior_direction": {
+                "const": "DOWN"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_effects": {
+                "contains": {
+                  "required": [
+                    "effect"
+                  ],
+                  "properties": {
+                    "effect": {
+                      "enum": [
+                        "WEAKENS",
+                        "STRONGLY_WEAKENS"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "counterevidence_status"
+            ],
+            "properties": {
+              "counterevidence_status": {
+                "const": "PRESENT"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_effects": {
+                "contains": {
+                  "required": [
+                    "effect"
+                  ],
+                  "properties": {
+                    "effect": {
+                      "enum": [
+                        "WEAKENS",
+                        "STRONGLY_WEAKENS"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "counterevidence_status"
+            ],
+            "properties": {
+              "counterevidence_status": {
+                "const": "NOT_OBTAINED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_effects": {
+                "not": {
+                  "contains": {
+                    "required": [
+                      "effect"
+                    ],
+                    "properties": {
+                      "effect": {
+                        "enum": [
+                          "WEAKENS",
+                          "STRONGLY_WEAKENS"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "pending": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 0,
+          "maxItems": 30
+        },
+        "limitation_kind": {
+          "type": "string",
+          "enum": [
+            "MISSING",
+            "UNREADABLE",
+            "UNAUTHORIZED",
+            "VERSION_UNKNOWN",
+            "CONFLICT",
+            "UNVERIFIED_REPORT",
+            "SEMANTIC_REVIEW",
+            "RUNTIME_UNAVAILABLE"
+          ]
+        }
+      },
+      "required": [
+        "description",
+        "evidence_refs",
+        "limitation_kind"
+      ]
+    },
+    "excluded": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hypothesis": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "domain": {
+          "type": "string",
+          "enum": [
+            "coordination",
+            "business",
+            "linux",
+            "oracle",
+            "java",
+            "observability",
+            "change",
+            "k8s"
+          ]
+        },
+        "scope": {
+          "$ref": "urn:crm-sre:schemas:common#/$defs/scope"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 1,
+          "maxItems": 30
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "cannot_exclude": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "basis_claim_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "minItems": 0,
+          "maxItems": 30
+        }
+      },
+      "required": [
+        "hypothesis",
+        "domain",
+        "scope",
+        "evidence_refs",
+        "reason",
+        "cannot_exclude",
+        "basis_claim_ids"
+      ]
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "related_evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 0,
+          "maxItems": 30
+        },
+        "object_alias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "event_window": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "is_new_collection": {
+          "type": "boolean"
+        },
+        "risk_floor": {
+          "type": "string",
+          "enum": [
+            "R0",
+            "R1",
+            "R2",
+            "R3",
+            "UNKNOWN"
+          ]
+        },
+        "content_limit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "stop_conditions": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "redaction_requirements": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "alternative_material": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "information_gain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "target_candidate_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "string",
+            "pattern": "^[HL][0-9]{2,}$"
+          }
+        },
+        "if_positive": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "if_negative": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "discriminates_between": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[HL][0-9]{2,}$"
+          },
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "artifact_kind",
+        "purpose",
+        "related_evidence_refs",
+        "object_alias",
+        "event_window",
+        "is_new_collection",
+        "risk_floor",
+        "content_limit",
+        "stop_conditions",
+        "redaction_requirements",
+        "alternative_material",
+        "information_gain",
+        "target_candidate_refs",
+        "if_positive",
+        "if_negative",
+        "discriminates_between"
+      ]
+    },
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "target_domain": {
+          "type": "string",
+          "enum": [
+            "business",
+            "linux",
+            "oracle",
+            "java",
+            "observability",
+            "change",
+            "k8s"
+          ]
+        },
+        "observed_cross_domain_phenomenon": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 0,
+          "maxItems": 30
+        },
+        "reason_for_handoff": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "target_domain",
+        "observed_cross_domain_phenomenon",
+        "evidence_refs",
+        "reason_for_handoff"
+      ]
+    },
+    "review_need": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "catalog_key": {
+          "type": "string",
+          "enum": [
+            "existing_material",
+            "bounded_readonly_collection",
+            "diagnostic_overhead",
+            "service_restart_review",
+            "rollback_review",
+            "business_compensation_review",
+            "capacity_change_review",
+            "database_change_review",
+            "disaster_recovery_review",
+            "UNKNOWN"
+          ]
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 0,
+          "maxItems": 30
+        },
+        "missing_prerequisites": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "minItems": 0,
+          "maxItems": 20
+        }
+      },
+      "required": [
+        "catalog_key",
+        "purpose",
+        "evidence_refs",
+        "missing_prerequisites"
+      ]
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "enum": [
+            "telecom-crm-crm-business-flow",
+            "telecom-crm-linux-infra",
+            "telecom-crm-oracle-dba",
+            "telecom-crm-java-runtime",
+            "telecom-crm-observability-diagnosis",
+            "telecom-crm-change-capacity-dr",
+            "telecom-crm-k8s-platform"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "pointing_evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 0,
+          "maxItems": 30
+        },
+        "explicit_narrow_task": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      },
+      "required": [
+        "agent_id",
+        "reason",
+        "pointing_evidence_refs",
+        "explicit_narrow_task"
+      ]
+    },
+    "evidence_effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "evidence_ref": {
+          "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+        },
+        "effect": {
+          "type": "string",
+          "enum": [
+            "STRONGLY_SUPPORTS",
+            "SUPPORTS",
+            "NEUTRAL",
+            "WEAKENS",
+            "STRONGLY_WEAKENS",
+            "UNKNOWN"
+          ]
+        },
+        "expected_if_true": {
+          "type": "string",
+          "enum": [
+            "COMMON",
+            "UNCOMMON",
+            "UNKNOWN"
+          ]
+        },
+        "expected_if_false": {
+          "type": "string",
+          "enum": [
+            "COMMON",
+            "UNCOMMON",
+            "UNKNOWN"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        "reference_basis": {
+          "$ref": "urn:crm-sre:schemas:common#/$defs/reference_basis"
+        },
+        "case_specific_factors": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/case_specific_factor"
+          },
+          "minItems": 0,
+          "maxItems": 6
+        }
+      },
+      "required": [
+        "evidence_ref",
+        "effect",
+        "expected_if_true",
+        "expected_if_false",
+        "reason",
+        "reference_basis",
+        "case_specific_factors"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "expected_if_true",
+              "expected_if_false"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "expected_if_true"
+                ],
+                "properties": {
+                  "expected_if_true": {
+                    "const": "UNKNOWN"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "expected_if_false"
+                ],
+                "properties": {
+                  "expected_if_false": {
+                    "const": "UNKNOWN"
+                  }
+                }
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "effect": {
+                "const": "UNKNOWN"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "expected_if_true",
+              "expected_if_false"
+            ],
+            "properties": {
+              "expected_if_true": {
+                "const": "COMMON"
+              },
+              "expected_if_false": {
+                "const": "COMMON"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "effect": {
+                "enum": [
+                  "NEUTRAL"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "expected_if_true",
+              "expected_if_false"
+            ],
+            "properties": {
+              "expected_if_true": {
+                "const": "UNCOMMON"
+              },
+              "expected_if_false": {
+                "const": "COMMON"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "effect": {
+                "enum": [
+                  "WEAKENS",
+                  "STRONGLY_WEAKENS"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "expected_if_true",
+              "expected_if_false"
+            ],
+            "properties": {
+              "expected_if_true": {
+                "const": "COMMON"
+              },
+              "expected_if_false": {
+                "const": "UNCOMMON"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "effect": {
+                "enum": [
+                  "SUPPORTS",
+                  "STRONGLY_SUPPORTS"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "expected_if_true",
+              "expected_if_false"
+            ],
+            "properties": {
+              "expected_if_true": {
+                "const": "UNCOMMON"
+              },
+              "expected_if_false": {
+                "const": "UNCOMMON"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "effect": {
+                "enum": [
+                  "UNKNOWN"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "reference_basis"
+            ],
+            "properties": {
+              "reference_basis": {
+                "required": [
+                  "basis_type"
+                ],
+                "properties": {
+                  "basis_type": {
+                    "const": "NO_REFERENCE_AVAILABLE"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "expected_if_true": {
+                "const": "UNKNOWN"
+              },
+              "expected_if_false": {
+                "const": "UNKNOWN"
+              },
+              "effect": {
+                "const": "UNKNOWN"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "judgment_question": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "question_ref": {
+          "type": "string",
+          "pattern": "^Q[0-9]{2,}$"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "target_candidate_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[HL][0-9]{2,}$"
+          },
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "answer_type": {
+          "type": "string",
+          "enum": [
+            "BINARY",
+            "DIRECTIONAL",
+            "ORDERING",
+            "COMPARATIVE",
+            "UNKNOWN"
+          ]
+        },
+        "observable": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "decision_relevance": {
+          "type": "string",
+          "enum": [
+            "HIGH",
+            "MEDIUM",
+            "LOW"
+          ]
+        },
+        "current_answer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "basis_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 0,
+          "maxItems": 12
+        }
+      },
+      "required": [
+        "question_ref",
+        "question",
+        "target_candidate_refs",
+        "answer_type",
+        "observable",
+        "decision_relevance",
+        "current_answer",
+        "basis_refs"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "basis_refs"
+            ],
+            "properties": {
+              "basis_refs": {
+                "maxItems": 0
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "current_answer": {
+                "const": "UNKNOWN"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "reference_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "basis_type": {
+          "type": "string",
+          "enum": [
+            "SAME_OBJECT_HISTORY",
+            "PEER_OBJECTS",
+            "NORMAL_WINDOW",
+            "SIMILAR_INCIDENTS",
+            "DOCUMENTED_BASELINE",
+            "NO_REFERENCE_AVAILABLE"
+          ]
+        },
+        "basis_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 0,
+          "maxItems": 12
+        },
+        "comparison_scope": {
+          "$ref": "urn:crm-sre:schemas:common#/$defs/scope"
+        },
+        "baseline_relation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "limitations": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        }
+      },
+      "required": [
+        "basis_type",
+        "basis_refs",
+        "comparison_scope",
+        "baseline_relation",
+        "limitations"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "basis_type"
+            ],
+            "properties": {
+              "basis_type": {
+                "const": "NO_REFERENCE_AVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "basis_refs": {
+                "maxItems": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "basis_refs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "case_specific_factor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "factor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+          },
+          "minItems": 1,
+          "maxItems": 12
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "FAVORS_CANDIDATE",
+            "WEAKENS_CANDIDATE",
+            "NO_DISCRIMINATION",
+            "UNKNOWN"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        }
+      },
+      "required": [
+        "factor",
+        "evidence_refs",
+        "direction",
+        "reason"
+      ]
+    }
+  }
+}

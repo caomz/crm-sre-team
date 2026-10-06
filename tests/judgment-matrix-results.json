@@ -1,0 +1,4038 @@
+{
+  "version": "2.7.0",
+  "scope": "LISTED_JUDGMENT_STRUCTURE_DIMENSIONS_NOT_HOST_OR_MODEL_ACCEPTANCE",
+  "validator": "jsonschema.Draft202012Validator",
+  "expected_outcome_source": "Independent documented-rule predicates, not Schema condition introspection",
+  "matrices": {
+    "reference_expectation_effect": {
+      "dimensions": {
+        "basis_type": [
+          "SAME_OBJECT_HISTORY",
+          "PEER_OBJECTS",
+          "NORMAL_WINDOW",
+          "SIMILAR_INCIDENTS",
+          "DOCUMENTED_BASELINE",
+          "NO_REFERENCE_AVAILABLE"
+        ],
+        "expected_if_true": [
+          "COMMON",
+          "UNCOMMON",
+          "UNKNOWN"
+        ],
+        "expected_if_false": [
+          "COMMON",
+          "UNCOMMON",
+          "UNKNOWN"
+        ],
+        "effect": [
+          "STRONGLY_SUPPORTS",
+          "SUPPORTS",
+          "NEUTRAL",
+          "WEAKENS",
+          "STRONGLY_WEAKENS",
+          "UNKNOWN"
+        ]
+      },
+      "isolation": "Shared evidence_effect only. Valid refs follow reference availability; no candidate direction or counterevidence masks the gate.",
+      "cases": 324,
+      "expected_accepts": 56,
+      "expected_rejects": 268,
+      "passed": 324,
+      "mismatches": 0,
+      "results": [
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "COMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNCOMMON",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "COMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNCOMMON",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "SUPPORTS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "NEUTRAL"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "STRONGLY_WEAKENS"
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "expected_if_true": "UNKNOWN",
+            "expected_if_false": "UNKNOWN",
+            "effect": "UNKNOWN"
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        }
+      ]
+    },
+    "reference_ref_count": {
+      "dimensions": {
+        "basis_type": [
+          "SAME_OBJECT_HISTORY",
+          "PEER_OBJECTS",
+          "NORMAL_WINDOW",
+          "SIMILAR_INCIDENTS",
+          "DOCUMENTED_BASELINE",
+          "NO_REFERENCE_AVAILABLE"
+        ],
+        "basis_refs_count": [
+          0,
+          1,
+          12,
+          13
+        ]
+      },
+      "isolation": "Shared reference_basis only. Count rule, not reference authenticity or independent evidence count.",
+      "cases": 24,
+      "expected_accepts": 11,
+      "expected_rejects": 13,
+      "passed": 24,
+      "mismatches": 0,
+      "results": [
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "basis_refs_count": 0
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "basis_refs_count": 1
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "basis_refs_count": 12
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SAME_OBJECT_HISTORY",
+            "basis_refs_count": 13
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "basis_refs_count": 0
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "basis_refs_count": 1
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "basis_refs_count": 12
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "PEER_OBJECTS",
+            "basis_refs_count": 13
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "basis_refs_count": 0
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "basis_refs_count": 1
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "basis_refs_count": 12
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NORMAL_WINDOW",
+            "basis_refs_count": 13
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "basis_refs_count": 0
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "basis_refs_count": 1
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "basis_refs_count": 12
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "SIMILAR_INCIDENTS",
+            "basis_refs_count": 13
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "basis_refs_count": 0
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "basis_refs_count": 1
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "basis_refs_count": 12
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "DOCUMENTED_BASELINE",
+            "basis_refs_count": 13
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "basis_refs_count": 0
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "basis_refs_count": 1
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "basis_refs_count": 12
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "basis_type": "NO_REFERENCE_AVAILABLE",
+            "basis_refs_count": 13
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        }
+      ]
+    },
+    "question_answer_basis": {
+      "dimensions": {
+        "current_answer": [
+          "UNKNOWN",
+          "SYNTHETIC_RESOLVED_ANSWER"
+        ],
+        "basis_refs_count": [
+          0,
+          1,
+          12,
+          13
+        ]
+      },
+      "isolation": "Answer is structurally supported by nonempty refs, not proven true; unresolved answers may still cite inconclusive evidence.",
+      "cases": 8,
+      "expected_accepts": 5,
+      "expected_rejects": 3,
+      "passed": 8,
+      "mismatches": 0,
+      "results": [
+        {
+          "input": {
+            "current_answer": "UNKNOWN",
+            "basis_refs_count": 0
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "current_answer": "UNKNOWN",
+            "basis_refs_count": 1
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "current_answer": "UNKNOWN",
+            "basis_refs_count": 12
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "current_answer": "UNKNOWN",
+            "basis_refs_count": 13
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "current_answer": "SYNTHETIC_RESOLVED_ANSWER",
+            "basis_refs_count": 0
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "current_answer": "SYNTHETIC_RESOLVED_ANSWER",
+            "basis_refs_count": 1
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "current_answer": "SYNTHETIC_RESOLVED_ANSWER",
+            "basis_refs_count": 12
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "current_answer": "SYNTHETIC_RESOLVED_ANSWER",
+            "basis_refs_count": 13
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        }
+      ]
+    },
+    "discrimination_shape": {
+      "dimensions": {
+        "profile": [
+          "empty",
+          "single",
+          "three",
+          "four",
+          "duplicate",
+          "question_not_candidate"
+        ]
+      },
+      "isolation": "Shared request only. Dynamic target subset and candidate registry are host checks, not tested as Schema guarantees.",
+      "cases": 6,
+      "expected_accepts": 2,
+      "expected_rejects": 4,
+      "passed": 6,
+      "mismatches": 0,
+      "results": [
+        {
+          "input": {
+            "profile": "empty",
+            "discriminates_between": []
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "profile": "single",
+            "discriminates_between": [
+              "H01"
+            ]
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "profile": "three",
+            "discriminates_between": [
+              "H01",
+              "H02",
+              "L01"
+            ]
+          },
+          "expected_valid": true,
+          "actual_valid": true,
+          "passed": true
+        },
+        {
+          "input": {
+            "profile": "four",
+            "discriminates_between": [
+              "H01",
+              "H02",
+              "H03",
+              "H04"
+            ]
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "profile": "duplicate",
+            "discriminates_between": [
+              "H01",
+              "H01"
+            ]
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        },
+        {
+          "input": {
+            "profile": "question_not_candidate",
+            "discriminates_between": [
+              "Q01"
+            ]
+          },
+          "expected_valid": false,
+          "actual_valid": false,
+          "passed": true
+        }
+      ]
+    }
+  },
+  "cases_total": 362,
+  "mismatches_total": 0
+}

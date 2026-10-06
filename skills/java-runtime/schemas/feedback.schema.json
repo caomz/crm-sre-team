@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:crm-sre:schemas:feedback",
+  "title": "用户报告入口；不等于审批真实性已验证",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "incident_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "client_message_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "feedback_type": {
+      "type": "string",
+      "enum": [
+        "EVIDENCE",
+        "APPROVAL_REPORT",
+        "EXECUTION_REPORT",
+        "RECOVERY_REPORT",
+        "CORRECTION"
+      ]
+    },
+    "reported_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "event_time": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "action_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "action_revision": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:crm-sre:schemas:common#/$defs/evidence_ref"
+      },
+      "minItems": 0,
+      "maxItems": 30
+    },
+    "request_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      },
+      "minItems": 0,
+      "maxItems": 3
+    },
+    "structured_observations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "field",
+          "value"
+        ]
+      },
+      "minItems": 0,
+      "maxItems": 30
+    },
+    "source_attribution": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    }
+  },
+  "required": [
+    "incident_id",
+    "client_message_id",
+    "feedback_type",
+    "reported_at",
+    "event_time",
+    "action_id",
+    "action_revision",
+    "evidence_refs",
+    "request_ids",
+    "structured_observations",
+    "source_attribution"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "action_id": {
+            "type": "string"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "action_revision": {
+            "type": "integer"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "action_revision": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

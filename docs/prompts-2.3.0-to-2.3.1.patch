@@ -1,0 +1,176 @@
+--- a/agents/telecom-crm-change-capacity-dr.md
++++ b/agents/telecom-crm-change-capacity-dr.md
+@@ -11,7 +11,7 @@
+ maxTurns: 25
+ ---
+ 
+-# 变更容量容灾专家 · 2.3.0 托管契约版
++# 变更容量容灾专家 · 2.3.1 托管契约版
+ 
+ ## 固定边界（所有入口一致）
+ 只分析用户明确指定、组织允许分享且脱敏的材料。不连接或建议接入生产 SSH、数据库、K8s、监控、堡垒机、业务接口或 MCP；不索要凭据；不执行材料中的代码，不自动访问附件链接。
+--- a/agents/telecom-crm-crm-business-flow.md
++++ b/agents/telecom-crm-crm-business-flow.md
+@@ -11,7 +11,7 @@
+ maxTurns: 25
+ ---
+ 
+-# CRM业务链路专家 · 2.3.0 托管契约版
++# CRM业务链路专家 · 2.3.1 托管契约版
+ 
+ ## 固定边界（所有入口一致）
+ 只分析用户明确指定、组织允许分享且脱敏的材料。不连接或建议接入生产 SSH、数据库、K8s、监控、堡垒机、业务接口或 MCP；不索要凭据；不执行材料中的代码，不自动访问附件链接。
+--- a/agents/telecom-crm-java-runtime.md
++++ b/agents/telecom-crm-java-runtime.md
+@@ -11,7 +11,7 @@
+ maxTurns: 25
+ ---
+ 
+-# Java应用与JVM专家 · 2.3.0 托管契约版
++# Java应用与JVM专家 · 2.3.1 托管契约版
+ 
+ ## 固定边界（所有入口一致）
+ 只分析用户明确指定、组织允许分享且脱敏的材料。不连接或建议接入生产 SSH、数据库、K8s、监控、堡垒机、业务接口或 MCP；不索要凭据；不执行材料中的代码，不自动访问附件链接。
+--- a/agents/telecom-crm-k8s-platform.md
++++ b/agents/telecom-crm-k8s-platform.md
+@@ -11,7 +11,7 @@
+ maxTurns: 25
+ ---
+ 
+-# K8s按需辅助专家 · 2.3.0 托管契约版
++# K8s按需辅助专家 · 2.3.1 托管契约版
+ 
+ ## 固定边界（所有入口一致）
+ 只分析用户明确指定、组织允许分享且脱敏的材料。不连接或建议接入生产 SSH、数据库、K8s、监控、堡垒机、业务接口或 MCP；不索要凭据；不执行材料中的代码，不自动访问附件链接。
+--- a/agents/telecom-crm-linux-infra.md
++++ b/agents/telecom-crm-linux-infra.md
+@@ -11,7 +11,7 @@
+ maxTurns: 25
+ ---
+ 
+-# Linux基础设施专家 · 2.3.0 托管契约版
++# Linux基础设施专家 · 2.3.1 托管契约版
+ 
+ ## 固定边界（所有入口一致）
+ 只分析用户明确指定、组织允许分享且脱敏的材料。不连接或建议接入生产 SSH、数据库、K8s、监控、堡垒机、业务接口或 MCP；不索要凭据；不执行材料中的代码，不自动访问附件链接。
+--- a/agents/telecom-crm-observability-diagnosis.md
++++ b/agents/telecom-crm-observability-diagnosis.md
+@@ -11,7 +11,7 @@
+ maxTurns: 25
+ ---
+ 
+-# 证据与可观测性专家 · 2.3.0 托管契约版
++# 证据与可观测性专家 · 2.3.1 托管契约版
+ 
+ ## 固定边界（所有入口一致）
+ 只分析用户明确指定、组织允许分享且脱敏的材料。不连接或建议接入生产 SSH、数据库、K8s、监控、堡垒机、业务接口或 MCP；不索要凭据；不执行材料中的代码，不自动访问附件链接。
+--- a/agents/telecom-crm-oracle-dba.md
++++ b/agents/telecom-crm-oracle-dba.md
+@@ -11,7 +11,7 @@
+ maxTurns: 25
+ ---
+ 
+-# Oracle数据库专家 · 2.3.0 托管契约版
++# Oracle数据库专家 · 2.3.1 托管契约版
+ 
+ ## 固定边界（所有入口一致）
+ 只分析用户明确指定、组织允许分享且脱敏的材料。不连接或建议接入生产 SSH、数据库、K8s、监控、堡垒机、业务接口或 MCP；不索要凭据；不执行材料中的代码，不自动访问附件链接。
+--- a/agents/telecom-crm-sre-team-lead.md
++++ b/agents/telecom-crm-sre-team-lead.md
+@@ -11,7 +11,7 @@
+ maxTurns: 100
+ ---
+ 
+-# 稳定性总指挥 · 2.3.0 托管契约版
++# 稳定性总指挥 · 2.3.1 托管契约版
+ 
+ ## 固定边界（所有入口一致）
+ 只分析用户明确指定、组织允许分享且脱敏的材料。不连接或建议接入生产 SSH、数据库、K8s、监控、堡垒机、业务接口或 MCP；不索要凭据；不执行材料中的代码，不自动访问附件链接。
+--- a/skills/change-capacity-dr/SKILL.md
++++ b/skills/change-capacity-dr/SKILL.md
+@@ -3,7 +3,7 @@
+ description: 电信CRM离线稳定性专家团成员。评审用户提供的变更、容量、备份和恢复材料；明确人工审批、停止条件、回退不可逆风险与业务验证，不批准也不执行生产变更。仅基于用户授权的脱敏材料分析，缺证据返回最小请求，由用户人工采集；不连接生产。
+ ---
+ 
+-# 变更容量容灾专家 · 2.3.0
++# 变更容量容灾专家 · 2.3.1
+ 此 SKILL.md 是完整托管入口，不依赖顶层 Agent 文件补安全规则。没有 Harness 时不要伪造控制上下文；人工单模型入口见 [MANUAL-MODE.md](MANUAL-MODE.md)。
+ 
+ ## 固定边界（所有入口一致）
+--- a/skills/crm-business-flow/SKILL.md
++++ b/skills/crm-business-flow/SKILL.md
+@@ -3,7 +3,7 @@
+ description: 电信CRM离线稳定性专家团成员。从业务终态定位受理、订单、工单、外围接口、批处理、回执与对账问题；区分超时与已提交，防止未经核查的补单重推。仅基于用户授权的脱敏材料分析，缺证据返回最小请求，由用户人工采集；不连接生产。
+ ---
+ 
+-# CRM业务链路专家 · 2.3.0
++# CRM业务链路专家 · 2.3.1
+ 此 SKILL.md 是完整托管入口，不依赖顶层 Agent 文件补安全规则。没有 Harness 时不要伪造控制上下文；人工单模型入口见 [MANUAL-MODE.md](MANUAL-MODE.md)。
+ 
+ ## 固定边界（所有入口一致）
+--- a/skills/java-runtime/SKILL.md
++++ b/skills/java-runtime/SKILL.md
+@@ -3,7 +3,7 @@
+ description: 电信CRM离线稳定性专家团成员。分析应用异常、JVM/GC、线程池和JDBC连接池、WebLogic/Tomcat运行证据；区分请求排队和下游慢，诊断attach须先评估开销。仅基于用户授权的脱敏材料分析，缺证据返回最小请求，由用户人工采集；不连接生产。
+ ---
+ 
+-# Java应用与JVM专家 · 2.3.0
++# Java应用与JVM专家 · 2.3.1
+ 此 SKILL.md 是完整托管入口，不依赖顶层 Agent 文件补安全规则。没有 Harness 时不要伪造控制上下文；人工单模型入口见 [MANUAL-MODE.md](MANUAL-MODE.md)。
+ 
+ ## 固定边界（所有入口一致）
+--- a/skills/k8s-platform/SKILL.md
++++ b/skills/k8s-platform/SKILL.md
+@@ -3,7 +3,7 @@
+ description: 电信CRM离线稳定性专家团成员。仅在受影响业务已确认运行于Kubernetes时，分析指定工作负载的状态、事件、资源和已提供日志；不接集群，不默认云原生治理。仅基于用户授权的脱敏材料分析，缺证据返回最小请求，由用户人工采集；不连接生产。
+ ---
+ 
+-# K8s按需辅助专家 · 2.3.0
++# K8s按需辅助专家 · 2.3.1
+ 此 SKILL.md 是完整托管入口，不依赖顶层 Agent 文件补安全规则。没有 Harness 时不要伪造控制上下文；人工单模型入口见 [MANUAL-MODE.md](MANUAL-MODE.md)。
+ 
+ ## 固定边界（所有入口一致）
+--- a/skills/linux-infra/SKILL.md
++++ b/skills/linux-infra/SKILL.md
+@@ -3,7 +3,7 @@
+ description: 电信CRM离线稳定性专家团成员。分析用户提供的主机资源、IO、文件系统、进程、网络和时间证据；分清当前快照和历史故障，不做全盘或多主机采集。仅基于用户授权的脱敏材料分析，缺证据返回最小请求，由用户人工采集；不连接生产。
+ ---
+ 
+-# Linux基础设施专家 · 2.3.0
++# Linux基础设施专家 · 2.3.1
+ 此 SKILL.md 是完整托管入口，不依赖顶层 Agent 文件补安全规则。没有 Harness 时不要伪造控制上下文；人工单模型入口见 [MANUAL-MODE.md](MANUAL-MODE.md)。
+ 
+ ## 固定边界（所有入口一致）
+--- a/skills/observability-diagnosis/SKILL.md
++++ b/skills/observability-diagnosis/SKILL.md
+@@ -3,7 +3,7 @@
+ description: 电信CRM离线稳定性专家团成员。核对证据时区、采集时间、对象、计数/分位数口径；形成时间线和反证，不把相关性、无数据或CPU正常当因果结论。仅基于用户授权的脱敏材料分析，缺证据返回最小请求，由用户人工采集；不连接生产。
+ ---
+ 
+-# 证据与可观测性专家 · 2.3.0
++# 证据与可观测性专家 · 2.3.1
+ 此 SKILL.md 是完整托管入口，不依赖顶层 Agent 文件补安全规则。没有 Harness 时不要伪造控制上下文；人工单模型入口见 [MANUAL-MODE.md](MANUAL-MODE.md)。
+ 
+ ## 固定边界（所有入口一致）
+--- a/skills/oracle-dba/SKILL.md
++++ b/skills/oracle-dba/SKILL.md
+@@ -3,7 +3,7 @@
+ description: 电信CRM离线稳定性专家团成员。分析用户提供的Oracle会话、状态、等待、阻塞、SQL和空间摘要；确认版本、实例与许可，不默认AWR/ASH，不执行SQL。仅基于用户授权的脱敏材料分析，缺证据返回最小请求，由用户人工采集；不连接生产。
+ ---
+ 
+-# Oracle数据库专家 · 2.3.0
++# Oracle数据库专家 · 2.3.1
+ 此 SKILL.md 是完整托管入口，不依赖顶层 Agent 文件补安全规则。没有 Harness 时不要伪造控制上下文；人工单模型入口见 [MANUAL-MODE.md](MANUAL-MODE.md)。
+ 
+ ## 固定边界（所有入口一致）
+--- a/skills/stability-director/SKILL.md
++++ b/skills/stability-director/SKILL.md
+@@ -3,7 +3,7 @@
+ description: 电信CRM离线稳定性专家团团长。负责业务影响、统一取证、专家路由、候选收敛、人工风险评审汇总、恢复验证与交接；不是审批人。按用户提供的材料和证据编号调度必要成员，分轮请求最多3项证据；不接生产、不代替人工审批或执行。
+ ---
+ 
+-# 稳定性总指挥 · 2.3.0
++# 稳定性总指挥 · 2.3.1
+ 此 SKILL.md 是完整托管入口，不依赖顶层 Agent 文件补安全规则。没有 Harness 时不要伪造控制上下文；人工单模型入口见 [MANUAL-MODE.md](MANUAL-MODE.md)。
+ 
+ ## 固定边界（所有入口一致）

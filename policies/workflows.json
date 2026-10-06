@@ -1,0 +1,136 @@
+{
+  "version": "2.7.0",
+  "phase_count": 8,
+  "phases": [
+    "P0",
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+    "P5",
+    "P6",
+    "P7"
+  ],
+  "allowed_edges": {
+    "P0": [
+      "P1"
+    ],
+    "P1": [
+      "P2"
+    ],
+    "P2": [
+      "P3"
+    ],
+    "P3": [
+      "P4"
+    ],
+    "P4": [
+      "P2",
+      "P3",
+      "P5"
+    ],
+    "P5": [
+      "P6"
+    ],
+    "P6": [
+      "P2",
+      "P3",
+      "P4",
+      "P7"
+    ],
+    "P7": []
+  },
+  "guard_ids": {
+    "P0->P1": [
+      "TASK_CLASSIFIED_UNKNOWN_FIELDS_RECORDED"
+    ],
+    "P1->P2": [
+      "EVIDENCE_PLAN_REGISTERED"
+    ],
+    "P2->P3": [
+      "MINIMUM_EVIDENCE_OR_BOUNDED_ANALYSIS_REASON",
+      "REQUEST_BUDGET_CHECKED",
+      "NO_UNRECORDED_REQUIRED_MATERIAL"
+    ],
+    "P3->P4": [
+      "BATCH_TERMINATED",
+      "ACCEPTED_RESULTS_OR_EXPLICIT_DEGRADATION"
+    ],
+    "P4->P2": [
+      "NOVEL_ATOMIC_REQUEST_VALUE",
+      "ROUND_AND_NO_GAIN_CHECK"
+    ],
+    "P4->P3": [
+      "TARGETED_REFUTATION_NEEDED",
+      "ROUTING_ELIGIBLE"
+    ],
+    "P4->P5": [
+      "CANDIDATES_AND_COUNTEREVIDENCE_RECORDED",
+      "REVIEW_INPUTS_OR_EXPLICIT_GAPS"
+    ],
+    "P5->P6": [
+      "REVIEW_CARD_OR_NO_ACTION_REASON_RECORDED"
+    ],
+    "P6->P2": [
+      "VERIFICATION_EVIDENCE_GAP",
+      "ROUND_AND_NO_GAIN_CHECK"
+    ],
+    "P6->P3": [
+      "VERIFICATION_REQUIRES_DOMAIN_ANALYSIS"
+    ],
+    "P6->P4": [
+      "NEW_CONFLICT_OR_CANDIDATE"
+    ],
+    "P6->P7": [
+      "RECOVERY_AND_RCA_SEPARATE",
+      "HANDOFF_GAPS_AND_OWNERS_RECORDED"
+    ]
+  },
+  "phase_status": [
+    "READY",
+    "RUNNING",
+    "WAITING_INPUT",
+    "BLOCKED"
+  ],
+  "workflow_ids": [
+    "WF-A",
+    "WF-B",
+    "WF-C"
+  ],
+  "workflow_change_is_cause_confirmation": false,
+  "emergency_reminder_changes_diagnostic_phase": false,
+  "non_incident_na_requires_reason": true,
+  "early_handoff_event": {
+    "changes_phase": false,
+    "description": "任意阶段可因无法继续结束会话并生成受阻交接；不伪造 P7 正常完成，不关闭业务事故。"
+  },
+  "reopen_event": {
+    "allowed_from": "P7",
+    "to": "P0",
+    "required": [
+      "NEW_INCIDENT_EVENT_OR_REOPEN_REASON",
+      "NEW_ANALYSIS_EPOCH"
+    ]
+  },
+  "recovery_dimensions": [
+    "technical",
+    "online_business",
+    "backlog",
+    "data_correctness"
+  ],
+  "recovery_values": [
+    "UNKNOWN",
+    "USER_REPORTED",
+    "VERIFYING",
+    "VERIFIED",
+    "FAILED",
+    "NOT_APPLICABLE"
+  ],
+  "rca_values": [
+    "OPEN",
+    "CANDIDATE",
+    "CONFIRMED"
+  ],
+  "model_may_write_phase": false,
+  "model_may_confirm_rca": false
+}

@@ -1,0 +1,222 @@
+{
+  "version": "2.7.0",
+  "status": "CONTRACT_ONLY_NOT_RUNTIME_ENFORCED",
+  "canonical_lead": "telecom-crm-sre-team-lead",
+  "aliases": {
+    "telecom-crm-stability-director": "telecom-crm-sre-team-lead"
+  },
+  "normalize_before_authorization": true,
+  "roles": {
+    "telecom-crm-sre-team-lead": {
+      "skill_id": "stability-director",
+      "domain": "coordination",
+      "role": "lead",
+      "allowed_claim_types": [
+        "impact_observation",
+        "source_quality",
+        "conflict_summary",
+        "accepted_claim_summary",
+        "review_material_status"
+      ],
+      "task_phases": {
+        "INTAKE": [
+          "P0"
+        ],
+        "INITIAL_ANALYSIS": [
+          "P1"
+        ],
+        "REQUEST_REVIEW": [
+          "P2"
+        ],
+        "CONSOLIDATE": [
+          "P4"
+        ],
+        "REVIEW_DRAFT": [
+          "P5"
+        ],
+        "VERIFY": [
+          "P6"
+        ],
+        "HANDOFF": [
+          "P7"
+        ]
+      },
+      "tools": [],
+      "optional": false,
+      "prerequisites": []
+    },
+    "telecom-crm-crm-business-flow": {
+      "skill_id": "crm-business-flow",
+      "domain": "business",
+      "role": "member",
+      "allowed_claim_types": [
+        "business_observation",
+        "business_mechanism_candidate",
+        "business_verification"
+      ],
+      "task_phases": {
+        "ANALYZE": [
+          "P3"
+        ],
+        "REFUTE": [
+          "P3"
+        ],
+        "VERIFY": [
+          "P6"
+        ]
+      },
+      "tools": [],
+      "optional": false,
+      "prerequisites": []
+    },
+    "telecom-crm-linux-infra": {
+      "skill_id": "linux-infra",
+      "domain": "linux",
+      "role": "member",
+      "allowed_claim_types": [
+        "host_observation",
+        "host_mechanism_candidate",
+        "host_verification"
+      ],
+      "task_phases": {
+        "ANALYZE": [
+          "P3"
+        ],
+        "REFUTE": [
+          "P3"
+        ],
+        "VERIFY": [
+          "P6"
+        ]
+      },
+      "tools": [],
+      "optional": false,
+      "prerequisites": []
+    },
+    "telecom-crm-oracle-dba": {
+      "skill_id": "oracle-dba",
+      "domain": "oracle",
+      "role": "member",
+      "allowed_claim_types": [
+        "database_observation",
+        "database_mechanism_candidate",
+        "database_verification"
+      ],
+      "task_phases": {
+        "ANALYZE": [
+          "P3"
+        ],
+        "REFUTE": [
+          "P3"
+        ],
+        "VERIFY": [
+          "P6"
+        ]
+      },
+      "tools": [],
+      "optional": false,
+      "prerequisites": []
+    },
+    "telecom-crm-java-runtime": {
+      "skill_id": "java-runtime",
+      "domain": "java",
+      "role": "member",
+      "allowed_claim_types": [
+        "runtime_observation",
+        "runtime_mechanism_candidate",
+        "runtime_verification"
+      ],
+      "task_phases": {
+        "ANALYZE": [
+          "P3"
+        ],
+        "REFUTE": [
+          "P3"
+        ],
+        "VERIFY": [
+          "P6"
+        ]
+      },
+      "tools": [],
+      "optional": false,
+      "prerequisites": []
+    },
+    "telecom-crm-observability-diagnosis": {
+      "skill_id": "observability-diagnosis",
+      "domain": "observability",
+      "role": "member",
+      "allowed_claim_types": [
+        "source_quality",
+        "timeline_observation",
+        "metric_semantics",
+        "association_refutation"
+      ],
+      "task_phases": {
+        "ANALYZE": [
+          "P3"
+        ],
+        "REFUTE": [
+          "P3"
+        ],
+        "VERIFY": [
+          "P6"
+        ]
+      },
+      "tools": [],
+      "optional": false,
+      "prerequisites": []
+    },
+    "telecom-crm-change-capacity-dr": {
+      "skill_id": "change-capacity-dr",
+      "domain": "change",
+      "role": "member",
+      "allowed_claim_types": [
+        "change_observation",
+        "capacity_candidate",
+        "restore_readiness",
+        "review_material_status"
+      ],
+      "task_phases": {
+        "ANALYZE": [
+          "P3"
+        ],
+        "REFUTE": [
+          "P3"
+        ],
+        "VERIFY": [
+          "P6"
+        ]
+      },
+      "tools": [],
+      "optional": false,
+      "prerequisites": []
+    },
+    "telecom-crm-k8s-platform": {
+      "skill_id": "k8s-platform",
+      "domain": "k8s",
+      "role": "member",
+      "allowed_claim_types": [
+        "platform_observation",
+        "platform_mechanism_candidate",
+        "platform_verification"
+      ],
+      "task_phases": {
+        "ANALYZE": [
+          "P3"
+        ],
+        "REFUTE": [
+          "P3"
+        ],
+        "VERIFY": [
+          "P6"
+        ]
+      },
+      "tools": [],
+      "optional": true,
+      "prerequisites": [
+        "K8S_DEPLOYMENT_CONFIRMED",
+        "PLATFORM_EVIDENCE_RELEVANT"
+      ]
+    }
+  }
+}

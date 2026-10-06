@@ -1,0 +1,94 @@
+{
+  "version": "2.7.0",
+  "status": "CONTRACT_ONLY_NOT_RUNTIME_ENFORCED",
+  "fermi_decomposition_required": true,
+  "fermi_is_within_task_not_phase": true,
+  "reference_class_required_for_non_unknown_expectation": true,
+  "numeric_probability_model_output_allowed": false,
+  "calibration_owner": "HOST_OR_OFFLINE_EVALUATOR",
+  "resolution_owner": "HOST_OR_OFFLINE_EVALUATOR",
+  "calibration_implementation_status": "NOT_IMPLEMENTED",
+  "reference_basis_types": [
+    "SAME_OBJECT_HISTORY",
+    "PEER_OBJECTS",
+    "NORMAL_WINDOW",
+    "SIMILAR_INCIDENTS",
+    "DOCUMENTED_BASELINE",
+    "NO_REFERENCE_AVAILABLE"
+  ],
+  "question_answer_types": [
+    "BINARY",
+    "DIRECTIONAL",
+    "ORDERING",
+    "COMPARATIVE",
+    "UNKNOWN"
+  ],
+  "case_specific_factor_directions": [
+    "FAVORS_CANDIDATE",
+    "WEAKENS_CANDIDATE",
+    "NO_DISCRIMINATION",
+    "UNKNOWN"
+  ],
+  "question_ref_pattern": "^Q[0-9]{2,}$",
+  "question_ref_namespace": "OUTPUT_LOCAL_JUDGMENT_NOT_HOST_REQUEST_Q",
+  "question_ref_uniqueness": "WITHIN_ONE_RESULT_ACROSS_ALL_CANDIDATES",
+  "reference_context": {
+    "required": false,
+    "trusted_only": true,
+    "keys": [
+      "historical_baselines",
+      "peer_baselines",
+      "known_similar_incidents",
+      "service_norms"
+    ],
+    "item_keys": [
+      "basis_type",
+      "basis_refs",
+      "comparison_scope",
+      "baseline_relation",
+      "limitations"
+    ],
+    "empty_or_missing_is_not_task_blocker": true,
+    "model_may_create_context": false
+  },
+  "host_checks": [
+    "question_ref 在本次结果全部 candidates 中唯一，且与宿主取证 Q 分属不同命名空间，不作为请求 ID 使用",
+    "每个候选的子问题 target_candidate_refs 包含该候选，所有 H/L 引用属于本事故、本任务或本输出",
+    "observable 明确对象、时窗、口径和判定条件；重述云状问题不构成拆解",
+    "没有 basis_refs 的 current_answer 只能 UNKNOWN；非 UNKNOWN 答案须被授权证据支持",
+    "reference_basis、question 与 case_specific_factors 的 E/revision/locator 均存在、获授权且未失效",
+    "reference_context 仅为宿主选择器，材料须先授权登记，不自动授予跨事故或跨租户访问权",
+    "参考对象、负载、时窗、指标口径、版本与选择偏差须可比；参考类适用性不能仅靠非空字段判断",
+    "非 UNKNOWN expected 的各自判断须有可核参考依据；NO_REFERENCE_AVAILABLE 时两个 expected 及 effect 都为 UNKNOWN",
+    "discriminates_between 是 target_candidate_refs 的子集，且引用真实授权候选；单候选时须与其明确的可证伪替代比较",
+    "if_positive/if_negative 须改变列明候选的比较；无信息增益不发布，不能靠多填候选数证明请求更好",
+    "case_specific_factors 不替代 reference_basis，不覆盖 effect 映射，不重复计算同源 E",
+    "judgment_questions 只是判断结构，新增材料索取只能进入 request_proposals 并受原配额约束",
+    "模型结果中的数字概率及宿主状态/评分字段不得发布；自由文本仍需语义复核",
+    "不将子问题当独立事件直接相乘或聚合；本包不实现概率计算",
+    "校准/最终裁决不得由待评模型自标；恢复与 RCA 分开，缺少裁决的数据不算答错或答对"
+  ],
+  "host_metrics": [
+    "support_precision",
+    "weaken_precision",
+    "request_discrimination_rate",
+    "stale_evidence_reuse_rate",
+    "unsupported_commonness_rate",
+    "contradiction_response_rate",
+    "false_causal_link_rate",
+    "indeterminate_rate",
+    "unsupported_direction_rate"
+  ],
+  "model_metrics_not_runtime_authority": true,
+  "offline_metrics_are_probability_calibration": false,
+  "brier_score_enabled": false,
+  "model_may_write_prior": false,
+  "model_may_write_candidate_status": false,
+  "model_may_increment_ooda_cycle": false,
+  "limits": {
+    "max_questions_per_candidate": 6,
+    "max_reference_refs": 12,
+    "max_case_specific_factors": 6
+  },
+  "notes": "指标仅为未实现的离线评估契约；不把序数标签映射成数值概率，不声称已提高诊断质量。"
+}
