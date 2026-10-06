@@ -151,10 +151,18 @@ def measure_role(root: Path, sid: str, role: dict, scope: str, split_modes,
         entry["source_dup"] = _dup_stats(ab, sb)
 
     if sid == "stability-director":
-        # routing table flag: false at 2.7.0 baseline (no {{ROUTING_TABLE}} yet)
+        # routing table flag: checks for the placeholder or the rendered roster
+        # title in source or generated form (placeholder replaced at build time).
         for src_path in (agent_src, agent_gen):
             if src_path.exists():
-                entry["routing_table_present"] = "{{ROUTING_TABLE}}" in _read(src_path) or "成员路由表" in _read(src_path)
+                t = _read(src_path)
+                entry["routing_table_present"] = (
+                    "{{TEAM_ROSTER}}" in t
+                    or "{{ROUTING_TABLE}}" in t
+                    or "成员名册" in t
+                    or "成员路由表" in t
+                )
+                break
                 break
     return entry
 

@@ -488,7 +488,7 @@
     "tools/check_thinking_tools.py": "d6a98a4f2ab24d183fa4d8724e5c26ceec9105696b411e699ea96f4f915e1090",
     "tools/check_workbuddy.py": "1d721ef524631495a65280b1965e038a33fd04fc5289e3983230e4ba3c1c9c7e",
     "tools/make_probe_build.py": "a2dcb4c7111215f2ddc1e564ab4ddd3cf54386af346297f527b673176ff43afd",
-    "tools/measure_prompts.py": "4bc035040eda853c68e3cdd9fafea46940477a42b9414e22899180f48f8437cd",
+    "tools/measure_prompts.py": "ef7f8c17ac00a011c2d5a4bf6060015ee210bf1d86895afea38020b0484929f4",
     "tools/README.md": "ac13516b1d2279e6941be895dc6ff74c49fb8922ef834d746ed03b40a93a009d",
     "tools/release.py": "a31ad3945d7042917667206d357d3aa78e00d123ae77e4739d4d8a99f3228342",
     "tools/release_rules.py": "f8aa9f1d472a75292871522620090119b7bdf7bc4811575c980ae4b4efa0a057",
