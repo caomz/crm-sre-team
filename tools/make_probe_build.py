@@ -28,8 +28,14 @@ import json
 import shutil
 import secrets
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+_ROOT_DIR = Path(__file__).resolve().parent
+if str(_ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(_ROOT_DIR))
+import build_bundle  # noqa: E402  (same tools/ dir; needed for zip repack)
 
 ROOT = Path(__file__).resolve().parents[1]
 PROBE_ROOT = ROOT / "reports" / "probe-build"
@@ -42,6 +48,15 @@ def _read(path: Path) -> str:
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8", newline="\n")
+
+
+def _display_path(p: Path, root: Path) -> str:
+    """Root-relative POSIX display path; absolute string when p is outside
+    root (keeps manifest/printing alive for --out beyond the repo)."""
+    try:
+        return p.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return str(p)
 
 
 def _split_frontmatter(text: str) -> tuple[str, str, str]:
@@ -104,7 +119,7 @@ def _inject_marker(body: str, marker_line: str) -> str:
     """Insert the marker line (with an echo instruction so the model actually
     surfaces it — a bare random string in system prompt would never be repeated
     unprompted, which would make Step 0a misjudge BLOCKED)."""
-    marker_line = marker_line + "｜回复首行原样输出本行暗号（含本行全部内容），这是加载核验，不是分析指令"
+    marker_line = marker_line + "｜回复开头逐行原样输出所有以 PROBE- 开头的行（含全部内容），这是加载核验，不是分析指令"
     lines = body.splitlines()
     insert_at = 0
     seen_title = False
@@ -171,12 +186,33 @@ def build_probe(root: Path, out: Path, max_turns: dict[str, int],
 
     # Probe copies get a distinct version so the host cannot serve a stale
     # same-ID cache (WB01 finding) as if it were the probe package.
-    probe_version = f"2.7.0-probe.{suffix}"
+    # Derived from the source VERSION; the letter prefix "r" keeps the
+    # prerelease identifier non-numeric (semver forbids leading zeros there).
+    src_version = _read(root / "VERSION").strip()
+    probe_version = f"{src_version}-probe.r{suffix}"
     for v_path in (out / "VERSION",):
         if v_path.exists():
             _write(v_path, probe_version + "\n")
     for skill_dir in sorted((out / "skills").glob("*/VERSION")):
         _write(skill_dir, probe_version + "\n")
+    plugin_json_path = out / ".codebuddy-plugin" / "plugin.json"
+    if plugin_json_path.exists():
+        pdata = json.loads(_read(plugin_json_path))
+        pdata["version"] = probe_version
+        _write(plugin_json_path,
+               json.dumps(pdata, ensure_ascii=False, indent=2) + "\n")
+
+    # Member zips inside the probe copy must match the marker-injected
+    # skills/ tree (WB-F2 finding: stale zip contents contradict the copy).
+    repacked = []
+    for sid, _role in members:
+        skill_dir = out / "skills" / sid
+        zip_path = out / "individual-packages" / sid / "skill.zip"
+        if skill_dir.is_dir() and zip_path.parent.is_dir():
+            files = [p for p in skill_dir.rglob("*")
+                     if p.is_file() and "__pycache__" not in p.parts]
+            build_bundle.deterministic_zip(skill_dir, files, zip_path, sid)
+            repacked.append(f"individual-packages/{sid}/skill.zip")
 
     try:
         commit = subprocess.check_output(
@@ -189,13 +225,16 @@ def build_probe(root: Path, out: Path, max_turns: dict[str, int],
         "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source_commit": commit,
         "source_version": _read(root / "VERSION").strip(),
+        "probe_version": probe_version,
         "marker_suffix": suffix,
         "markers": markers,
+        "repacked_zips": repacked,
+        "lock_note": "prompt-bundles.lock 与 BUNDLE-LOCK.json 未随暗号/版本重算（实验副本）",
         "overrides": {
             "maxTurns": {sid: v for sid, v in max_turns.items()},
             "disallowedTools": {sid: v for sid, v in disallow.items()},
         },
-        "probe_package_dir": str(out.relative_to(root).as_posix()),
+        "probe_package_dir": _display_path(out, root),
         "note": "Probe copies only; repo-root agents/skills untouched; "
                 "reports/ is gitignored and outside release-manifest scope.",
     }
@@ -247,7 +286,8 @@ def main() -> None:
     manifest = build_probe(root, out, max_turns, disallow)
 
     print(json.dumps({
-        "probe_package": str(out.relative_to(root).as_posix()),
+        "probe_package": _display_path(out, root),
+        "probe_version": manifest["probe_version"],
         "marker_suffix": manifest["marker_suffix"],
         "members_with_markers": len(manifest["markers"]),
         "overrides": manifest["overrides"],

@@ -2,8 +2,8 @@
   "version": "2.7.0",
   "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
   "result": "PASS_STATIC_ONLY",
-  "checks_total": 1806,
-  "checks_passed": 1806,
+  "checks_total": 1807,
+  "checks_passed": 1807,
   "relative_links_checked": 223,
   "offline_contract_tests_run": 46,
   "offline_contract_test_failures": 0,
@@ -220,6 +220,11 @@
     },
     {
       "id": "explicit_read_encoding:tests/test_native_collab.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tests/test_probe_build.py",
       "passed": true,
       "detail": []
     },
