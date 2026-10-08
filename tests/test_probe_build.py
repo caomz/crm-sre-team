@@ -97,13 +97,23 @@ class ProbeBuildTests(unittest.TestCase):
 
     def test_03_member_zips_repacked_with_markers(self):
         m = self.manifest
-        self.assertEqual(len(m["repacked_zips"]), 7)
+        # V4: all 8 zips (including stability-director) are repacked from
+        # the probe skills/ tree, and each zip's VERSION must equal
+        # probe_version.
+        self.assertEqual(len(m["repacked_zips"]), 8)
         for sid, role in _roles().items():
-            if sid == "stability-director":
-                continue
             zp = self.out / "individual-packages" / sid / "skill.zip"
             with zipfile.ZipFile(zp) as z:
+                names = z.namelist()
+                version = z.read(f"{sid}/VERSION").decode("utf-8").strip()
                 body = z.read(f"{sid}/SKILL.md").decode("utf-8")
+            self.assertIn(f"individual-packages/{sid}/skill.zip",
+                          m["repacked_zips"])
+            self.assertEqual(version, m["probe_version"],
+                             f"{sid} zip VERSION != probe_version")
+            self.assertIn(f"{sid}/BUNDLE-LOCK.json", names)
+            if sid == "stability-director":
+                continue  # 团长不注入暗号，仅核 VERSION 与重打包
             self.assertIn(m["markers"][role["agent"]]["marker_d"], body)
             self.assertIn(MARKER_ECHO, body)
 

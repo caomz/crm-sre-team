@@ -202,10 +202,11 @@ def build_probe(root: Path, out: Path, max_turns: dict[str, int],
         _write(plugin_json_path,
                json.dumps(pdata, ensure_ascii=False, indent=2) + "\n")
 
-    # Member zips inside the probe copy must match the marker-injected
-    # skills/ tree (WB-F2 finding: stale zip contents contradict the copy).
+    # Zips inside the probe copy must match the probe skills/ tree for every
+    # role including the lead (WB-F2 finding: stale zip contents contradict
+    # the copy; V4: the lead's zip must be repacked too, not just members').
     repacked = []
-    for sid, _role in members:
+    for sid, _role in sorted(roles.items()):
         skill_dir = out / "skills" / sid
         zip_path = out / "individual-packages" / sid / "skill.zip"
         if skill_dir.is_dir() and zip_path.parent.is_dir():
