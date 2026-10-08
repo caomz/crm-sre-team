@@ -27,3 +27,19 @@ class KnowledgeDocumentationTests(unittest.TestCase):
         self.assertEqual({p.name for p in source.glob("*.md")},{p.name for p in target.glob("*.md")})
         for p in source.glob("*.md"):
             self.assertEqual(p.read_bytes(),(target/p.name).read_bytes())
+
+    def test_docs11_blocked_definition_matches_docs12(self):
+        """V1: docs/11 的 Step 0 判定必须与 docs/12 的关口术语一致——
+        CAPABILITY_BLOCKED 只在成员完全无回复时成立；有回复无暗号按
+        加载/缓存问题处理，不判 CAPABILITY_BLOCKED。"""
+        d11=(ROOT/"docs/11-workbuddy-host-acceptance.md").read_text(encoding="utf-8")
+        d12=(ROOT/"docs/12-native-vs-single-comparison.md").read_text(encoding="utf-8")
+        # 旧规则（缓存造成的暗号缺失会被误判 BLOCKED）必须彻底消失
+        self.assertNotIn("选不中带暗号 C 的成员",d11)
+        # 两文档统一使用关口结论术语 CAPABILITY_BLOCKED
+        self.assertIn("CAPABILITY_BLOCKED",d11)
+        self.assertIn("CAPABILITY_BLOCKED",d12)
+        # docs/11 的判定句必须要求"无任何回复"这一真实原因
+        verdict=[ln for ln in d11.splitlines() if "判定 CAPABILITY_BLOCKED" in ln]
+        self.assertTrue(verdict,"docs/11 缺少 CAPABILITY_BLOCKED 判定句")
+        self.assertIn("无任何回复","\n".join(verdict))
