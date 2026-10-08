@@ -9,7 +9,8 @@
 # stale: the commit is rejected, the user re-runs the build and re-stages.
 # The working tree is untouched by this hook on every code path.
 #
-# Install with:  git config core.hooksPath tools/git-hooks
+# Install with:  python tools/install_git_hooks.py
+#   (sets core.hooksPath to tools/git-hooks and is idempotent)
 # Bypass (deliberately):  git commit --no-verify
 #
 # No extension on this filename is intentional: git resolves hooks by exact
@@ -69,9 +70,12 @@ hashes() {
 hashes > "$tmp_base/before.txt"
 
 # Build from the exported staged tree; --root keeps every write inside it.
+# Run the STAGED copy of tools/build_bundle.py from the export dir (not the
+# working-tree one): an unstaged edit to the build script must not change
+# the verdict.
 # shellcheck disable=SC2086
-if ! $PY "$repo_root/tools/build_bundle.py" --root "$export_dir" >/dev/null 2>&1; then
-    echo "pre-commit: FAILED - tools/build_bundle.py exited non-zero on the staged tree." >&2
+if ! $PY "$export_dir/tools/build_bundle.py" --root "$export_dir" >/dev/null 2>&1; then
+    echo "pre-commit: FAILED - tools/build_bundle.py (staged copy) exited non-zero on the staged tree." >&2
     echo "pre-commit: run it manually to see the error; commit aborted; working tree untouched." >&2
     exit 1
 fi

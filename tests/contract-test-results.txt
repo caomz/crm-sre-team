@@ -127,11 +127,13 @@ test_21_schema_cannot_verify_reasoning_quality (thinking_tool_tests.ThinkingTool
 Ran 21 tests in <elapsed>
 
 OK
+test_docs11_blocked_definition_matches_docs12 (test_knowledge_docs.KnowledgeDocumentationTests.test_docs11_blocked_definition_matches_docs12)
+V1: docs/11 的 Step 0 判定必须与 docs/12 的关口术语一致—— ... ok
 test_knowledge_generated_from_canonical_source (test_knowledge_docs.KnowledgeDocumentationTests.test_knowledge_generated_from_canonical_source) ... ok
 test_reference_basis_documentation_examples_match_schema (test_knowledge_docs.KnowledgeDocumentationTests.test_reference_basis_documentation_examples_match_schema) ... ok
 
 ----------------------------------------------------------------------
-Ran 2 tests in <elapsed>
+Ran 3 tests in <elapsed>
 
 OK
 test_01_entire_mode_bundle_is_consistent (test_workbuddy_native.WorkBuddyNativeTests.test_01_entire_mode_bundle_is_consistent) ... ok

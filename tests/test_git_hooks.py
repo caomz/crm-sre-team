@@ -52,13 +52,15 @@ requires_sh = unittest.skipUnless(can_run_sh(), "SKIPPED_CAPABILITY: no sh/bash 
 
 
 def run_hook(repo: Path) -> subprocess.CompletedProcess:
-    """Run the hook exactly as git would (sh, cwd=repo).
+    """Run the hook directly via sh (cwd=repo), bypassing git's hook runner.
 
-    We deliberately do NOT rely on `git commit` to propagate the hook's exit
-    code: this dev environment's git (PortableGit 2.55 run_processes_parallel
-    hook runner) executes the hook but swallows its exit code, so a blocking
-    hook would not abort the commit. The hook's own semantics are what this
-    suite verifies; the landing paths still go through real commits.
+    Real-`git commit` coverage lives in test_13 (rejection + HEAD unchanged)
+    and the positive commit paths below; direct execution keeps these cases
+    hermetic (no dependence on git's hook runner or its exit-code plumbing).
+    An earlier claim that this environment's git swallows hook exit codes
+    was disproven on 2026-10-08 by minimal-repo reproduction: both git
+    2.55.0.windows.3 and 2.49.0.windows.1 propagate a pre-commit hook's
+    non-zero exit as a failed `git commit` with HEAD unchanged.
     """
     return subprocess.run(["sh", str(repo / "tools" / "git-hooks" / "pre-commit")],
                           cwd=str(repo), capture_output=True, text=True,
@@ -91,12 +93,21 @@ class PreCommitHookTests(unittest.TestCase):
         git(self.repo, "config", "user.email", "hook@test.invalid")
         git(self.repo, "config", "user.name", "hook-test")
         git(self.repo, "add", "-A")
+        # V2: record the hook executable in the index (Windows checkouts have
+        # core.fileMode=false; without this, POSIX git would ignore the hook
+        # and test_13's real-commit rejection would pass vacuously there).
+        git(self.repo, "update-index", "--chmod=+x", "tools/git-hooks/pre-commit")
         git(self.repo, "commit", "-m", "baseline")
         git(self.repo, "config", "core.hooksPath", "tools/git-hooks")
 
     def test_01_hook_and_installer_are_versioned(self):
         self.assertTrue(HOOK.is_file(), "versioned hook missing")
         self.assertTrue(INSTALLER.is_file(), "installer missing")
+        # V2: the hook must be recorded executable in the index so POSIX
+        # checkouts honor it when core.hooksPath points here.
+        listed = git(ROOT, "ls-files", "-s", "tools/git-hooks/pre-commit")
+        self.assertTrue(listed.stdout.startswith("100755"),
+                        f"hook must be indexed as 100755, got: {listed.stdout!r}")
 
     def test_02_installer_sets_hooks_path_and_is_idempotent(self):
         proc = subprocess.run(["python3", str(INSTALLER), "--root", str(self.repo)],
@@ -238,6 +249,53 @@ class PreCommitHookTests(unittest.TestCase):
         run_hook(self.repo)
         self.assertEqual(before, snap(),
                          "hook must leave the working tree untouched even when blocking")
+
+    @requires_sh
+    def test_13_real_git_commit_rejects_stale_tree(self):
+        """V2: the gate must be provably effective under a REAL `git commit`:
+        with the hook executable and stale staged outputs, commit returns
+        non-zero and HEAD does not move. This is the evidence that was
+        missing since the rejection cases moved to direct hook execution."""
+        self.src.write_text("canonical v13\n", encoding="utf-8", newline="\n")
+        git(self.repo, "add", "-A")
+        before = git(self.repo, "rev-parse", "HEAD").stdout.strip()
+        blocked = git(self.repo, "commit", "-m", "must be rejected by the gate",
+                      check=False)
+        self.assertNotEqual(blocked.returncode, 0,
+                            "real git commit must fail when staged outputs are stale")
+        after = git(self.repo, "rev-parse", "HEAD").stdout.strip()
+        self.assertEqual(before, after,
+                         "HEAD must not move when the gate blocks the commit")
+
+    @requires_sh
+    def test_14_hook_uses_staged_build_script(self):
+        """V2: the hook runs the STAGED tools/build_bundle.py from the export
+        dir — an unstaged working-tree edit to the build script must not
+        influence the verdict (positive still lands, negative still STALE)."""
+        build = self.repo / "tools" / "build_bundle.py"
+        original = build.read_text(encoding="utf-8")
+        broken = "import sys\nsys.exit(3)\n"
+        try:
+            # Positive: consistent staged tree commits even though the
+            # working-tree build script is broken (unstaged).
+            extra = self.repo / "policy-source" / "extra14.md"
+            extra.write_text("extra\n", encoding="utf-8", newline="\n")
+            self.rebuild_and_stage()
+            build.write_text(broken, encoding="utf-8", newline="\n")
+            allowed = git(self.repo, "commit",
+                          "-m", "consistent staged tree, broken worktree script",
+                          check=False)
+            self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
+            # Negative: stale staged outputs must be rejected as STALE —
+            # proof the staged (working) script ran, not the broken copy.
+            self.src.write_text("canonical v14\n", encoding="utf-8", newline="\n")
+            git(self.repo, "add", "policy-source/shared.md")
+            blocked = run_hook(self.repo)
+            self.assertNotEqual(blocked.returncode, 0)
+            self.assertIn("stale", (blocked.stderr or "").lower(),
+                          "must report STALE (staged script ran), not a broken-script failure")
+        finally:
+            build.write_text(original, encoding="utf-8", newline="\n")
 
 
 if __name__ == "__main__":
