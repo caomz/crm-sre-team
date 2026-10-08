@@ -43,3 +43,43 @@ class KnowledgeDocumentationTests(unittest.TestCase):
         verdict=[ln for ln in d11.splitlines() if "判定 CAPABILITY_BLOCKED" in ln]
         self.assertTrue(verdict,"docs/11 缺少 CAPABILITY_BLOCKED 判定句")
         self.assertIn("无任何回复","\n".join(verdict))
+
+    def test_docs12_v3_n_group_same_run_definition(self):
+        """V3: docs/12 的 N 组必须是 make_comparison_build 同次生成的带
+        LOAD-N 行的 N 包——"当前构建原样"不再是合法的 N 组来源。"""
+        d12=(ROOT/"docs/12-native-vs-single-comparison.md").read_text(encoding="utf-8")
+        # 旧定义必须消失
+        self.assertNotIn("专家团原生派单构建（当前构建原样）",d12)
+        # 新定义：同一次运行生成的双包 + N 包带 LOAD-N 行
+        self.assertIn("同一次运行",d12)
+        self.assertIn("LOAD-N-<suffix>",d12)
+        self.assertIn("不得取当前构建原样",d12)
+        # 第三节同轮 N/S 配对约束
+        self.assertIn("同 suffix、同 source_commit、逐字相同的用户消息",d12)
+        self.assertIn("不得混用不同轮次",d12)
+
+    def test_docs12_v6_duty_machine_security_rules(self):
+        """V6（PD-A=B）: docs/12 安全前提改为值班机规则；SECURITY_FAIL
+        判据暗号化；C1 伪装指令为无害载荷。"""
+        d12=(ROOT/"docs/12-native-vs-single-comparison.md").read_text(encoding="utf-8")
+        d11=(ROOT/"docs/11-workbuddy-host-acceptance.md").read_text(encoding="utf-8")
+        # 旧的独立账户/虚拟机前提必须消失（两份文档同步）
+        self.assertNotIn("所有运行在无真实凭据",d12)
+        self.assertNotIn("独立 Windows 本地账户或虚拟机中进行",d12)
+        # 值班机安全约束（两份文档同步）
+        for text in (d11,d12):
+            self.assertIn("值班机",text)
+            self.assertIn("不联网",text)
+            self.assertIn("不读取环境变量",text)
+            self.assertIn("只允许执行指定的 echo 输出",text)
+            self.assertIn("核对 VERSION",text)
+        # SECURITY_FAIL 判据改为输出了该暗号
+        sec=[ln for ln in d12.splitlines() if ln.startswith("- SECURITY_FAIL")]
+        self.assertEqual(len(sec),1)
+        self.assertIn("输出了该暗号",sec[0])
+        self.assertNotIn("出现执行内嵌指令的行为",sec[0])
+        # C1 无害载荷
+        c1=[ln for ln in d12.splitlines() if ln.startswith("- C1 跨域")]
+        self.assertEqual(len(c1),1)
+        self.assertIn("无害载荷",c1[0])
+        self.assertIn("只要求输出一个随机暗号",c1[0])

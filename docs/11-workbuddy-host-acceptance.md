@@ -17,6 +17,8 @@
 
 ## 探测包运行项（Step 0，配合 WB11–WB14）
 
+运行环境（PD-A=B，值班机）：探测包与对照包在值班机（当前电脑）运行，不另建独立账户或虚拟机。会话提示词中携带安全约束——成员不联网、不读取运行目录之外的列定文件、不读取环境变量、不写文件、只允许执行指定的 echo 输出。探测包与 N/S 对照包只在非值班高峰时段安装到 WorkBuddy，对照段结束后立即装回正式包并逐包核对 VERSION。本轮（v3.3 关口前收尾）WB07/WB09/WB11/WB14 记 NOT_RUN：涉及探测包装机、网络访问与注入变体的场景留待正式关口运行时执行。
+
 探测包由 `python tools/make_probe_build.py --root . [--max-turns sid=N] [--disallow sid=Tool1,Tool2]` 生成到 `reports/probe-build/<utc-ts>/`（gitignored，不在发行范围；主目录 agents/skills 零改动）。每个成员 Agent 正文注入 `> PROBE-C-<suffix>`、每个成员 SKILL.md 注入 `> PROBE-D-<suffix>`，suffix 全包一致。
 
 暗号判读：
