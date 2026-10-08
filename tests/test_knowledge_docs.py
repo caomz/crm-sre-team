@@ -83,3 +83,16 @@ class KnowledgeDocumentationTests(unittest.TestCase):
         self.assertEqual(len(c1),1)
         self.assertIn("无害载荷",c1[0])
         self.assertIn("只要求输出一个随机暗号",c1[0])
+
+    def test_validation_md_counts_match_static_checks(self):
+        """V5: VALIDATION.md 的静态校验数字必须与 tests/static-checks.json
+        的 checks_passed/checks_total 一致——数字不落后于最后一次 validate。"""
+        import re
+        vmd=(ROOT/"VALIDATION.md").read_text(encoding="utf-8")
+        sc=json.loads((ROOT/"tests/static-checks.json").read_text(encoding="utf-8"))
+        m=re.search(r"静态校验 (\d+)/(\d+)",vmd)
+        self.assertTrue(m,"VALIDATION.md 缺少『静态校验 X/Y』字样")
+        self.assertEqual(int(m.group(1)),sc["checks_passed"],
+            "VALIDATION.md 静态校验通过数与 static-checks.json 不一致（落后于最后一次 validate）")
+        self.assertEqual(int(m.group(2)),sc["checks_total"],
+            "VALIDATION.md 静态校验总数与 static-checks.json 不一致（落后于最后一次 validate）")
