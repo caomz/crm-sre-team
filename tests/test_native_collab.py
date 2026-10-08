@@ -223,5 +223,54 @@ class T6CollabTextTests(unittest.TestCase):
                               "wrong or missing error code on " + surface)
 
 
+class MemberConventionTests(unittest.TestCase):
+    """PD-3: the shared member material/analysis/return convention block must
+    stay verbatim-identical across all 7 member role sources and all 7 member
+    skill sources, and must stay out of both lead sources. Static only."""
+
+    CONVENTION_HEADING = "## 成员材料—分析—返回约定（原生与兼容共用）"
+
+    def _extract_convention(self, text: str):
+        idx = text.find(self.CONVENTION_HEADING)
+        if idx == -1:
+            return None
+        rest = text[idx:]
+        nxt = rest.find("\n## ", len(self.CONVENTION_HEADING))
+        return rest if nxt == -1 else rest[:nxt]
+
+    def _member_sources(self):
+        roles = json.loads(
+            (ROOT / "policy-source/roles-source.json").read_text(encoding="utf-8"))
+        for sid, role in sorted(roles.items()):
+            if sid == "stability-director":
+                continue
+            yield sid, role
+
+    def test_01_convention_block_identical_across_member_sources(self):
+        blocks = {}
+        for sid, role in self._member_sources():
+            role_text = (ROOT / "policy-source/prompts/roles" /
+                         (role["agent"] + ".md")).read_text(encoding="utf-8")
+            skill_text = (ROOT / "policy-source/skills" /
+                          (sid + ".md")).read_text(encoding="utf-8")
+            role_block = self._extract_convention(role_text)
+            skill_block = self._extract_convention(skill_text)
+            self.assertIsNotNone(role_block, role["agent"])
+            self.assertIsNotNone(skill_block, sid)
+            blocks["role:" + role["agent"]] = role_block
+            blocks["skill:" + sid] = skill_block
+        self.assertEqual(len(blocks), 14)
+        unique = set(blocks.values())
+        self.assertEqual(len(unique), 1,
+                         "14 份成员源的约定段必须逐字相同；差异: "
+                         + "; ".join(sorted({b[:60] for b in unique}))[:300])
+
+    def test_02_lead_sources_have_no_convention_block(self):
+        for rel in ("policy-source/prompts/roles/telecom-crm-sre-team-lead.md",
+                    "policy-source/skills/stability-director.md"):
+            text = (ROOT / rel).read_text(encoding="utf-8")
+            self.assertNotIn(self.CONVENTION_HEADING, text, rel)
+
+
 if __name__ == "__main__":
     unittest.main()

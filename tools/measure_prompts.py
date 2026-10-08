@@ -275,16 +275,23 @@ def main() -> None:
     root = args.root.resolve()
     report = run(root, args.scope)
 
+    def _display_path(p: Path) -> str:
+        """Root-relative POSIX display path; absolute string when outside root."""
+        try:
+            return p.resolve().relative_to(root).as_posix()
+        except ValueError:
+            return str(p)
+
     if args.json_out:
         out = args.json_out if args.json_out.is_absolute() else root / args.json_out
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
-        print(f"json -> {out.relative_to(root).as_posix()}")
+        print(f"json -> {_display_path(out)}")
     if args.md_out:
         out = args.md_out if args.md_out.is_absolute() else root / args.md_out
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(render_md(report), encoding="utf-8", newline="\n")
-        print(f"md   -> {out.relative_to(root).as_posix()}")
+        print(f"md   -> {_display_path(out)}")
     if not args.json_out and not args.md_out:
         print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
 
