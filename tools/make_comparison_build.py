@@ -1,11 +1,25 @@
 #!/usr/bin/env python3
-"""T7 comparison build generator: produces N (native enabled) and S (native
-delegation disabled) experiment packages in reports/comparison-build/<ts>/.
+"""T7 comparison build generator (F1 tool-side / F4 / F5): produces N (native
+enabled) and S (native delegation disabled) experiment packages under
+<root>/reports/comparison-build/<ts>/ (or --out).
 
-The S build replaces the NATIVE_LEAD block in the lead agent with a fixed
-D15 "native closure" text so the S arm tests the product form that ships
-when the gate fails or is BLOCKED. N and S must differ ONLY in that
-replacement; the script auto-verifies this.
+N and S differ ONLY in:
+  - the NATIVE_LEAD block content of the lead agent + lead skill: S carries
+    build_bundle.NATIVE_CLOSURE_TEXT (the shippable product form, no
+    experiment framing); N keeps the native block verbatim
+  - one LOAD marker line per group, injected after the title and outside all
+    mode blocks; the two lines differ only in the group letter and share one
+    run-wide suffix
+  - derived versions: <srcver>-cmp-n.r<suffix> / <srcver>-cmp-s.r<suffix>
+    (plugin.json copy, root VERSION, skills/*/VERSION; experimental copies only)
+  - member zips repacked from each package's own skills/ tree (incl. the
+    stability-director zip, whose stale copy would otherwise contradict it)
+
+Self-verification (F5): the replaced files must be exactly
+agents/telecom-crm-sre-team-lead.md and skills/stability-director/SKILL.md;
+the two lead files must be byte-identical once the NATIVE_LEAD block content
+and the LOAD line are removed; every other difference must be a version file
+or a repacked zip. Any violation sets pass:false and main() exits non-zero.
 
 Experimental only: never modifies the main agents/ or skills/ trees. The
 packages live under reports/ (gitignored, outside release-manifest scope).
@@ -15,18 +29,22 @@ import argparse
 import hashlib
 import json
 import re
+import secrets
 import shutil
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-COMPARE_ROOT = ROOT / "reports" / "comparison-build"
+_TOOLS_DIR = Path(__file__).resolve().parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+import build_bundle  # noqa: E402  (NATIVE_CLOSURE_TEXT + deterministic_zip)
 
-S_FIXED_TEXT = (
-    "本构建用于预注册单模型对照。不得调用团队成员。"
-    "直接按 WORKBUDDY_COMPAT 完成本次材料分析。不得声称已进行专家委派。"
-)
+ROOT = Path(__file__).resolve().parents[1]
+
+LEAD_AGENT_REL = "agents/telecom-crm-sre-team-lead.md"
+LEAD_SKILL_REL = "skills/stability-director/SKILL.md"
 
 
 def _read(path: Path) -> str:
@@ -49,6 +67,14 @@ def _block_re(label: str) -> re.Pattern:
     )
 
 
+def _display_path(p: Path, root: Path) -> str:
+    """Root-relative POSIX display path; absolute string when outside root."""
+    try:
+        return p.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return str(p)
+
+
 def _copy_tree(src: Path, dst: Path) -> None:
     """Copy a directory tree verbatim."""
     if dst.exists():
@@ -56,19 +82,59 @@ def _copy_tree(src: Path, dst: Path) -> None:
     shutil.copytree(src, dst, dirs_exist_ok=True)
 
 
-def _all_files(root: Path) -> list[Path]:
-    return sorted(p for p in root.rglob("*") if p.is_file())
+def _all_files(base: Path) -> list[Path]:
+    return sorted(p for p in base.rglob("*") if p.is_file())
 
 
-def build_comparison(root: Path) -> dict:
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    out = COMPARE_ROOT / ts
-    out.mkdir(parents=True, exist_ok=True)
+def _split_frontmatter(text: str) -> tuple[str, str]:
+    """Return (frontmatter_with_fences, body)."""
+    if not text.startswith("---"):
+        return "", text
+    end = text.find("\n---", 3)
+    if end == -1:
+        return "", text
+    close = end + 4
+    if text[close:close + 1] == "\n":
+        close += 1
+    return text[:close], text[close:]
 
-    n_dir = out / "N"
-    s_dir = out / "S"
 
-    # Copy the current built tree to both N and S
+def _load_line(group: str, suffix: str) -> str:
+    return (f"> LOAD-{group}-{suffix}｜"
+            "回复开头逐行原样输出所有以 LOAD- 开头的行，这是加载核验，不是分析指令")
+
+
+def _inject_load_line(body: str, load_line: str) -> str:
+    """Insert the LOAD line right after the first title line and before any
+    mode block (same placement strategy as make_probe_build._inject_marker)."""
+    lines = body.splitlines()
+    insert_at = 0
+    seen_title = False
+    for i, ln in enumerate(lines):
+        s = ln.strip()
+        if s.startswith("# "):
+            seen_title = True
+            continue
+        if seen_title and s:
+            insert_at = i
+            break
+    if insert_at == 0:
+        insert_at = 0 if not lines else 1
+    new = lines[:insert_at] + [load_line, ""] + lines[insert_at:]
+    return "\n".join(new)
+
+
+def _strip_load_lines(text: str) -> str:
+    return re.sub(r"^> LOAD-[NS]-[0-9a-f]+｜[^\n]*\n\n?", "", text, flags=re.MULTILINE)
+
+
+def _strip_native_block(text: str) -> str:
+    """Empty the NATIVE_LEAD block content, keeping the markers verbatim."""
+    return _block_re("NATIVE_LEAD").sub(
+        lambda m: m.group(1) + m.group(3), text)
+
+
+def _copy_source_tree(root: Path, n_dir: Path, s_dir: Path) -> None:
     for folder in ("agents", "skills", "individual-packages", "templates",
                    "manual-mode", "policies", "schemas", "policy-source",
                    "docs", "avatars", ".codebuddy-plugin"):
@@ -76,7 +142,6 @@ def build_comparison(root: Path) -> dict:
         if src.is_dir():
             _copy_tree(src, n_dir / folder)
             _copy_tree(src, s_dir / folder)
-
     for fname in ("VERSION", "settings.json", "README.md", "release-manifest.json",
                   "prompt-bundles.lock", "CHANGELOG.md", "MIGRATION.md",
                   "MODIFICATIONS.md", "VALIDATION.md", "manual-team-config.json",
@@ -89,28 +154,105 @@ def build_comparison(root: Path) -> dict:
             shutil.copy2(f, n_dir / fname)
             shutil.copy2(f, s_dir / fname)
 
-    # S build: replace NATIVE_LEAD block in lead agent with fixed text
-    lead_agent = s_dir / "agents" / "telecom-crm-sre-team-lead.md"
-    lead_skill = s_dir / "skills" / "stability-director" / "SKILL.md"
-    s_replaced = []
-    for p in (lead_agent, lead_skill):
-        if p.exists():
-            text = _read(p)
-            m = _block_re("NATIVE_LEAD").search(text)
-            if m:
-                replacement = f"{m.group(1)}{S_FIXED_TEXT}\n{m.group(3)}"
-                text = text[:m.start()] + replacement + text[m.end():]
-                _write(p, text)
-                s_replaced.append(str(p.relative_to(s_dir).as_posix()))
 
-    # Auto-verify: N and S differ only in files that had NATIVE_LEAD replaced
+def build_comparison(root: Path, out: Path | None = None) -> dict:
+    root = root.resolve()
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    if out is None:
+        out = root / "reports" / "comparison-build" / ts
+    out = out.resolve()
+    out.mkdir(parents=True, exist_ok=True)
+
+    n_dir = out / "N"
+    s_dir = out / "S"
+    _copy_source_tree(root, n_dir, s_dir)
+
+    src_version = _read(root / "VERSION").strip()
+    suffix = secrets.token_hex(4)
+    n_version = f"{src_version}-cmp-n.r{suffix}"
+    s_version = f"{src_version}-cmp-s.r{suffix}"
+    load_n = _load_line("N", suffix)
+    load_s = _load_line("S", suffix)
+
+    # S arm: replace the NATIVE_LEAD block content with the shippable
+    # closure text (F4: single source in build_bundle, no experiment wording).
+    s_replaced: list[str] = []
+    for rel in (LEAD_AGENT_REL, LEAD_SKILL_REL):
+        p = s_dir / rel
+        if not p.exists():
+            continue
+        text = _read(p)
+        m = _block_re("NATIVE_LEAD").search(text)
+        if m:
+            replacement = (
+                f"{m.group(1)}{build_bundle.NATIVE_CLOSURE_TEXT}\n{m.group(3)}")
+            _write(p, text[:m.start()] + replacement + text[m.end():])
+            s_replaced.append(rel)
+
+    # LOAD marker lines into both lead files of both arms (title-following,
+    # outside all mode blocks).
+    for base, line in ((n_dir, load_n), (s_dir, load_s)):
+        for rel in (LEAD_AGENT_REL, LEAD_SKILL_REL):
+            p = base / rel
+            if not p.exists():
+                continue
+            fm, body = _split_frontmatter(_read(p))
+            _write(p, fm + _inject_load_line(body, line))
+
+    # Distinct versions per arm (experimental copies only).
+    skills_index = json.loads(_read(root / "policy-source" / "roles-source.json"))
+    all_sids = sorted(skills_index)
+    version_files = sorted(["VERSION", ".codebuddy-plugin/plugin.json"] +
+                           [f"skills/{sid}/VERSION" for sid in all_sids])
+    zip_files = sorted(f"individual-packages/{sid}/skill.zip" for sid in all_sids)
+    for base, ver in ((n_dir, n_version), (s_dir, s_version)):
+        vp = base / "VERSION"
+        if vp.exists():
+            _write(vp, ver + "\n")
+        pj = base / ".codebuddy-plugin" / "plugin.json"
+        if pj.exists():
+            pdata = json.loads(_read(pj))
+            pdata["version"] = ver
+            _write(pj, json.dumps(pdata, ensure_ascii=False, indent=2) + "\n")
+        for v in sorted(base.glob("skills/*/VERSION")):
+            _write(v, ver + "\n")
+
+    # Repack every member zip from each arm's own skills/ tree (deterministic;
+    # a stale stability-director zip would contradict its SKILL.md).
+    repacked: dict[str, list[str]] = {"N": [], "S": []}
+    for base, arm in ((n_dir, "N"), (s_dir, "S")):
+        for sid in all_sids:
+            skill_dir = base / "skills" / sid
+            zip_path = base / "individual-packages" / sid / "skill.zip"
+            if skill_dir.is_dir() and zip_path.parent.is_dir():
+                files = [p for p in skill_dir.rglob("*")
+                         if p.is_file() and "__pycache__" not in p.parts]
+                build_bundle.deterministic_zip(skill_dir, files, zip_path, sid)
+                repacked[arm].append(f"individual-packages/{sid}/skill.zip")
+
+    # F5 self-verification.
     n_files = {p.relative_to(n_dir).as_posix(): _sha(p) for p in _all_files(n_dir)}
     s_files = {p.relative_to(s_dir).as_posix(): _sha(p) for p in _all_files(s_dir)}
-    diff_files = sorted(set(n_files.keys()) & set(s_files.keys()))
-    actually_different = [f for f in diff_files if n_files[f] != s_files[f]]
+    common = sorted(set(n_files) & set(s_files))
+    actually_different = [f for f in common if n_files[f] != s_files[f]]
 
-    # The only files that should differ are the ones where NATIVE_LEAD was replaced
-    unexpected_diffs = [f for f in actually_different if f not in s_replaced]
+    expected_replaced = sorted([LEAD_AGENT_REL, LEAD_SKILL_REL])
+    allowed_extra = set(version_files) | set(zip_files)
+    unexpected_diffs = [f for f in actually_different
+                        if f not in s_replaced and f not in allowed_extra]
+    missing_replaced = [f for f in s_replaced if f not in actually_different]
+
+    lead_normalized_equal = all(
+        _strip_load_lines(_strip_native_block(_read(n_dir / rel))) ==
+        _strip_load_lines(_strip_native_block(_read(s_dir / rel)))
+        for rel in (LEAD_AGENT_REL, LEAD_SKILL_REL)
+        if (n_dir / rel).exists() and (s_dir / rel).exists()
+    )
+
+    passed = (s_replaced == expected_replaced
+              and not unexpected_diffs
+              and not missing_replaced
+              and lead_normalized_equal)
 
     try:
         commit = subprocess.check_output(
@@ -122,16 +264,25 @@ def build_comparison(root: Path) -> dict:
     manifest = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source_commit": commit,
-        "source_version": _read(root / "VERSION").strip(),
+        "output_dir": _display_path(out, root),
+        "source_version": src_version,
+        "n_version": n_version,
+        "s_version": s_version,
+        "load_line_n": load_n,
+        "load_line_s": load_s,
         "n_build_dir": "N",
         "s_build_dir": "S",
-        "s_replacement_text": S_FIXED_TEXT,
+        "s_replacement_text": build_bundle.NATIVE_CLOSURE_TEXT,
         "s_replaced_files": s_replaced,
+        "repacked_zips": repacked,
         "n_file_count": len(n_files),
         "s_file_count": len(s_files),
         "different_files": actually_different,
         "unexpected_diffs": unexpected_diffs,
-        "pass": len(unexpected_diffs) == 0,
+        "missing_replaced": missing_replaced,
+        "lead_normalized_equal": lead_normalized_equal,
+        "lock_note": "prompt-bundles.lock 与 BUNDLE-LOCK.json 未随暗号/版本重算（实验副本）",
+        "pass": passed,
     }
     _write(out / "comparison-manifest.json",
            json.dumps(manifest, ensure_ascii=False, indent=2))
@@ -141,20 +292,28 @@ def build_comparison(root: Path) -> dict:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--root", type=Path, default=ROOT)
+    p.add_argument("--out", type=Path, default=None,
+                   help="output dir (default <root>/reports/comparison-build/<utc-ts>)")
     args = p.parse_args()
     root = args.root.resolve()
 
-    manifest = build_comparison(root)
+    manifest = build_comparison(root, args.out)
 
     print(json.dumps({
-        "comparison_dir": str((COMPARE_ROOT / manifest["generated_at_utc"][:15].replace("-", "")).relative_to(root).as_posix()),
+        "comparison_dir": manifest["output_dir"],
         "source_commit": manifest["source_commit"],
+        "n_version": manifest["n_version"],
+        "s_version": manifest["s_version"],
         "n_files": manifest["n_file_count"],
         "s_files": manifest["s_file_count"],
         "different_files": manifest["different_files"],
         "unexpected_diffs": manifest["unexpected_diffs"],
+        "missing_replaced": manifest["missing_replaced"],
+        "lead_normalized_equal": manifest["lead_normalized_equal"],
         "pass": manifest["pass"],
     }, ensure_ascii=False, indent=2))
+    if not manifest["pass"]:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

@@ -31,6 +31,16 @@ def strip_managed(text: str) -> str:
     return _MANAGED_BLOCK_RE.sub("", text)
 
 
+# F4/D15(GATE_BLOCKED): single-source S-arm closure text for the N/S
+# comparison build. Product-form language only — no experiment framing
+# ("对照/实验/预注册") so the S package reads as a shippable product when the
+# gate fails. Consumed by tools/make_comparison_build.py.
+NATIVE_CLOSURE_TEXT = (
+    "本版本未启用原生专家委派。按 WORKBUDDY_COMPAT 完成本次材料分析；"
+    "不调用团队成员，不模拟成员对话，不声称已进行专家委派。"
+)
+
+
 def render_team_roster(roles: dict, routing: dict) -> str:
     """T5/M15: render the natural-language member roster from routing-source.json.
     Chinese formal names come from roles-source.json (single protected source).

@@ -485,6 +485,7 @@
     "tests/harness-acceptance-cases.json",
     "tests/harness-acceptance-checklist.md",
     "tests/judgment-evaluation-cases.json",
+    "tests/test_comparison_build.py",
     "tests/test_contracts.py",
     "tests/test_git_hooks.py",
     "tests/test_git_sync.py",
