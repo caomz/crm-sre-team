@@ -2,9 +2,9 @@
   "version": "2.7.0",
   "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
   "result": "PASS_STATIC_ONLY",
-  "checks_total": 1808,
-  "checks_passed": 1808,
-  "relative_links_checked": 223,
+  "checks_total": 1809,
+  "checks_passed": 1809,
+  "relative_links_checked": 224,
   "offline_contract_tests_run": 46,
   "offline_contract_test_failures": 0,
   "offline_contract_test_errors": 0,
@@ -5795,6 +5795,11 @@
     },
     {
       "id": "relative_link:docs/12-native-vs-single-comparison.md:../README.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "relative_link:docs/12-native-vs-single-comparison.md:11-workbuddy-host-acceptance.md",
       "passed": true,
       "detail": ""
     },

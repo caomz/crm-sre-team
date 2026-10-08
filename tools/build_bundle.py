@@ -31,7 +31,7 @@ def strip_managed(text: str) -> str:
     return _MANAGED_BLOCK_RE.sub("", text)
 
 
-# F4/D15(GATE_BLOCKED): single-source S-arm closure text for the N/S
+# F4/PD-15(GATE_BLOCKED): single-source S-arm closure text for the N/S
 # comparison build. Product-form language only — no experiment framing
 # ("对照/实验/预注册") so the S package reads as a shippable product when the
 # gate fails. Consumed by tools/make_comparison_build.py.
