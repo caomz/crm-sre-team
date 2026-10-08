@@ -1,14 +1,19 @@
 #!/bin/sh
-# Pre-commit gate: regenerate build-owned outputs from policy-source and refuse the
-# commit if that regeneration changes anything.
+# Pre-commit gate (F6): rebuild from the STAGED tree and refuse the commit if
+# the staged build-owned outputs are stale — without ever rewriting the
+# working tree.
 #
-# Enforced capability, not a prompt claim: if generated trees drift from the
-# canonical source, the commit is blocked until the rebuilt files are staged.
+# Mechanics: export the index to a temp dir (git checkout-index), run
+# tools/build_bundle.py --root there, and compare hashes of the build-owned
+# outputs before/after the rebuild. A diff means the staged outputs are
+# stale: the commit is rejected, the user re-runs the build and re-stages.
+# The working tree is untouched by this hook on every code path.
+#
 # Install with:  git config core.hooksPath tools/git-hooks
 # Bypass (deliberately):  git commit --no-verify
 #
-# No extension on this filename is intentional: git resolves hooks by exact name.
-# This file is a local dev tool and is deliberately absent from
+# No extension on this filename is intentional: git resolves hooks by exact
+# name. This file is a local dev tool and is deliberately absent from
 # release-manifest.json, which only governs packaged release contents.
 
 set -eu
@@ -16,33 +21,71 @@ set -eu
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
-if ! command -v python3 >/dev/null 2>&1; then
-    if command -v python >/dev/null 2>&1; then
-        python3() { python "$@"; }
-    else
-        echo "pre-commit: SKIPPED - no python3/python on PATH" >&2
-        exit 0
+# Find a real python: try python3, python, then py -3 (Windows launcher).
+# Each candidate must actually run (-c "import sys") so the Windows Store
+# python3 stub does not silently pass the command -v check.
+PY=""
+if command -v python3 >/dev/null 2>&1 && python3 -c "import sys" >/dev/null 2>&1; then
+    PY="python3"
+elif command -v python >/dev/null 2>&1 && python -c "import sys" >/dev/null 2>&1; then
+    PY="python"
+elif command -v py >/dev/null 2>&1 && py -3 -c "import sys" >/dev/null 2>&1; then
+    PY="py -3"
+fi
+if [ -z "$PY" ]; then
+    echo "pre-commit: SKIPPED - no working python3/python/py -3 on PATH" >&2
+    exit 0
+fi
+
+tmp_base=$(mktemp -d "${TMPDIR:-/tmp}/crm-precommit.XXXXXX")
+# MSYS/git-bash only: align every child process (git, python) with the
+# shell's view of the temp dir. Without this, sh sees one directory while
+# git/python resolve the same "/tmp/..." string to "<cwd-drive>:\tmp\...".
+# macOS has no cygpath and its /tmp is a real path for every process.
+if command -v cygpath >/dev/null 2>&1; then
+    tmp_base=$(cygpath -m "$tmp_base")
+fi
+trap 'rm -rf "$tmp_base" 2>/dev/null || true' EXIT
+export_dir="$tmp_base/export"
+mkdir -p "$export_dir"
+
+# Export the STAGED tree (the index), not the working tree, then work there.
+git checkout-index -a --prefix="$export_dir/"
+cd "$export_dir"
+
+owned_find() {
+    find agents skills templates manual-mode individual-packages -type f 2>/dev/null || true
+}
+
+hashes() {
+    owned_find | LC_ALL=C sort | while IFS= read -r f; do
+        printf '%s  %s\n' "$(git hash-object -- "$f")" "$f"
+    done
+    if [ -f prompt-bundles.lock ]; then
+        printf '%s  %s\n' "$(git hash-object -- prompt-bundles.lock)" "prompt-bundles.lock"
     fi
-fi
+}
 
-if ! python3 tools/build_bundle.py >/dev/null 2>&1; then
-    echo "pre-commit: FAILED - tools/build_bundle.py exited non-zero." >&2
-    echo "pre-commit: run it manually to see the error; commit aborted." >&2
+hashes > "$tmp_base/before.txt"
+
+# Build from the exported staged tree; --root keeps every write inside it.
+# shellcheck disable=SC2086
+if ! $PY "$repo_root/tools/build_bundle.py" --root "$export_dir" >/dev/null 2>&1; then
+    echo "pre-commit: FAILED - tools/build_bundle.py exited non-zero on the staged tree." >&2
+    echo "pre-commit: run it manually to see the error; commit aborted; working tree untouched." >&2
     exit 1
 fi
 
-# Only the build-owned outputs are allowed to have been rewritten by the rebuild.
-staged=$(git diff --name-only)
-generated=$(printf '%s\n' "$staged" | grep -E '^(agents/|skills/|templates/|manual-mode/|individual-packages/|prompt-bundles\.lock$)' || true)
+hashes > "$tmp_base/after.txt"
 
-if [ -n "$generated" ]; then
-    echo "pre-commit: FAILED - build output was stale and has now been regenerated." >&2
-    echo "pre-commit: review the changes below, stage them, and commit again:" >&2
-    printf '%s\n' "$generated" | sed 's/^/pre-commit:   /' >&2
+if ! cmp -s "$tmp_base/before.txt" "$tmp_base/after.txt"; then
+    echo "pre-commit: FAILED - staged build-owned outputs are stale." >&2
+    diff "$tmp_base/before.txt" "$tmp_base/after.txt" \
+        | grep '^>' | sed -e 's/^> [0-9a-f]*  /pre-commit:   /' >&2 || true
+    echo "pre-commit: run the build yourself, then re-stage the rebuilt files and commit again:" >&2
+    echo "pre-commit:   python tools/build_bundle.py && git add agents skills templates manual-mode individual-packages prompt-bundles.lock" >&2
+    echo "pre-commit: the working tree was NOT modified by this hook." >&2
     exit 1
 fi
 
-# The check above is sufficient and is the only gate. A second "not staged"
-# check here would also match `M ` (staged-and-modified), which the rebuild
-# legitimately leaves behind, deadlocking the commit forever.
 exit 0

@@ -73,4 +73,6 @@ python3 tools/sync_git.py --apply --confirm <plan_id>
 
 默认 dry-run；写入需 `--apply` 加 plan_id 二次确认；仅作用于项目根内文件；构建自有产物不按文件同步。工具不执行 `git add` / `commit` / `push`。
 
+从开发 clone 同步到 GitHub 克隆之前，先列出 `origin/main` 自上次同步以来改过的文件（`git log --name-only HEAD..origin/main` 或等价命令），逐个确认本地改动不会被覆盖回旧版本，再开始同步。
+
 `git push` / `git commit` 属于独立的显式决定，不因本文件的存在而自动发生。

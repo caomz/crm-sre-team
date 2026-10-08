@@ -1,19 +1,35 @@
 """Pre-commit gate behavior on a synthetic repo. Never touches the real project.
 
-Covers: stale build output is blocked and rebuilt, a consistent tree commits, and
-a source edit forces a rebuild+stage cycle instead of drifting silently.
+Covers (F6 semantics): the gate rebuilds the STAGED tree in isolation and
+rejects stale build-owned outputs WITHOUT repairing them; a consistent
+staged tree commits; working-tree noise and unstaged edits never influence
+the verdict; the hook never modifies the working tree.
 """
 from __future__ import annotations
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 HOOK = ROOT / "tools" / "git-hooks" / "pre-commit"
 INSTALLER = ROOT / "tools" / "install_git_hooks.py"
+
+FAKE_BUILD = (
+    "import pathlib, sys\n"
+    "args = sys.argv[1:]\n"
+    "if '--root' in args:\n"
+    "    root = pathlib.Path(args[args.index('--root') + 1]).resolve()\n"
+    "else:\n"
+    "    root = pathlib.Path(__file__).resolve().parents[1]\n"
+    "s = (root/'policy-source'/'shared.md').read_text(encoding='utf-8')\n"
+    "skill = root/'skills'\n"
+    "skill.mkdir(parents=True, exist_ok=True)\n"
+    "(skill/'out.md').write_text(s, encoding='utf-8', newline='\\n')\n"
+)
 
 
 def git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
@@ -35,6 +51,20 @@ def can_run_sh() -> bool:
 requires_sh = unittest.skipUnless(can_run_sh(), "SKIPPED_CAPABILITY: no sh/bash on PATH")
 
 
+def run_hook(repo: Path) -> subprocess.CompletedProcess:
+    """Run the hook exactly as git would (sh, cwd=repo).
+
+    We deliberately do NOT rely on `git commit` to propagate the hook's exit
+    code: this dev environment's git (PortableGit 2.55 run_processes_parallel
+    hook runner) executes the hook but swallows its exit code, so a blocking
+    hook would not abort the commit. The hook's own semantics are what this
+    suite verifies; the landing paths still go through real commits.
+    """
+    return subprocess.run(["sh", str(repo / "tools" / "git-hooks" / "pre-commit")],
+                          cwd=str(repo), capture_output=True, text=True,
+                          encoding="utf-8", errors="replace")
+
+
 class PreCommitHookTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -48,11 +78,7 @@ class PreCommitHookTests(unittest.TestCase):
         self.src.write_text("canonical\n", encoding="utf-8", newline="\n")
         self.gen.write_text("canonical\n", encoding="utf-8", newline="\n")
         (self.repo / "tools" / "build_bundle.py").write_text(
-            "import pathlib\n"
-            "root = pathlib.Path(__file__).resolve().parents[1]\n"
-            "s = (root/'policy-source'/'shared.md').read_text(encoding='utf-8')\n"
-            "(root/'skills'/'out.md').write_text(s, encoding='utf-8', newline='\\n')\n",
-            encoding="utf-8", newline="\n")
+            FAKE_BUILD, encoding="utf-8", newline="\n")
         (self.repo / ".gitattributes").write_text("* text=auto eol=lf\n", encoding="utf-8", newline="\n")
         hooks = self.repo / "tools" / "git-hooks"
         hooks.mkdir(parents=True)
@@ -93,15 +119,22 @@ class PreCommitHookTests(unittest.TestCase):
         current = git(self.repo, "config", "--get", "core.hooksPath", check=False)
         self.assertNotEqual(current.returncode, 0, "hooksPath should be removed after uninstall")
 
+    def rebuild_and_stage(self):
+        """Simulate the documented repair path: rebuild in the repo, re-stage."""
+        subprocess.run([sys.executable, str(self.repo / "tools" / "build_bundle.py")],
+                       check=True, capture_output=True)
+        git(self.repo, "add", "-A")
+
     @requires_sh
-    def test_04_stale_artifact_is_blocked_and_rebuilt(self):
+    def test_04_stale_artifact_is_blocked_without_repair(self):
         self.src.write_text("canonical v2\n", encoding="utf-8", newline="\n")
         git(self.repo, "add", "-A")
-        blocked = git(self.repo, "commit", "-m", "drift", check=False)
+        blocked = run_hook(self.repo)
         self.assertNotEqual(blocked.returncode, 0, "hook must block a stale build artifact")
         self.assertIn("stale", (blocked.stderr or "").lower())
-        # Blocking is only useful if it also repaired the artifact.
-        self.assertEqual(self.gen.read_text(encoding="utf-8"), "canonical v2\n")
+        # F6: the gate judges the staged tree and never repairs in place.
+        self.assertEqual(self.gen.read_text(encoding="utf-8"), "canonical\n",
+                         "hook must not modify the working tree when blocking")
 
     @requires_sh
     def test_05_consistent_tree_commits_cleanly(self):
@@ -115,9 +148,9 @@ class PreCommitHookTests(unittest.TestCase):
     def test_06_source_edit_forces_rebuild_then_allows_landing(self):
         self.src.write_text("canonical v3\n", encoding="utf-8", newline="\n")
         git(self.repo, "add", "-A")
-        first = git(self.repo, "commit", "-m", "edit source", check=False)
+        first = run_hook(self.repo)
         self.assertNotEqual(first.returncode, 0, "source edit must not commit a stale artifact")
-        git(self.repo, "add", "-A")
+        self.rebuild_and_stage()
         second = git(self.repo, "commit", "-m", "land rebuild", check=False)
         self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
         self.assertIn("canonical v3\n", self.gen.read_text(encoding="utf-8"))
@@ -127,8 +160,8 @@ class PreCommitHookTests(unittest.TestCase):
         """A correct gate must let the follow-up commit through, not deadlock."""
         self.src.write_text("canonical v4\n", encoding="utf-8", newline="\n")
         git(self.repo, "add", "-A")
-        git(self.repo, "commit", "-m", "edit", check=False)
-        git(self.repo, "add", "-A")
+        run_hook(self.repo)
+        self.rebuild_and_stage()
         landed = git(self.repo, "commit", "-m", "land", check=False)
         self.assertEqual(landed.returncode, 0, landed.stdout + landed.stderr)
         # A subsequent unrelated commit must not be blocked either.
@@ -145,7 +178,7 @@ class PreCommitHookTests(unittest.TestCase):
         bypass = git(self.repo, "commit", "--no-verify", "-m", "bypass", check=False)
         self.assertEqual(bypass.returncode, 0, bypass.stdout + bypass.stderr)
         self.assertEqual(self.gen.read_text(encoding="utf-8"), "canonical\n",
-                         "--no-verify should leave the artifact stale, proving the gate is what rebuilt it")
+                         "--no-verify skips the gate entirely; the working tree stays stale")
 
     def test_09_extensionless_tools_stay_out_of_release_manifest(self):
         """Neither the extensionless hook nor AGENTS.md is release payload."""
@@ -159,6 +192,52 @@ class PreCommitHookTests(unittest.TestCase):
         self.assertIn("tools/sync_git.py", manifest)
         self.assertIn("tests/test_git_hooks.py", manifest)
         self.assertIn("tests/test_git_sync.py", manifest)
+
+    @requires_sh
+    def test_10_partial_staging_negative_is_blocked(self):
+        """F6 key negative: the gate judges the STAGED tree only. Staging a
+        new source while the working tree keeps the old source must be
+        blocked (the old worktree-based gate would have let it through)."""
+        self.src.write_text("canonical v6\n", encoding="utf-8", newline="\n")
+        git(self.repo, "add", "policy-source/shared.md")
+        # Working tree is reverted to the old source; the index keeps v6.
+        self.src.write_text("canonical\n", encoding="utf-8", newline="\n")
+        blocked = run_hook(self.repo)
+        self.assertNotEqual(blocked.returncode, 0,
+                            "staged-tree gate must block staged-source/stale-output drift")
+        self.assertIn("stale", (blocked.stderr or "").lower())
+        self.assertEqual(self.gen.read_text(encoding="utf-8"), "canonical\n")
+        self.assertEqual(self.src.read_text(encoding="utf-8"), "canonical\n",
+                         "hook must not touch working-tree files")
+
+    @requires_sh
+    def test_11_unstaged_working_tree_noise_is_ignored(self):
+        """A consistent staged tree commits even with dirty working-tree
+        content: the hook builds the index, not the worktree."""
+        tracked = self.repo / "NOISE.md"
+        tracked.write_text("staged noise\n", encoding="utf-8", newline="\n")
+        git(self.repo, "add", "NOISE.md")
+        tracked.write_text("dirty worktree noise\n", encoding="utf-8", newline="\n")
+        allowed = git(self.repo, "commit", "-m", "clean index, dirty worktree",
+                      check=False)
+        self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
+        self.assertEqual(tracked.read_text(encoding="utf-8"), "dirty worktree noise\n",
+                         "the commit must not touch unstaged working-tree content")
+
+    @requires_sh
+    def test_12_hook_never_modifies_working_tree(self):
+        """On the blocking path the working tree must stay byte-identical."""
+        def snap():
+            return {p.relative_to(self.repo).as_posix(): p.read_bytes()
+                    for p in sorted(self.repo.rglob("*"))
+                    if p.is_file() and ".git" not in p.parts}
+
+        self.src.write_text("canonical v7\n", encoding="utf-8", newline="\n")
+        git(self.repo, "add", "-A")
+        before = snap()
+        run_hook(self.repo)
+        self.assertEqual(before, snap(),
+                         "hook must leave the working tree untouched even when blocking")
 
 
 if __name__ == "__main__":
