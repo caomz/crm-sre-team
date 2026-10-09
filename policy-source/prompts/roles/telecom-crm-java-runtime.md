@@ -13,7 +13,7 @@ skills:
   - java-runtime
 ---
 
-# Java应用与JVM专家 · 2.6.0-rc3.workbuddy.2 三模式候选版
+# Java应用与JVM专家 · 三模式契约
 
 {{COMMON_CONTRACT}}
 

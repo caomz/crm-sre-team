@@ -11,7 +11,7 @@ import tempfile
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from release_rules import PREFIX, ZIP_TIME, release_files
+from release_rules import PREFIX, ZIP_TIME, release_files, is_link
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,7 +20,7 @@ def build_release(root: Path, output: Path) -> dict:
     root = root.resolve(strict=True)
     # Reject the link itself and symlinked parents before resolving the output.
     output = output.absolute()
-    if output.is_symlink() or any(p.is_symlink() for p in output.parents):
+    if is_link(output) or any(is_link(p) for p in output.parents):
         raise ValueError("Symlink output or parent is not permitted")
     output = output.resolve()
     if output.suffix.lower() != ".zip": raise ValueError("Output must end with .zip")

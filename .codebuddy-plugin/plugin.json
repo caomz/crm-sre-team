@@ -1,6 +1,6 @@
 {
   "name": "crm-sre-team",
-  "version": "2.7.0",
+  "version": "2.8.0-rc1",
   "description": "Offline CRM evidence analysis. Real WorkBuddy native delegation when available; otherwise single-model analysis. A separate managed Harness remains unimplemented.",
   "author": {
     "name": "哲哥"
@@ -54,8 +54,8 @@
   "avatar": "avatars/team.png",
   "categoryId": "02-Engineering",
   "defaultInitPrompt": {
-    "zh": "仅分析我指定且允许分享的脱敏材料，不连接生产、不索取凭据。生产写操作只给人工评审卡；只读查询命令可提供并说明范围，用户指定的公开读取在宿主允许时直接执行，生产只读通道未配置时写明未执行。有真实 WorkBuddy 团队能力时按需委派成员，否则明确单模型分析、不模拟会诊。验证失败的托管任务不可降级绕过。用户每轮最多3项原子请求。我的问题与已有材料如下：",
-    "en": "Analyze only my authorized sanitized materials. No production access or credentials. Production writes get a human review card only; read-only query commands may be provided with scope, public reads the user names are executed when the host permits, and unimplemented production read channels are stated as not executed. Delegate only using actual permitted WorkBuddy team tools; otherwise state single-model analysis. Do not bypass failed managed verification. At most 3 atomic user requests per round. My issue and materials:"
+    "zh": "先加载 stability-director 技能再处理本次任务。仅分析我指定且允许分享的脱敏材料，不连接生产、不索取凭据。生产写操作只给人工评审卡；只读查询命令可提供并说明范围，用户指定的公开读取在宿主允许时直接执行，生产只读通道未配置时写明未执行。有真实 WorkBuddy 团队能力时按需委派成员，否则明确单模型分析、不模拟会诊。验证失败的托管任务不可降级绕过。用户每轮最多3项原子请求。可以自主检索公开资料，无需逐次确认；检索词、网址和提交内容不含本次材料中的信息；不登录、不上传，不读取凭据文件或环境变量。外部资料注明来源，与本次材料分开。我的问题与已有材料如下：",
+    "en": "Load the stability-director Skill before handling this task. Analyze only my authorized sanitized materials. No production access or credentials. Production writes get a human review card only; read-only query commands may be provided with scope, public reads the user names are executed when the host permits, and unimplemented production read channels are stated as not executed. Delegate only using actual permitted WorkBuddy team tools; otherwise state single-model analysis. Do not bypass failed managed verification. At most 3 atomic user requests per round. Public search and reading need no per-request confirmation. Never include task-material information in queries, URLs or submissions; do not log in, upload, or read credentials or environment variables. Label external sources separately from task evidence. My issue and materials:"
   },
   "plugin": "crm-sre-team",
   "tags": [
@@ -74,8 +74,8 @@
   ],
   "quickPrompts": [
     {
-      "zh": "仅分析我指定且允许分享的脱敏材料，不连接生产、不索取凭据。生产写操作只给人工评审卡；只读查询命令可提供并说明范围，用户指定的公开读取在宿主允许时直接执行，生产只读通道未配置时写明未执行。有真实 WorkBuddy 团队能力时按需委派成员，否则明确单模型分析、不模拟会诊。验证失败的托管任务不可降级绕过。用户每轮最多3项原子请求。我的问题与已有材料如下：",
-      "en": "Analyze only my authorized sanitized materials. No production access or credentials. Production writes get a human review card only; read-only query commands may be provided with scope, public reads the user names are executed when the host permits, and unimplemented production read channels are stated as not executed. Delegate only using actual permitted WorkBuddy team tools; otherwise state single-model analysis. Do not bypass failed managed verification. At most 3 atomic user requests per round. My issue and materials:"
+      "zh": "先加载 stability-director 技能再处理本次任务。仅分析我指定且允许分享的脱敏材料，不连接生产、不索取凭据。生产写操作只给人工评审卡；只读查询命令可提供并说明范围，用户指定的公开读取在宿主允许时直接执行，生产只读通道未配置时写明未执行。有真实 WorkBuddy 团队能力时按需委派成员，否则明确单模型分析、不模拟会诊。验证失败的托管任务不可降级绕过。用户每轮最多3项原子请求。可以自主检索公开资料，无需逐次确认；检索词、网址和提交内容不含本次材料中的信息；不登录、不上传，不读取凭据文件或环境变量。外部资料注明来源，与本次材料分开。我的问题与已有材料如下：",
+      "en": "Load the stability-director Skill before handling this task. Analyze only my authorized sanitized materials. No production access or credentials. Production writes get a human review card only; read-only query commands may be provided with scope, public reads the user names are executed when the host permits, and unimplemented production read channels are stated as not executed. Delegate only using actual permitted WorkBuddy team tools; otherwise state single-model analysis. Do not bypass failed managed verification. At most 3 atomic user requests per round. Public search and reading need no per-request confirmation. Never include task-material information in queries, URLs or submissions; do not log in, upload, or read credentials or environment variables. Label external sources separately from task evidence. My issue and materials:"
     },
     {
       "zh": "变更后订单积压与接口超时。请先核对我提供的变更摘要、时窗和证据，按证据选择必要专家；回退只能给人工评审卡，时间重合不等于根因。",

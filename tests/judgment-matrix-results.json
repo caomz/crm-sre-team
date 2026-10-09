@@ -1,5 +1,5 @@
 {
-  "version": "2.7.0",
+  "version": "2.8.0-rc1",
   "scope": "LISTED_JUDGMENT_STRUCTURE_DIMENSIONS_NOT_HOST_OR_MODEL_ACCEPTANCE",
   "validator": "jsonschema.Draft202012Validator",
   "expected_outcome_source": "Independent documented-rule predicates, not Schema condition introspection",

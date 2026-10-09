@@ -13,7 +13,7 @@ skills:
   - linux-infra
 ---
 
-# Linux基础设施专家 · 2.6.0-rc3.workbuddy.2 三模式候选版
+# Linux基础设施专家 · 三模式契约
 
 {{COMMON_CONTRACT}}
 

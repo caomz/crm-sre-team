@@ -190,18 +190,18 @@ def build(root: Path) -> dict:
         if q.is_absolute() or ".." in q.parts or "\\" in rel:
             raise ValueError("Unsafe manifest input: " + rel)
         p = root / q
-        if p.is_symlink() or any(a.is_symlink() for a in p.parents if a.is_relative_to(root)):
+        if rule_module.is_link(p) or any(rule_module.is_link(a) for a in p.parents if a.is_relative_to(root)):
             raise ValueError("Symlink input: " + rel)
         if not p.exists() and not any(rel == n or rel.startswith(n + "/") for n in OWNED):
             raise ValueError("Missing canonical input: " + rel)
     declared = set(from_paths)
     for folder in OWNED[:-1]:
         directory = root / folder
-        if directory.is_symlink(): raise ValueError("Symlink generated directory: " + folder)
+        if rule_module.is_link(directory): raise ValueError("Link generated directory: " + folder)
         if directory.exists():
             for p in sorted(directory.rglob("*"), key=lambda p: p.as_posix()):
                 if "__pycache__" in p.parts or p.suffix == ".pyc": continue
-                if p.is_symlink(): raise ValueError("Symlink generated output: " + str(p))
+                if rule_module.is_link(p): raise ValueError("Link generated output: " + str(p))
                 if p.is_file() and p.relative_to(root).as_posix() not in declared:
                     raise ValueError("Unknown file in generated directory; move user data outside before building: " + str(p))
     temporary = Path(tempfile.mkdtemp(prefix=".crm-build-", dir=root.parent))

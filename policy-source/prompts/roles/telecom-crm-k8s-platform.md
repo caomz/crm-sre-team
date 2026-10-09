@@ -13,7 +13,7 @@ skills:
   - k8s-platform
 ---
 
-# K8s按需辅助专家 · 2.6.0-rc3.workbuddy.2 三模式候选版
+# K8s按需辅助专家 · 三模式契约
 
 {{COMMON_CONTRACT}}
 

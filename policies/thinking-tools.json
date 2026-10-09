@@ -1,5 +1,5 @@
 {
-  "version": "2.7.0",
+  "version": "2.8.0-rc1",
   "status": "PROMPT_ROUTING_ONLY_NOT_RUNTIME_ENFORCED",
   "namespace": "course_tools",
   "display_prefix": "course:",
@@ -463,7 +463,7 @@
             "T027"
           ],
           "material": "等待机制、活动对象、时序、正常负载和业务影响",
-          "judgment": "拆分锁、IO、连接等解释，提出能区分机制的一项最小材料；不输出查询或采集命令。"
+          "judgment": "拆分锁、IO、连接等解释，提出能区分机制的一项最小材料；原生/兼容可按只读边界生成查询命令，写明未执行；托管仍只提材料需求。"
         },
         {
           "trigger": "只给聚合或经过筛选的等待摘要",

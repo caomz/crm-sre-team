@@ -1,6 +1,6 @@
 {
   "format": "manual-configuration-guide-not-workbuddy-import-schema",
-  "version": "2.6.0-rc3.workbuddy.2",
+  "version": "2.8.0-rc1",
   "mode": "USER_PROVIDED_EVIDENCE_NO_PRODUCTION_ACCESS",
   "purpose": "人工配置参考，不是官方导入 Schema；托管模式需独立 Harness，实现情况见 policies/runtime-contract.json",
   "production_connections": "Do not configure; enforce in host permissions, not only prompts",

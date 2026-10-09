@@ -13,7 +13,7 @@ skills:
   - oracle-dba
 ---
 
-# Oracle数据库专家 · 2.6.0-rc3.workbuddy.2 三模式候选版
+# Oracle数据库专家 · 三模式契约
 
 {{COMMON_CONTRACT}}
 

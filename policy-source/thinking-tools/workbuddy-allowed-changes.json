@@ -1,5 +1,5 @@
 {
-  "version": "2.7.0",
+  "version": "2.8.0-rc1",
   "scope": "EXPLICIT_OFFLINE_CHANGE_REVIEW_NOT_SOURCE_AUTHENTICITY",
   "immutable_files": {
     "policy-source/roles-source.json": {
@@ -21,8 +21,8 @@
     },
     ".codebuddy-plugin/plugin.json": {
       "baseline_sha256": "46b33a4bc5e3865781e5b854df89fe8a593d5f158162c897a7e5dd55444b1acb",
-      "revised_sha256": "3b2f627d581f853b5e89406889798b6a271831b51e5f4d7b2782554fe4d8f264",
-      "reason": "Publish the truthful read-only boundary in init/quick prompts; production writes still get a human review card only."
+      "revised_sha256": "6e109ebaac967edb4c072a25f122d0e21ef52dfdef4cae21e0ddf221155814f9",
+      "reason": "2026-10-09 v3.5：主会话不预加载团长 Agent 正文，在初始化/首条快捷提示先引导加载 stability-director，并明示已授权自主公开检索及不外发材料、不登录上传、不读凭据/环境变量的底线。生产权限与人工评审边界不变。"
     }
   }
 }

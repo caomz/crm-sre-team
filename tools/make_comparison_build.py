@@ -30,7 +30,6 @@ import hashlib
 import json
 import re
 import secrets
-import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -40,6 +39,7 @@ _TOOLS_DIR = Path(__file__).resolve().parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 import build_bundle  # noqa: E402  (NATIVE_CLOSURE_TEXT + deterministic_zip)
+from experimental_build import prepare_output, copy_inputs
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -73,13 +73,6 @@ def _display_path(p: Path, root: Path) -> str:
         return p.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
         return str(p)
-
-
-def _copy_tree(src: Path, dst: Path) -> None:
-    """Copy a directory tree verbatim."""
-    if dst.exists():
-        shutil.rmtree(dst)
-    shutil.copytree(src, dst, dirs_exist_ok=True)
 
 
 def _all_files(base: Path) -> list[Path]:
@@ -134,38 +127,17 @@ def _strip_native_block(text: str) -> str:
         lambda m: m.group(1) + m.group(3), text)
 
 
-def _copy_source_tree(root: Path, n_dir: Path, s_dir: Path) -> None:
-    for folder in ("agents", "skills", "individual-packages", "templates",
-                   "manual-mode", "policies", "schemas", "policy-source",
-                   "docs", "avatars", ".codebuddy-plugin"):
-        src = root / folder
-        if src.is_dir():
-            _copy_tree(src, n_dir / folder)
-            _copy_tree(src, s_dir / folder)
-    for fname in ("VERSION", "settings.json", "README.md", "release-manifest.json",
-                  "prompt-bundles.lock", "CHANGELOG.md", "MIGRATION.md",
-                  "MODIFICATIONS.md", "VALIDATION.md", "manual-team-config.json",
-                  "source-baseline.json", "source-provenance.json",
-                  "requirements-build.txt", "requirements-dev.txt"):
-        f = root / fname
-        if f.exists():
-            n_dir.mkdir(parents=True, exist_ok=True)
-            s_dir.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(f, n_dir / fname)
-            shutil.copy2(f, s_dir / fname)
-
-
 def build_comparison(root: Path, out: Path | None = None) -> dict:
     root = root.resolve()
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     if out is None:
         out = root / "reports" / "comparison-build" / ts
-    out = out.resolve()
-    out.mkdir(parents=True, exist_ok=True)
+    out, inputs, source_digest = prepare_output(root, out)
 
     n_dir = out / "N"
     s_dir = out / "S"
-    _copy_source_tree(root, n_dir, s_dir)
+    copy_inputs(root, inputs, n_dir)
+    copy_inputs(root, inputs, s_dir)
 
     src_version = _read(root / "VERSION").strip()
     suffix = secrets.token_hex(4)
@@ -252,7 +224,9 @@ def build_comparison(root: Path, out: Path | None = None) -> dict:
     passed = (s_replaced == expected_replaced
               and not unexpected_diffs
               and not missing_replaced
-              and lead_normalized_equal)
+              and lead_normalized_equal
+              and set(n_files) == set(s_files)
+              and actually_different == sorted(set(expected_replaced) | allowed_extra))
 
     try:
         commit = subprocess.check_output(
@@ -264,6 +238,7 @@ def build_comparison(root: Path, out: Path | None = None) -> dict:
     manifest = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source_commit": commit,
+        "source_tree_sha256": source_digest,
         "output_dir": _display_path(out, root),
         "source_version": src_version,
         "n_version": n_version,
@@ -297,7 +272,10 @@ def main() -> None:
     args = p.parse_args()
     root = args.root.resolve()
 
-    manifest = build_comparison(root, args.out)
+    try:
+        manifest = build_comparison(root, args.out)
+    except (OSError, ValueError) as exc:
+        raise SystemExit("Comparison build failed: " + str(exc)) from exc
 
     print(json.dumps({
         "comparison_dir": manifest["output_dir"],

@@ -13,7 +13,7 @@ skills:
   - change-capacity-dr
 ---
 
-# 变更容量容灾专家 · 2.6.0-rc3.workbuddy.2 三模式候选版
+# 变更容量容灾专家 · 三模式契约
 
 {{COMMON_CONTRACT}}
 

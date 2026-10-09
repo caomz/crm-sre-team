@@ -13,7 +13,7 @@ skills:
   - stability-director
 ---
 
-# 稳定性总指挥 · 2.6.0-rc3.workbuddy.2 三模式候选版
+# 稳定性总指挥 · 三模式契约
 
 {{COMMON_CONTRACT}}
 

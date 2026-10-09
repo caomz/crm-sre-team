@@ -27,7 +27,6 @@ source commit and file list. Also prints a marker cheat sheet for the host run.
 from __future__ import annotations
 import argparse
 import json
-import shutil
 import secrets
 import subprocess
 import sys
@@ -38,9 +37,9 @@ _ROOT_DIR = Path(__file__).resolve().parent
 if str(_ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(_ROOT_DIR))
 import build_bundle  # noqa: E402  (same tools/ dir; needed for zip repack)
+from experimental_build import prepare_output, copy_inputs
 
 ROOT = Path(__file__).resolve().parents[1]
-PROBE_ROOT = ROOT / "reports" / "probe-build"
 
 
 def _read(path: Path) -> str:
@@ -141,27 +140,25 @@ def _inject_marker(body: str, marker_line: str) -> str:
 
 def build_probe(root: Path, out: Path, max_turns: dict[str, int],
                 disallow: dict[str, list[str]]) -> dict:
+    root = root.resolve(strict=True)
     roles = json.loads(_read(root / "policy-source/roles-source.json"))
+    member_sids = set(roles) - {"stability-director"}
+    if not set(max_turns).union(disallow) <= member_sids:
+        raise ValueError("Overrides require registered member Skill IDs")
+    if any(type(v) is not int or v < 1 for v in max_turns.values()):
+        raise ValueError("maxTurns must be a positive integer")
+    if set(max_turns).intersection(disallow):
+        raise ValueError("Do not combine maxTurns and disallowedTools on the same member")
+    import re
+    if any(not isinstance(v, list) or not v or
+           any(not isinstance(t, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", t) for t in v)
+           for v in disallow.values()):
+        raise ValueError("disallowedTools must contain tool names")
+    out, inputs, source_digest = prepare_output(root, out)
+    copy_inputs(root, inputs, out)
     suffix = secrets.token_hex(4)
     members = [(sid, r) for sid, r in sorted(roles.items()) if sid != "stability-director"]
     markers = {}
-    copied = 0
-
-    for sub in ("agents", "skills", "individual-packages", "templates",
-                "manual-mode", "policies", "schemas", "policy-source",
-                "docs", "avatars", ".codebuddy-plugin", "VERSION",
-                "settings.json", "README.md", "release-manifest.json",
-                "prompt-bundles.lock"):
-        src = root / sub
-        dst = out / sub
-        if src.is_dir():
-            shutil.copytree(src, dst, dirs_exist_ok=True)
-            copied += 1
-        elif src.is_file():
-            out.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
-            copied += 1
-
     for sid, role in members:
         agent_path = out / "agents" / (role["agent"] + ".md")
         skill_path = out / "skills" / sid / "SKILL.md"
@@ -240,6 +237,7 @@ def build_probe(root: Path, out: Path, max_turns: dict[str, int],
     manifest = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source_commit": commit,
+        "source_tree_sha256": source_digest,
         "source_version": _read(root / "VERSION").strip(),
         "probe_version": probe_version,
         "marker_suffix": suffix,
@@ -289,18 +287,16 @@ def main() -> None:
 
     if args.out is None:
         ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        out = PROBE_ROOT / ts
+        out = root / "reports" / "probe-build" / ts
     else:
         out = args.out if args.out.is_absolute() else root / args.out
 
-    if out.exists():
-        raise SystemExit(f"probe output exists, refusing to overwrite: {out}")
-    out.mkdir(parents=True)
-
-    max_turns = _parse_kv_list(args.max_turns, cast=int)
-    disallow = _parse_kv_list(args.disallow, cast=list)
-
-    manifest = build_probe(root, out, max_turns, disallow)
+    try:
+        max_turns = _parse_kv_list(args.max_turns, cast=int)
+        disallow = _parse_kv_list(args.disallow, cast=list)
+        manifest = build_probe(root, out, max_turns, disallow)
+    except (OSError, ValueError) as exc:
+        raise SystemExit("Probe build failed: " + str(exc)) from exc
 
     print(json.dumps({
         "probe_package": _display_path(out, root),

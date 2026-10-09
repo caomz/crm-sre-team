@@ -3,12 +3,24 @@ from __future__ import annotations
 import json
 from pathlib import Path, PurePosixPath
 import re
+import stat
 
 PREFIX = "crm-sre-team"
 ZIP_TIME = (2026, 9, 21, 0, 0, 0)
 FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", "incident-evidence", "reports", "dist", "node_modules"}
 FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".bak", ".pem", ".key", ".p12", ".pfx", ".log", ".tmp", ".swp"}
 ALLOWED_SUFFIXES = {".py", ".md", ".json", ".yaml", ".yml", ".txt", ".png", ".jpg", ".jpeg", ".patch"}
+
+
+def is_link(path: Path) -> bool:
+    """Fail closed on Windows reparse points, including on Python 3.11."""
+    if path.is_symlink() or getattr(path, "is_junction", lambda: False)():
+        return True
+    try:
+        attributes = getattr(path.lstat(), "st_file_attributes", 0)
+    except FileNotFoundError:
+        return False
+    return bool(attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT)
 
 
 def safe_relative(name: str) -> bool:
@@ -30,7 +42,7 @@ def safe_relative(name: str) -> bool:
 
 def manifest_names(root: Path) -> list[str]:
     manifest_path = root / "release-manifest.json"
-    if manifest_path.is_symlink(): raise ValueError("Manifest must not be a symlink")
+    if is_link(manifest_path): raise ValueError("Manifest must not be a link")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     names = manifest.get("files")
     if manifest.get("schema_version") != 1 or not isinstance(names, list) or not names:
@@ -49,7 +61,7 @@ def release_files(root: Path) -> list[Path]:
     files = []
     for rel in manifest_names(root):
         p = root / rel
-        if p.is_symlink() or any(parent.is_symlink() for parent in p.parents if parent.is_relative_to(root)):
+        if is_link(p) or any(is_link(parent) for parent in p.parents if parent.is_relative_to(root)):
             raise ValueError("Symlink release input: " + rel)
         if not p.is_file() or not p.resolve().is_relative_to(root):
             raise ValueError("Missing or escaping release input: " + rel)

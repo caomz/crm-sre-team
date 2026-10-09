@@ -22,6 +22,12 @@ BLANKET_READONLY_BANS = [
     "所有生产相关动作，包括只读、可回退、已批准的动作，一律只给人工评审卡",
     "不输出生产命令",
     "不给命令",
+    "不输出查询或采集命令",
+    "所有新增生产采集或动作仅给人工评审卡",
+    "新增现场采样也仅给卡片",
+    "不输出任何生产命令",
+    "事故模型不自动联网",
+    "不是事故模型自动联网入口",
 ]
 READ_ONLY_BOUNDARY_MARKERS = [
     "只读诊断与执行边界",
@@ -194,6 +200,7 @@ def policy_errors(policy: dict) -> list[str]:
 def run(root: Path) -> dict:
     errors = settings_errors(root)
     errors += routing_errors(root)
+    errors += reference_errors(root)
     roles = json.loads((root / "policy-source/roles-source.json").read_text(encoding="utf-8"))
     policy = json.loads((root / "policies/runtime-contract.json").read_text(encoding="utf-8"))
     errors += policy_errors(policy)
@@ -215,6 +222,23 @@ def run(root: Path) -> dict:
             b = [part for mode, part in split_modes(skill_src.read_text(encoding="utf-8"))[0] if mode == label]
             if not a or a != b: errors.append(sid + ":paired_mode_mismatch:" + label)
     return {"scope": "STATIC_MODE_CONSISTENCY_NOT_MODEL_OR_HOST_BEHAVIOR", "errors": sorted(set(errors)), "pass": not errors}
+
+
+def reference_errors(root: Path) -> list[str]:
+    """Check reachable reference/policy text too; entry-only checks miss old bans."""
+    manifest = json.loads((root / "release-manifest.json").read_text(encoding="utf-8"))
+    paths = [p for p in manifest["files"] if p.startswith("policy-source/references/")]
+    paths.append("policies/thinking-tools.json")
+    errors = []
+    for rel in sorted(paths):
+        text = (root / rel).read_text(encoding="utf-8")
+        chunks, scope_errors = split_modes(text)
+        errors.extend(rel + ":" + e for e in scope_errors)
+        for mode, chunk in chunks:
+            if mode != "MANAGED_HARNESS":
+                errors.extend(rel + ":blanket_readonly_ban:" + phrase
+                              for phrase in BLANKET_READONLY_BANS if phrase in chunk)
+    return sorted(set(errors))
 
 
 def render_full(root: Path, sid: str, role: dict) -> str:

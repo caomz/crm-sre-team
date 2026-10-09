@@ -18,6 +18,13 @@ ROOT=Path(__file__).resolve().parents[1]
 def read(path: Path): return json.loads(path.read_text(encoding="utf-8"))
 def digest(path: Path): return hashlib.sha256(path.read_bytes()).hexdigest()
 
+def iter_test_cases(suite):
+    for test in suite:
+        if isinstance(test, unittest.TestSuite):
+            yield from iter_test_cases(test)
+        else:
+            yield test
+
 def run(root: Path) -> dict:
     checks=[];errors=[]
     def check(name: str, ok: bool, detail=""):
@@ -240,12 +247,32 @@ def run(root: Path) -> dict:
     # Keep every test name/status/failure; only omit elapsed wall-clock time from the stable artifact.
     stable_output=re.sub(r"^Ran (\d+) tests? in [0-9.]+s$",r"Ran \1 tests (elapsed time omitted for deterministic artifact)",stream.getvalue(),flags=re.MULTILINE)
     extra_tests_run=0
+    deferred_docs=None
     for test_name in ["test_knowledge_docs", "test_workbuddy_native"]:
         spec=importlib.util.spec_from_file_location(test_name,root/"tests"/(test_name+".py"))
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
-        extra_result=unittest.TextTestRunner(stream=stream,verbosity=2).run(unittest.defaultTestLoader.loadTestsFromModule(module))
+        cases=list(iter_test_cases(unittest.defaultTestLoader.loadTestsFromModule(module)))
+        if test_name == "test_knowledge_docs":
+            deferred=[t for t in cases if t.id().endswith(".test_validation_md_counts_match_static_checks")]
+            cases=[t for t in cases if t not in deferred]
+        extra_result=unittest.TextTestRunner(stream=stream,verbosity=2).run(unittest.TestSuite(cases))
         extra_tests_run+=extra_result.testsRun
         check("static_regression:"+test_name,extra_result.wasSuccessful(),f"{extra_result.testsRun} tests; failures={len(extra_result.failures)}; errors={len(extra_result.errors)}")
+        if test_name == "test_knowledge_docs":
+            deferred_docs=(module,deferred,extra_result,checks[-1])
+    # Check documentation against the current completed checks, not yesterday's report.
+    # This also permits a first validation on a clean release without generated reports.
+    module,deferred,prior,entry=deferred_docs
+    if len(deferred) != 1:
+        raise ValueError("Expected exactly one validation-count regression test")
+    module.CURRENT_STATIC_COUNTS={"checks_total":len(checks),"checks_passed":sum(c["passed"] for c in checks)}
+    deferred_result=unittest.TextTestRunner(stream=stream,verbosity=2).run(unittest.TestSuite(deferred))
+    extra_tests_run+=deferred_result.testsRun
+    detail=f"{prior.testsRun+deferred_result.testsRun} tests; failures={len(prior.failures)+len(deferred_result.failures)}; errors={len(prior.errors)+len(deferred_result.errors)}"
+    if not deferred_result.wasSuccessful() and entry["passed"]:
+        entry["passed"]=False
+        errors.append(entry["id"]+": "+detail)
+    entry["detail"]=detail
     stable_output=re.sub(r"Ran (\d+) tests? in [0-9.]+s", r"Ran \1 tests in <elapsed>", stream.getvalue())
     (root/"tests/contract-test-results.txt").write_text(stable_output,encoding="utf-8", newline="\n")
     checks.sort(key=lambda item:(item["id"],json.dumps(item["detail"],ensure_ascii=False,sort_keys=True),item["passed"]))

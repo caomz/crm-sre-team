@@ -5,6 +5,8 @@ import unittest
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 ROOT=Path(__file__).resolve().parents[1]
+# The validator supplies completed current checks; standalone pytest reads its report.
+CURRENT_STATIC_COUNTS=None
 def load(name):
     return json.loads((ROOT/name).read_text(encoding="utf-8"))
 
@@ -155,7 +157,9 @@ class KnowledgeDocumentationTests(unittest.TestCase):
         的 checks_passed/checks_total 一致——数字不落后于最后一次 validate。"""
         import re
         vmd=(ROOT/"VALIDATION.md").read_text(encoding="utf-8")
-        sc=json.loads((ROOT/"tests/static-checks.json").read_text(encoding="utf-8"))
+        sc=CURRENT_STATIC_COUNTS
+        if sc is None:
+            sc=json.loads((ROOT/"tests/static-checks.json").read_text(encoding="utf-8"))
         m=re.search(r"静态校验 (\d+)/(\d+)",vmd)
         self.assertTrue(m,"VALIDATION.md 缺少『静态校验 X/Y』字样")
         self.assertEqual(int(m.group(1)),sc["checks_passed"],

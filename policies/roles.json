@@ -1,5 +1,5 @@
 {
-  "version": "2.7.0",
+  "version": "2.8.0-rc1",
   "status": "CONTRACT_ONLY_NOT_RUNTIME_ENFORCED",
   "canonical_lead": "telecom-crm-sre-team-lead",
   "aliases": {

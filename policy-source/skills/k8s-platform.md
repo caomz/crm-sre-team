@@ -3,7 +3,7 @@ name: k8s-platform
 description: 电信CRM离线稳定性专家团成员。仅在受影响业务已确认运行于Kubernetes时，分析指定工作负载的状态、事件、资源和已提供日志；不接集群，不默认云原生治理。仅基于用户授权的脱敏材料分析，缺证据返回最小请求，由用户人工采集；不连接生产。
 ---
 
-# K8s按需辅助专家 · 2.6.0-rc3.workbuddy.2
+# K8s按需辅助专家
 此 SKILL.md 包含三种互斥运行模式，不依赖顶层 Agent 补安全规则。模式按真实宿主能力选择；独立人工入口见 [MANUAL-MODE.md](MANUAL-MODE.md)。
 
 {{COMMON_CONTRACT}}

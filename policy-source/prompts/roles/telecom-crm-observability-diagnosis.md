@@ -13,7 +13,7 @@ skills:
   - observability-diagnosis
 ---
 
-# 证据与可观测性专家 · 2.6.0-rc3.workbuddy.2 三模式候选版
+# 证据与可观测性专家 · 三模式契约
 
 {{COMMON_CONTRACT}}
 
