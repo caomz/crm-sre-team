@@ -1,5 +1,5 @@
-"""Probe build tool tests (F2): version derivation, marker wording, zip
-repack, out-of-repo --out survival, and repo-root immutability.
+"""Probe build tool tests (F2): version derivation, member/lead marker wording,
+zip repack, out-of-repo --out survival, and repo-root immutability.
 
 Builds one probe package into a temp dir (outside the repo) and asserts
 on the manifest and artifacts. Static/evidence checks only — no host.
@@ -113,8 +113,9 @@ class ProbeBuildTests(unittest.TestCase):
                              f"{sid} zip VERSION != probe_version")
             self.assertIn(f"{sid}/BUNDLE-LOCK.json", names)
             if sid == "stability-director":
-                continue  # 团长不注入暗号，仅核 VERSION 与重打包
-            self.assertIn(m["markers"][role["agent"]]["marker_d"], body)
+                self.assertIn(m["lead_markers"]["marker_ls"], body)
+            else:
+                self.assertIn(m["markers"][role["agent"]]["marker_d"], body)
             self.assertIn(MARKER_ECHO, body)
 
     def test_04_out_of_repo_out_survives(self):
@@ -128,6 +129,25 @@ class ProbeBuildTests(unittest.TestCase):
     def test_05_repo_root_agents_skills_untouched(self):
         self.assertEqual(self.snap, self._snapshot())
 
+    def test_06_lead_markers_in_manifest_and_bodies(self):
+        m = self.manifest
+        expected = {
+            "marker_la": f"PROBE-LA-{m['marker_suffix']}",
+            "marker_ls": f"PROBE-LS-{m['marker_suffix']}",
+        }
+        self.assertEqual(m["lead_markers"], expected)
+        manifest_on_disk = json.loads(
+            (self.out / "probe-manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest_on_disk["lead_markers"], expected)
+        for rel, marker in (
+            ("agents/telecom-crm-sre-team-lead.md", expected["marker_la"]),
+            ("skills/stability-director/SKILL.md", expected["marker_ls"]),
+        ):
+            with self.subTest(rel=rel):
+                text = (self.out / rel).read_text(encoding="utf-8")
+                self.assertIn(f"> {marker}", text)
+                self.assertIn(MARKER_ECHO, text)
+                self.assertNotIn(OLD_ECHO, text)
 
 if __name__ == "__main__":
     unittest.main()

@@ -39,7 +39,7 @@
     },
     {
       "id": "WB07",
-      "scenario": "成员失败（团长派单时传 max_turns=1）",
+      "scenario": "成员失败（团长派单时传 max_turns=1，成员先执行指定 echo）",
       "status": "NOT_RUN_IN_TARGET_HOST",
       "observed_output": null
     },
@@ -75,7 +75,7 @@
     },
     {
       "id": "WB12",
-      "scenario": "K8s 派单路由（已确认 K8s 部署 + 平台证据双条件；用中文名与注册 ID 各派一次，比对哪个字段选中成员）",
+      "scenario": "K8s 派单路由（已确认 K8s 部署 + 平台证据双条件时才派 K8s 成员；subagent_type 填注册 ID，中文名只作 name 标签）",
       "status": "NOT_RUN_IN_TARGET_HOST",
       "observed_output": null
     },

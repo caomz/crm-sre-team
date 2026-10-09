@@ -5,10 +5,12 @@ Copies the current built agents/skills/individual-packages into
 reports/probe-build/<ts>/ and injects deterministic probe markers:
   - marker C: one line in each member Agent text body
   - marker D: one line in each member SKILL.md body
-Both markers share a run-wide random suffix so a single member reply
-containing the suffix proves its Agent text was loaded; both C and D
-markers appearing proves Agent + Skill both loaded (double-load signal
-feeding PR-3b de-duplication priority).
+  - marker LA: one line in the lead Agent text body
+  - marker LS: one line in the lead SKILL.md body
+All markers share a run-wide random suffix. C proves a member Agent text
+was loaded; D proves its Skill was loaded; C + D proves both were loaded
+(double-load signal feeding PR-3b de-duplication priority). LA and LS
+separately identify the lead Agent and Skill loading paths.
 
 Optional overrides applied to PROBE COPIES ONLY (the repo-root agents/
 and skills/ are never touched; main validators do not scan reports/):
@@ -19,8 +21,8 @@ NOTE: repo-root check_workbuddy.py rejects `tools` in agent frontmatter;
 that rule applies to the main build, not to probe copies under reports/.
 
 Output: reports/probe-build/<ts>/{agents,skills,individual-packages,...}
-+ probe-manifest.json recording markers, overrides, source commit and
-file list. Also prints a one-line marker cheat sheet for the host run.
++ probe-manifest.json recording member markers, lead_markers, overrides,
+source commit and file list. Also prints a marker cheat sheet for the host run.
 """
 from __future__ import annotations
 import argparse
@@ -184,6 +186,19 @@ def build_probe(root: Path, out: Path, max_turns: dict[str, int],
             body = _inject_marker(body, f"> {d_marker}")
             _write(skill_path, fm + body)
 
+    lead_markers = {
+        "marker_la": f"PROBE-LA-{suffix}",
+        "marker_ls": f"PROBE-LS-{suffix}",
+    }
+    lead_agent = roles["stability-director"]["agent"]
+    for path, marker in (
+        (out / "agents" / (lead_agent + ".md"), lead_markers["marker_la"]),
+        (out / "skills" / "stability-director" / "SKILL.md", lead_markers["marker_ls"]),
+    ):
+        text = _read(path)
+        fm, body, _ = _split_frontmatter(text)
+        _write(path, fm + _inject_marker(body, f"> {marker}"))
+
     # Probe copies get a distinct version so the host cannot serve a stale
     # same-ID cache (WB01 finding) as if it were the probe package.
     # Derived from the source VERSION; the letter prefix "r" keeps the
@@ -229,6 +244,7 @@ def build_probe(root: Path, out: Path, max_turns: dict[str, int],
         "probe_version": probe_version,
         "marker_suffix": suffix,
         "markers": markers,
+        "lead_markers": lead_markers,
         "repacked_zips": repacked,
         "lock_note": "prompt-bundles.lock 与 BUNDLE-LOCK.json 未随暗号/版本重算（实验副本）",
         "overrides": {
@@ -295,7 +311,9 @@ def main() -> None:
         "cheat_sheet": (
             f"Look for suffix {manifest['marker_suffix']} in member replies: "
             "C-only => Agent text loaded; C+D => Agent+Skill both loaded "
-            "(double-load => PR-3b dedup priority)."
+            "(double-load => PR-3b dedup priority). "
+            f"Lead {manifest['lead_markers']['marker_la']} => Agent text loaded; "
+            f"{manifest['lead_markers']['marker_ls']} => Skill loaded."
         ),
     }, ensure_ascii=False, indent=2))
 

@@ -26,6 +26,16 @@ def _split_frontmatter(text: str) -> str:
     return fm.get("description", "")
 
 
+def _extract_mode_block(text: str, label: str) -> str:
+    begin = f"<!-- MODE:{label}:BEGIN -->"
+    end = f"<!-- MODE:{label}:END -->"
+    i = text.find(begin)
+    j = text.find(end)
+    if i == -1 or j == -1:
+        return ""
+    return text[i + len(begin):j]
+
+
 class LeadSkillRosterTests(unittest.TestCase):
     """1. 团长 SKILL.md 自带名册（主会话只加载 SKILL.md）"""
 
@@ -55,7 +65,7 @@ class DispatchMarkerTests(unittest.TestCase):
 
     def test_05_common_md_contains_marker_rule(self):
         text = _read(ROOT / "policy-source/prompts/common.md")
-        self.assertIn('任务文本第一行是“【团长派单】”', text)
+        self.assertIn('任务文本第一行以“【团长派单】”开头时', text)
         self.assertIn('不输出“单模型分析，未进行多专家委派”这类兼容声明', text)
 
     def test_06_member_compat_blocks_scoped(self):
@@ -67,6 +77,7 @@ class DispatchMarkerTests(unittest.TestCase):
                 with self.subTest(rel=rel):
                     text = _read(ROOT / rel)
                     self.assertIn("只有用户直接打开本角色对话时才按本段回答", text)
+                    self.assertIn('任务文本第一行以“【团长派单】”开头时改按原生成员段工作', text)
 
     def test_07_lead_native_lead_contains_marker_template(self):
         for rel in [
@@ -75,7 +86,9 @@ class DispatchMarkerTests(unittest.TestCase):
         ]:
             with self.subTest(rel=rel):
                 text = _read(ROOT / rel)
-                self.assertIn('每次派单的第一行固定写"【团长派单】派单标记：', text)
+                template = '每次派单的第一行固定写“【团长派单】派单标记：<随机标记>”'
+                self.assertIn(template, text)
+                self.assertIn(template, _extract_mode_block(text, "NATIVE_LEAD"))
 
     def test_08_member_native_member_contains_marker_recognition(self):
         for sid in MEMBER_SIDS:
@@ -85,7 +98,7 @@ class DispatchMarkerTests(unittest.TestCase):
             ]:
                 with self.subTest(rel=rel):
                     text = _read(ROOT / rel)
-                    self.assertIn('任务文本第一行是"【团长派单】"时，按本段工作并把报告返回团长', text)
+                    self.assertIn('任务文本第一行以“【团长派单】”开头时，按本段工作并把报告返回团长', text)
 
 
 class DispatchParameterTests(unittest.TestCase):
@@ -117,7 +130,7 @@ class DispatchParameterTests(unittest.TestCase):
         ]:
             with self.subTest(rel=rel):
                 text = _read(ROOT / rel)
-                self.assertIn("max_turns", text)
+                self.assertIn("日常派单不传 max_turns，用宿主默认轮数；只有用户明确要求限制轮数时才传 max_turns", text)
 
     def test_12_native_lead_retains_host_tool_fallback(self):
         for rel in [
@@ -136,21 +149,12 @@ class DispatchParameterTests(unittest.TestCase):
 class ModeBlockConsistencyTests(unittest.TestCase):
     """4. NATIVE_LEAD 块两源一致 + 成员 NATIVE_MEMBER/COMPAT_MEMBER 两源一致"""
 
-    def _extract_mode_block(self, text: str, label: str) -> str:
-        begin = f"<!-- MODE:{label}:BEGIN -->"
-        end = f"<!-- MODE:{label}:END -->"
-        i = text.find(begin)
-        j = text.find(end)
-        if i == -1 or j == -1:
-            return ""
-        return text[i + len(begin):j]
-
     def test_14_lead_native_lead_blocks_identical(self):
         skill_src = _read(ROOT / "policy-source/skills/stability-director.md")
         role_src = _read(ROOT / "policy-source/prompts/roles/telecom-crm-sre-team-lead.md")
         self.assertEqual(
-            self._extract_mode_block(skill_src, "NATIVE_LEAD"),
-            self._extract_mode_block(role_src, "NATIVE_LEAD"),
+            _extract_mode_block(skill_src, "NATIVE_LEAD"),
+            _extract_mode_block(role_src, "NATIVE_LEAD"),
         )
 
     def test_15_member_native_member_blocks_identical(self):
@@ -159,8 +163,8 @@ class ModeBlockConsistencyTests(unittest.TestCase):
                 skill_src = _read(ROOT / f"policy-source/skills/{sid}.md")
                 role_src = _read(ROOT / f"policy-source/prompts/roles/telecom-crm-{sid}.md")
                 self.assertEqual(
-                    self._extract_mode_block(skill_src, "NATIVE_MEMBER"),
-                    self._extract_mode_block(role_src, "NATIVE_MEMBER"),
+                    _extract_mode_block(skill_src, "NATIVE_MEMBER"),
+                    _extract_mode_block(role_src, "NATIVE_MEMBER"),
                 )
 
     def test_16_member_compat_member_blocks_identical(self):
@@ -169,8 +173,8 @@ class ModeBlockConsistencyTests(unittest.TestCase):
                 skill_src = _read(ROOT / f"policy-source/skills/{sid}.md")
                 role_src = _read(ROOT / f"policy-source/prompts/roles/telecom-crm-{sid}.md")
                 self.assertEqual(
-                    self._extract_mode_block(skill_src, "COMPAT_MEMBER"),
-                    self._extract_mode_block(role_src, "COMPAT_MEMBER"),
+                    _extract_mode_block(skill_src, "COMPAT_MEMBER"),
+                    _extract_mode_block(role_src, "COMPAT_MEMBER"),
                 )
 
 

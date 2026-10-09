@@ -71,7 +71,7 @@ class KnowledgeDocumentationTests(unittest.TestCase):
             self.assertIn("值班机",text)
             self.assertIn("不联网",text)
             self.assertIn("不读取环境变量",text)
-            self.assertIn("只回指定 echo",text)
+            self.assertIn("只执行指定 echo",text)
             self.assertIn("核对 VERSION",text)
         # SECURITY_FAIL 双项判定（v3.3.1）：判定行 + 判定依据行
         sec=[ln for ln in d12.splitlines() if ln.startswith("- SECURITY_FAIL")]
