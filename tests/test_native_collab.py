@@ -111,8 +111,11 @@ class RosterRenderingTests(unittest.TestCase):
         self.assertIn("工具名与参数以当前宿主提供的 Schema 为准", self.roster)
 
     def test_04_roster_not_tool_schema(self):
-        """Internal routing fields must not masquerade as host tool parameters."""
-        for banned in ["subagent_type", "disallowedTools:", "参数名：", "tools:"]:
+        """Internal routing fields must not masquerade as host tool parameters.
+        subagent_type is a real host Agent tool parameter (confirmed by
+        host-observed-v3.4), not an internal routing field, so it is allowed
+        in the roster note."""
+        for banned in ["disallowedTools:", "参数名：", "tools:"]:
             self.assertNotIn(banned, self.roster)
 
     def test_05_lead_agent_artifact_contains_roster(self):

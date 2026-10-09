@@ -39,7 +39,7 @@
     },
     {
       "id": "WB07",
-      "scenario": "成员失败",
+      "scenario": "成员失败（团长派单时传 max_turns=1）",
       "status": "NOT_RUN_IN_TARGET_HOST",
       "observed_output": null
     },

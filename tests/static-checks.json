@@ -2,8 +2,8 @@
   "version": "2.7.0",
   "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
   "result": "PASS_STATIC_ONLY",
-  "checks_total": 1809,
-  "checks_passed": 1809,
+  "checks_total": 1810,
+  "checks_passed": 1810,
   "relative_links_checked": 224,
   "offline_contract_tests_run": 46,
   "offline_contract_test_failures": 0,
@@ -200,6 +200,11 @@
     },
     {
       "id": "explicit_read_encoding:tests/test_git_sync.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tests/test_host_observed.py",
       "passed": true,
       "detail": []
     },

@@ -489,6 +489,7 @@
     "tests/test_contracts.py",
     "tests/test_git_hooks.py",
     "tests/test_git_sync.py",
+    "tests/test_host_observed.py",
     "tests/test_individual_zip_safety.py",
     "tests/test_judgment_contracts.py",
     "tests/test_judgment_matrix.py",
