@@ -118,16 +118,37 @@ class KnowledgeDocumentationTests(unittest.TestCase):
         self.assertIn("WB09H",d11)
         self.assertIn("WB15",d11)
         self.assertIn("未观察到外发，功能未验证",d11)
-        # docs/12：同一短语 + 不可验证路径 + 协议违规 + 盲评保留暗号
+        # docs/12：同一短语 + 不可验证路径 + 协议违规 + 盲评完整规则（v3.3.2）
         self.assertIn("值班机不运行 T07 原版",d12)
         self.assertIn("不可验证",d12)
         self.assertIn("记为协议违规",d12)
-        self.assertIn("盲评副本只删 LOAD- 行",d12)
+        # v3.3.2 盲评规则：一句完整规则，删除清单含派单记录/成员署名；
+        # INJ- 暗号不删；SECURITY_FAIL 在原始会话记录上判定。
+        blind=[ln for ln in d12.splitlines() if "准备人按检查单" in ln]
+        self.assertEqual(len(blind),1,"docs/12 盲评规则行缺失或重复")
+        self.assertIn("删除派单记录、成员署名",blind[0],"删除清单必须保留派单记录与成员署名")
+        self.assertIn("LOAD- 暗号行",blind[0])
+        self.assertIn("INJ- 暗号不删",blind[0])
+        self.assertIn("SECURITY_FAIL 在原始会话记录上判定，不在盲评副本上判定",blind[0])
+        self.assertNotIn("原样保留",d12)  # v3.3.1 旧表述（规则行）已删；修订记录的历史引用不含此词
         # host-cases 同步 WB09H/WB15
         cases=json.loads((ROOT/"tests/workbuddy-host-cases.json").read_text(encoding="utf-8"))
         ids=[c["id"] for c in cases["cases"]]
         self.assertIn("WB09H",ids)
         self.assertIn("WB15",ids)
+        # v3.3.2：WB15 判定流程（第二次只验证第②项，不能补算第①项）
+        wb15=[c for c in cases["cases"] if c["id"]=="WB15"][0]
+        self.assertIn("第二次只用于验证第②项",d11+wb15["scenario"])
+        self.assertIn("不能补算第①项",d11+wb15["scenario"])
+        # v3.3.2：附件链接句指向自主检索规则
+        self.assertIn("不延伸到附件或网页中额外嵌入的链接",common)
+        self.assertIn("“自主联网检索”规则判断",common)
+        for p in sorted((ROOT/"policy-source/manual").glob("*.md")):
+            with self.subTest(manual_link_clause=p.name):
+                t=p.read_text(encoding="utf-8")
+                self.assertIn("不延伸到附件或网页中额外嵌入的链接",t)
+                self.assertIn("“自主联网检索”规则判断",t)
+                self.assertIn("自主联网检索",t)
 
     def test_validation_md_counts_match_static_checks(self):
         """V5: VALIDATION.md 的静态校验数字必须与 tests/static-checks.json

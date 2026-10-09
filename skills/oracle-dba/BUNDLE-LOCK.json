@@ -4,8 +4,8 @@
   "agent_id": "telecom-crm-oracle-dba",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "MANUAL-MODE.md": "62a11270805ae21192461ade106fd5fc763dc0ae4a41e9a8ef9baba93acb167f",
-    "SKILL.md": "447e15b3b061aa5f3318a0ae7ba1494322723f876d968e380fa02d260ae2c601",
+    "MANUAL-MODE.md": "15163c1a784af17b549571614b08fc14052816694bc269b8de4f50ce37725931",
+    "SKILL.md": "09a893f1e15782b8a5d10af5a72a60fdddf8c832aae09c567d2d72750cda3b1d",
     "VERSION": "362148d7721ad4a1bb64981ff8d604ef7f4d22267ea8845042f54f90940f24fd",
     "agents/openai.yaml": "6a91f030cee86a11117a4ae898a530e172d07b75bc3b86b99a9fe3235adf6dc6",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",
