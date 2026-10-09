@@ -16,8 +16,8 @@
   "version_only_json": {
     "policies/runtime-contract.json": {
       "baseline_sha256": "2ab91101b41d9ecdf0a1106816a030911210c2b704aaf786e4ed09870efe5fad",
-      "revised_sha256": "0eff58f628a8dd3ce00bdec57ecd94c6053297f75ec01bfc894e833c8ef39fce",
-      "reason": "Add scoped read_only_boundary: read-only query generation and user-named public reads for non-managed entries; production read still NOT_IMPLEMENTED and production write still requires separate change approval."
+      "revised_sha256": "18731c83f9c78916c03e96e92969e4c7cd76e1991af52a354a3768fe19b7248b",
+      "reason": "用户 2026-10-09 同意放开自主检索，底线为不外发用户信息；public_read_execution 改 AUTHORIZED_PUBLIC_READ_AND_SEARCH_NO_USER_DATA_EGRESS（同时覆盖用户点名公开读取与自主联网检索）。production_read_execution 与 production_write 保持不变。"
     },
     ".codebuddy-plugin/plugin.json": {
       "baseline_sha256": "46b33a4bc5e3865781e5b854df89fe8a593d5f158162c897a7e5dd55444b1acb",

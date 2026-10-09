@@ -27,8 +27,8 @@
   "thinking_tool_test_failures": 0,
   "thinking_tool_test_errors": 0,
   "thinking_tool_case_specs_not_run": 20,
-  "additional_static_tests": 32,
-  "offline_unit_tests_total": 136,
+  "additional_static_tests": 33,
+  "offline_unit_tests_total": 137,
   "model_or_host_runtime_test_status": "NOT_RUN_IN_TARGET_HOST",
   "production_access": "NONE",
   "errors": [],
@@ -7396,7 +7396,7 @@
     {
       "id": "static_regression:test_knowledge_docs",
       "passed": true,
-      "detail": "6 tests; failures=0; errors=0"
+      "detail": "7 tests; failures=0; errors=0"
     },
     {
       "id": "static_regression:test_workbuddy_native",

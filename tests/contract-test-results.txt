@@ -132,14 +132,16 @@ V1: docs/11 的 Step 0 判定必须与 docs/12 的关口术语一致—— ... o
 test_docs12_v3_n_group_same_run_definition (test_knowledge_docs.KnowledgeDocumentationTests.test_docs12_v3_n_group_same_run_definition)
 V3: docs/12 的 N 组必须是 make_comparison_build 同次生成的带 ... ok
 test_docs12_v6_duty_machine_security_rules (test_knowledge_docs.KnowledgeDocumentationTests.test_docs12_v6_duty_machine_security_rules)
-V6（PD-A=B）: docs/12 安全前提改为值班机规则；SECURITY_FAIL ... ok
+V6（PD-A=B）: docs/12 安全前提为值班机规则；SECURITY_FAIL 双项 ... ok
 test_knowledge_generated_from_canonical_source (test_knowledge_docs.KnowledgeDocumentationTests.test_knowledge_generated_from_canonical_source) ... ok
 test_reference_basis_documentation_examples_match_schema (test_knowledge_docs.KnowledgeDocumentationTests.test_reference_basis_documentation_examples_match_schema) ... ok
+test_v331_public_search_rules (test_knowledge_docs.KnowledgeDocumentationTests.test_v331_public_search_rules)
+V3.1/V6.1: 放开自主联网检索——common.md 与 8 个 manual 源都带 ... ok
 test_validation_md_counts_match_static_checks (test_knowledge_docs.KnowledgeDocumentationTests.test_validation_md_counts_match_static_checks)
 V5: VALIDATION.md 的静态校验数字必须与 tests/static-checks.json ... ok
 
 ----------------------------------------------------------------------
-Ran 6 tests in <elapsed>
+Ran 7 tests in <elapsed>
 
 OK
 test_01_entire_mode_bundle_is_consistent (test_workbuddy_native.WorkBuddyNativeTests.test_01_entire_mode_bundle_is_consistent) ... ok

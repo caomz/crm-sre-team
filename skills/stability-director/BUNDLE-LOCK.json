@@ -4,8 +4,8 @@
   "agent_id": "telecom-crm-sre-team-lead",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "MANUAL-MODE.md": "43280ed8015ff414f0548d0e5b866b7b2c001de5526491d41bff28f25d2eae33",
-    "SKILL.md": "afd83b0cd79178e241985149396449acec02373d33f23183ee91958da388bb67",
+    "MANUAL-MODE.md": "0f76a51e84a6f77b7c3b0deaeb9570b1c4ed2417d4a0240ce0bc40cf2a287cbd",
+    "SKILL.md": "b285948bd7aff36bd03c13c78f4fe9101e21ecc5af7de84e67db382b002f55b5",
     "VERSION": "362148d7721ad4a1bb64981ff8d604ef7f4d22267ea8845042f54f90940f24fd",
     "agents/openai.yaml": "025062d860bf91c0ece131ff482ac6a2200add3c2532637d63c11eef173eace7",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",

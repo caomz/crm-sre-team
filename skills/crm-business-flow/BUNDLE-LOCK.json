@@ -4,8 +4,8 @@
   "agent_id": "telecom-crm-crm-business-flow",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "MANUAL-MODE.md": "6df745645a97de051186dd515d123339aabe15c006f052cd872239605bf15f29",
-    "SKILL.md": "9f360d0d672ac4a10bf128d47327a89d799cc49f700096cc9baa48a2a66b67bb",
+    "MANUAL-MODE.md": "e8140fdebd56f014dd52c897c1ae47d0a2ecdeee53d42946e67b07a2638a7d23",
+    "SKILL.md": "20f06adede322ec2862b827ce37ad7f22655ff1b9a9f007984597d65d31ccc1b",
     "VERSION": "362148d7721ad4a1bb64981ff8d604ef7f4d22267ea8845042f54f90940f24fd",
     "agents/openai.yaml": "423c6dc0d3ef560acaa42578ccc942f012b9222361bed09139489a640e25b5f8",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",

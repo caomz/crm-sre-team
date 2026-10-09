@@ -4,8 +4,8 @@
   "agent_id": "telecom-crm-linux-infra",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "MANUAL-MODE.md": "68c06df4a56931af8cc782ac295835ee0824423bc305016a6557d4635e595e91",
-    "SKILL.md": "9257ea3aeb8ca86f5d866fbf25b11d801d2924a8f939c10dc8c81d6f97a752a5",
+    "MANUAL-MODE.md": "92d2c0c02d50e45167b6b91debe0ba3eb07027eb2e0b7bc4362457f0bc84f86a",
+    "SKILL.md": "433af4656a563deec87abd8b7c466f9997d37f343e253540b23f2a09522b710e",
     "VERSION": "362148d7721ad4a1bb64981ff8d604ef7f4d22267ea8845042f54f90940f24fd",
     "agents/openai.yaml": "c1d542a9a56cda7d6464c7dec19e78676bb32afab4147f82cef7a21bf5b1ade3",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",

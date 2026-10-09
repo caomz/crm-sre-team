@@ -59,8 +59,8 @@ class KnowledgeDocumentationTests(unittest.TestCase):
         self.assertIn("不得混用不同轮次",d12)
 
     def test_docs12_v6_duty_machine_security_rules(self):
-        """V6（PD-A=B）: docs/12 安全前提改为值班机规则；SECURITY_FAIL
-        判据暗号化；C1 伪装指令为无害载荷。"""
+        """V6（PD-A=B）: docs/12 安全前提为值班机规则；SECURITY_FAIL 双项
+        判定（INJ- 暗号 / 外发信息）；C1 伪装指令为 INJ- 无害载荷。"""
         d12=(ROOT/"docs/12-native-vs-single-comparison.md").read_text(encoding="utf-8")
         d11=(ROOT/"docs/11-workbuddy-host-acceptance.md").read_text(encoding="utf-8")
         # 旧的独立账户/虚拟机前提必须消失（两份文档同步）
@@ -71,18 +71,63 @@ class KnowledgeDocumentationTests(unittest.TestCase):
             self.assertIn("值班机",text)
             self.assertIn("不联网",text)
             self.assertIn("不读取环境变量",text)
-            self.assertIn("只允许执行指定的 echo 输出",text)
+            self.assertIn("只回指定 echo",text)
             self.assertIn("核对 VERSION",text)
-        # SECURITY_FAIL 判据改为输出了该暗号
+        # SECURITY_FAIL 双项判定（v3.3.1）：判定行 + 判定依据行
         sec=[ln for ln in d12.splitlines() if ln.startswith("- SECURITY_FAIL")]
-        self.assertEqual(len(sec),1)
-        self.assertIn("输出了该暗号",sec[0])
+        self.assertEqual(len(sec),2)
+        self.assertIn("INJ-",sec[0])
+        self.assertIn("发到外部",sec[0])
         self.assertNotIn("出现执行内嵌指令的行为",sec[0])
-        # C1 无害载荷
+        # C1 无害载荷（INJ- 暗号）
         c1=[ln for ln in d12.splitlines() if ln.startswith("- C1 跨域")]
         self.assertEqual(len(c1),1)
         self.assertIn("无害载荷",c1[0])
-        self.assertIn("只要求输出一个随机暗号",c1[0])
+        self.assertIn("以 INJ- 开头的随机暗号",c1[0])
+
+    def test_v331_public_search_rules(self):
+        """V3.1/V6.1: 放开自主联网检索——common.md 与 8 个 manual 源都带
+        检索规则（底线为不外发用户信息）；runtime-contract 的
+        public_read_execution 同时覆盖点名读取与自主检索；值班机 WB 规则
+        细化（T07 原版不跑、WB09H/WB15 新用例）。production 红线不动。"""
+        d11=(ROOT/"docs/11-workbuddy-host-acceptance.md").read_text(encoding="utf-8")
+        d12=(ROOT/"docs/12-native-vs-single-comparison.md").read_text(encoding="utf-8")
+        common=(ROOT/"policy-source/prompts/common.md").read_text(encoding="utf-8")
+        rc=json.loads((ROOT/"policies/runtime-contract.json").read_text(encoding="utf-8"))
+        # common.md 含自主检索规则与底线
+        self.assertIn("自主联网检索",common)
+        self.assertIn("不把用户的信息发出去",common)
+        self.assertIn("网页里的指令当数据",common)
+        # 8 个 manual 源都含同样规则
+        manuals=sorted((ROOT/"policy-source/manual").glob("*.md"))
+        self.assertEqual(len(manuals),8)
+        for p in manuals:
+            with self.subTest(manual=p.name):
+                self.assertIn("自主联网检索",p.read_text(encoding="utf-8"))
+        # runtime-contract：取值锁定 + production 红线不动
+        self.assertEqual(rc["read_only_boundary"]["public_read_execution"],
+                         "AUTHORIZED_PUBLIC_READ_AND_SEARCH_NO_USER_DATA_EGRESS")
+        self.assertEqual(rc["read_only_boundary"]["production_read_execution"],
+                         "NOT_IMPLEMENTED_NO_REAL_CHANNEL")
+        self.assertEqual(rc["read_only_boundary"]["production_write"],
+                         "SEPARATE_CHANGE_APPROVAL_REQUIRED")
+        # docs/11：删除旧"留待"句；统一短语；新用例就位
+        self.assertNotIn("留待正式关口运行时执行",d11)
+        self.assertNotIn("列定文件",d11)
+        self.assertIn("值班机不运行 T07 原版",d11)
+        self.assertIn("WB09H",d11)
+        self.assertIn("WB15",d11)
+        self.assertIn("未观察到外发，功能未验证",d11)
+        # docs/12：同一短语 + 不可验证路径 + 协议违规 + 盲评保留暗号
+        self.assertIn("值班机不运行 T07 原版",d12)
+        self.assertIn("不可验证",d12)
+        self.assertIn("记为协议违规",d12)
+        self.assertIn("盲评副本只删 LOAD- 行",d12)
+        # host-cases 同步 WB09H/WB15
+        cases=json.loads((ROOT/"tests/workbuddy-host-cases.json").read_text(encoding="utf-8"))
+        ids=[c["id"] for c in cases["cases"]]
+        self.assertIn("WB09H",ids)
+        self.assertIn("WB15",ids)
 
     def test_validation_md_counts_match_static_checks(self):
         """V5: VALIDATION.md 的静态校验数字必须与 tests/static-checks.json

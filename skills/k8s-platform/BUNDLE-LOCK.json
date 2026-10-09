@@ -4,8 +4,8 @@
   "agent_id": "telecom-crm-k8s-platform",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "MANUAL-MODE.md": "e69c9584601c19e225ed06890850947aa7e4e47d73b915915d19479da37ec4c4",
-    "SKILL.md": "c5dfdc8a10f6eff4dee01660c3fdce44ac3aeb3bdeb4f8510eac52eab3647ed2",
+    "MANUAL-MODE.md": "4a66839074d8ebfdfcc53d90b078ee1e77888f0cf34ef5d1c4b3b66f837d9ac6",
+    "SKILL.md": "bd4fd4b37864234d6bb7e7324ed0c3bec880c8061b73b31034de2fac5a1060a4",
     "VERSION": "362148d7721ad4a1bb64981ff8d604ef7f4d22267ea8845042f54f90940f24fd",
     "agents/openai.yaml": "3b86aec1d7c96a9f6dcef866b0a90395b7149d7f4a23aac78eac93ced5ee0b4e",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",

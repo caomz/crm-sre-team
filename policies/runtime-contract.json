@@ -126,7 +126,7 @@
       "MANUAL_MODE"
     ],
     "command_generation": "READ_ONLY_QUERY_COMMANDS_ALLOWED_WITH_SCOPE_AND_PLACEHOLDERS",
-    "public_read_execution": "AUTHORIZED_WHEN_USER_NAMED_TARGET_AND_HOST_PERMITS",
+    "public_read_execution": "AUTHORIZED_PUBLIC_READ_AND_SEARCH_NO_USER_DATA_EGRESS",
     "local_result_write": "AUTHORIZED_WORKING_DIRECTORY_ONLY",
     "production_read_execution": "NOT_IMPLEMENTED_NO_REAL_CHANNEL",
     "production_write": "SEPARATE_CHANGE_APPROVAL_REQUIRED",
