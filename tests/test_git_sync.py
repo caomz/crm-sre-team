@@ -52,6 +52,15 @@ def git(root: Path, *args: str) -> str:
 
 class SyncGuardTests(unittest.TestCase):
     def setUp(self):
+        # Synthetic repositories must not inherit the host's line endings,
+        # signing, hooks, filters or URL rewrites. Never inspect credentials.
+        self.git_config = patch.dict(os.environ, {
+            "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_SYSTEM": os.devnull,
+            "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_COUNT": "0",
+            "GIT_ATTR_NOSYSTEM": "1", "GIT_CONFIG_PARAMETERS": "",
+        })
+        self.git_config.start()
+        self.addCleanup(self.git_config.stop)
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.base = Path(self.tmp.name)
@@ -59,20 +68,22 @@ class SyncGuardTests(unittest.TestCase):
         self.clone = self.base / "clone"
         subprocess.run(["git", "init", "--bare", "-b", "main", str(self.origin)], check=True,
                        capture_output=True)
+        git(self.origin, "config", "core.autocrlf", "false")
         seed = self.base / "seed"
         seed.mkdir()
         git(seed, "init", "-b", "main")
+        git(seed, "config", "core.autocrlf", "false")
         git(seed, "config", "user.email", "sync@test.invalid")
         git(seed, "config", "user.name", "sync-test")
         (seed / "policy-source").mkdir()
-        (seed / "policy-source" / "common.md").write_text("base\n", encoding="utf-8")
-        (seed / "settings.json").write_text('{"agent":"lead"}\n', encoding="utf-8")
-        (seed / "VERSION").write_text("1.0.0\n", encoding="utf-8")
+        (seed / "policy-source" / "common.md").write_text("base\n", encoding="utf-8", newline="\n")
+        (seed / "settings.json").write_text('{"agent":"lead"}\n', encoding="utf-8", newline="\n")
+        (seed / "VERSION").write_text("1.0.0\n", encoding="utf-8", newline="\n")
         git(seed, "add", "-A")
         git(seed, "commit", "-m", "base")
         git(seed, "remote", "add", "origin", str(self.origin))
         git(seed, "push", "-u", "origin", "main")
-        subprocess.run(["git", "clone", str(self.origin), str(self.clone)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", "-c", "core.autocrlf=false", str(self.origin), str(self.clone)], check=True, capture_output=True)
         git(self.clone, "config", "user.email", "sync@test.invalid")
         git(self.clone, "config", "user.name", "sync-test")
 
@@ -90,7 +101,7 @@ class SyncGuardTests(unittest.TestCase):
     @requires_real_symlink
     def test_03_symlink_target_rejected(self):
         outside = self.base / "outside.txt"
-        outside.write_text("secret\n", encoding="utf-8")
+        outside.write_text("secret\n", encoding="utf-8", newline="\n")
         (self.clone / "link.md").symlink_to(outside)
         with self.assertRaises(sync.SyncError):
             sync.guard_path(self.clone, "link.md")
@@ -101,7 +112,7 @@ class SyncGuardTests(unittest.TestCase):
     # ------------------------------------------------------------ dry-run default
     def test_05_dry_run_writes_nothing(self):
         git(self.origin, "config", "receive.denyCurrentBranch", "ignore")
-        (self.clone / "VERSION").write_text("2.0.0\n", encoding="utf-8")
+        (self.clone / "VERSION").write_text("2.0.0\n", encoding="utf-8", newline="\n")
         git(self.clone, "commit", "-am", "local change")
         plan = sync.build_plan(self.clone, "HEAD", "origin/main")
         plan["plan_id"] = sync.plan_id_of(plan)
@@ -110,7 +121,7 @@ class SyncGuardTests(unittest.TestCase):
 
     def test_06_apply_without_confirm_token_writes_nothing(self):
         git(self.origin, "config", "receive.denyCurrentBranch", "ignore")
-        (self.clone / "VERSION").write_text("3.0.0\n", encoding="utf-8")
+        (self.clone / "VERSION").write_text("3.0.0\n", encoding="utf-8", newline="\n")
         git(self.clone, "commit", "-am", "local change")
         plan = sync.build_plan(self.clone, "HEAD", "origin/main")
         plan["plan_id"] = sync.plan_id_of(plan)
@@ -135,7 +146,7 @@ class SyncGuardTests(unittest.TestCase):
 
     def test_09_untracked_generated_file_is_blocked(self):
         (self.clone / "agents").mkdir()
-        (self.clone / "agents" / "new.md").write_text("x\n", encoding="utf-8")
+        (self.clone / "agents" / "new.md").write_text("x\n", encoding="utf-8", newline="\n")
         plan = sync.build_plan(self.clone, "HEAD", "origin/main")
         blocked = {b["path"] for b in plan["blocked_generated"]}
         self.assertIn("agents/new.md", blocked)
@@ -143,7 +154,7 @@ class SyncGuardTests(unittest.TestCase):
 
     def test_10_untracked_new_source_flagged_not_silently_dropped(self):
         (self.clone / "tools").mkdir(parents=True, exist_ok=True)
-        (self.clone / "tools" / "brand_new.py").write_text("x = 1\n", encoding="utf-8")
+        (self.clone / "tools" / "brand_new.py").write_text("x = 1\n", encoding="utf-8", newline="\n")
         plan = sync.build_plan(self.clone, "HEAD", "origin/main")
         self.assertIn("tools/brand_new.py", plan["untracked_local"])
         actions = {a["path"]: a["action"] for a in plan["actions"]}
@@ -160,13 +171,13 @@ class SyncGuardTests(unittest.TestCase):
         self.assertEqual(plan["ahead"], 0)
 
     def test_12_divergence_counts_and_diverged_conflict(self):
-        (self.clone / "VERSION").write_text("local\n", encoding="utf-8")
+        (self.clone / "VERSION").write_text("local\n", encoding="utf-8", newline="\n")
         git(self.clone, "commit", "-am", "local edit")
         other = self.base / "other"
-        subprocess.run(["git", "clone", str(self.origin), str(other)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", "-c", "core.autocrlf=false", str(self.origin), str(other)], check=True, capture_output=True)
         git(other, "config", "user.email", "o@t.invalid")
         git(other, "config", "user.name", "o")
-        (other / "VERSION").write_text("remote\n", encoding="utf-8")
+        (other / "VERSION").write_text("remote\n", encoding="utf-8", newline="\n")
         git(other, "commit", "-am", "remote edit")
         git(other, "push", "origin", "main")
         git(self.clone, "fetch", "origin")
@@ -177,13 +188,13 @@ class SyncGuardTests(unittest.TestCase):
         self.assertEqual(plan["conflicts"][0]["strategy"], "EXPLICIT_RESCOLUTION_REQUIRED")
 
     def test_13_unresolved_conflict_blocks_apply(self):
-        (self.clone / "VERSION").write_text("local\n", encoding="utf-8")
+        (self.clone / "VERSION").write_text("local\n", encoding="utf-8", newline="\n")
         git(self.clone, "commit", "-am", "local edit")
         other = self.base / "other2"
-        subprocess.run(["git", "clone", str(self.origin), str(other)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", "-c", "core.autocrlf=false", str(self.origin), str(other)], check=True, capture_output=True)
         git(other, "config", "user.email", "o@t.invalid")
         git(other, "config", "user.name", "o")
-        (other / "VERSION").write_text("remote\n", encoding="utf-8")
+        (other / "VERSION").write_text("remote\n", encoding="utf-8", newline="\n")
         git(other, "commit", "-am", "remote edit")
         git(other, "push", "origin", "main")
         git(self.clone, "fetch", "origin")
@@ -197,7 +208,7 @@ class SyncGuardTests(unittest.TestCase):
         payload = bytes(range(256)) * 8
         git(self.origin, "config", "receive.denyCurrentBranch", "ignore")
         other = self.base / "other3"
-        subprocess.run(["git", "clone", str(self.origin), str(other)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", "-c", "core.autocrlf=false", str(self.origin), str(other)], check=True, capture_output=True)
         git(other, "config", "user.email", "o@t.invalid")
         git(other, "config", "user.name", "o")
         (other / "logo.png").write_bytes(payload)
@@ -218,10 +229,10 @@ class SyncGuardTests(unittest.TestCase):
     def test_15_apply_does_not_stage_anything(self):
         git(self.origin, "config", "receive.denyCurrentBranch", "ignore")
         other = self.base / "other4"
-        subprocess.run(["git", "clone", str(self.origin), str(other)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", "-c", "core.autocrlf=false", str(self.origin), str(other)], check=True, capture_output=True)
         git(other, "config", "user.email", "o@t.invalid")
         git(other, "config", "user.name", "o")
-        (other / "settings.json").write_text('{"agent":"lead","x":1}\n', encoding="utf-8")
+        (other / "settings.json").write_text('{"agent":"lead","x":1}\n', encoding="utf-8", newline="\n")
         git(other, "commit", "-am", "remote settings")
         git(other, "push", "origin", "main")
         git(self.clone, "fetch", "origin")
@@ -235,10 +246,10 @@ class SyncGuardTests(unittest.TestCase):
     def test_16_ledger_records_every_write(self):
         git(self.origin, "config", "receive.denyCurrentBranch", "ignore")
         other = self.base / "other5"
-        subprocess.run(["git", "clone", str(self.origin), str(other)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", "-c", "core.autocrlf=false", str(self.origin), str(other)], check=True, capture_output=True)
         git(other, "config", "user.email", "o@t.invalid")
         git(other, "config", "user.name", "o")
-        (other / "VERSION").write_text("9.9.9\n", encoding="utf-8")
+        (other / "VERSION").write_text("9.9.9\n", encoding="utf-8", newline="\n")
         git(other, "commit", "-am", "remote version")
         git(other, "push", "origin", "main")
         git(self.clone, "fetch", "origin")
@@ -287,7 +298,7 @@ class SyncGuardTests(unittest.TestCase):
 
     def test_23_prompt_files_are_not_structurally_merged(self):
         self.assertFalse(sync.mergeable_json(self.clone, "VERSION"))
-        (self.clone / "release-manifest.json").write_text('{"files":[]}', encoding="utf-8")
+        (self.clone / "release-manifest.json").write_text('{"files":[]}', encoding="utf-8", newline="\n")
         self.assertTrue(sync.mergeable_json(self.clone, "release-manifest.json"))
 
     # ---------------------------------------------------------- plan_id integrity
@@ -300,10 +311,10 @@ class SyncGuardTests(unittest.TestCase):
     def test_25_rollback_restores_previous_bytes_on_failure(self):
         git(self.origin, "config", "receive.denyCurrentBranch", "ignore")
         other = self.base / "other6"
-        subprocess.run(["git", "clone", str(self.origin), str(other)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", "-c", "core.autocrlf=false", str(self.origin), str(other)], check=True, capture_output=True)
         git(other, "config", "user.email", "o@t.invalid")
         git(other, "config", "user.name", "o")
-        (other / "VERSION").write_text("remote-only\n", encoding="utf-8")
+        (other / "VERSION").write_text("remote-only\n", encoding="utf-8", newline="\n")
         git(other, "commit", "-am", "remote version")
         git(other, "push", "origin", "main")
         git(self.clone, "fetch", "origin")
@@ -339,10 +350,10 @@ class SyncGuardTests(unittest.TestCase):
     # ------------------------------------------------- tip binding after planning
     def _remote_edit(self, name: str, text: str, message: str = "remote edit"):
         other = self.base / name
-        subprocess.run(["git", "clone", str(self.origin), str(other)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", "-c", "core.autocrlf=false", str(self.origin), str(other)], check=True, capture_output=True)
         git(other, "config", "user.email", "o@t.invalid")
         git(other, "config", "user.name", "o")
-        (other / "VERSION").write_text(text, encoding="utf-8")
+        (other / "VERSION").write_text(text, encoding="utf-8", newline="\n")
         git(other, "commit", "-am", message)
         git(other, "push", "origin", "main")
         git(self.clone, "fetch", "origin")
@@ -379,7 +390,7 @@ class SyncGuardTests(unittest.TestCase):
         plan = sync.build_plan(self.clone, "HEAD", "origin/main")
         plan["plan_id"] = sync.plan_id_of(plan)
         # The operator edits the very file the plan intends to overwrite.
-        (self.clone / "VERSION").write_text("my-own-edit\n", encoding="utf-8")
+        (self.clone / "VERSION").write_text("my-own-edit\n", encoding="utf-8", newline="\n")
         with self.assertRaises(sync.SyncError) as ctx:
             sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
         self.assertIn("changed on disk", str(ctx.exception))
@@ -395,7 +406,7 @@ class SyncGuardTests(unittest.TestCase):
     def test_32_windows_junction_rejected(self):
         outside = self.base / "outside_dir"
         outside.mkdir()
-        (outside / "target.md").write_text("escaped\n", encoding="utf-8")
+        (outside / "target.md").write_text("escaped\n", encoding="utf-8", newline="\n")
         junction = self.clone / "linked"
         try:
             subprocess.run(["cmd", "/c", "mklink", "/J", str(junction), str(outside)],
@@ -460,7 +471,7 @@ class SyncGuardTests(unittest.TestCase):
 
     def test_34_identical_bytes_and_identical_mode_are_not_a_conflict(self):
         script = self.clone / "run.sh"
-        script.write_text("same\n", encoding="utf-8")
+        script.write_text("same\n", encoding="utf-8", newline="\n")
         git(self.clone, "add", "run.sh")
         git(self.clone, "commit", "-m", "add run.sh")
         git(self.clone, "push", "origin", "main")
@@ -472,11 +483,11 @@ class SyncGuardTests(unittest.TestCase):
     def test_35_rollback_does_not_delete_file_created_after_planning(self):
         git(self.origin, "config", "receive.denyCurrentBranch", "ignore")
         other = self.base / "rb1"
-        subprocess.run(["git", "clone", str(self.origin), str(other)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", "-c", "core.autocrlf=false", str(self.origin), str(other)], check=True, capture_output=True)
         git(other, "config", "user.email", "o@t.invalid")
         git(other, "config", "user.name", "o")
-        (other / "VERSION").write_text("remote-bytes\n", encoding="utf-8")
-        (other / "fresh.md").write_text("remote-fresh\n", encoding="utf-8")
+        (other / "VERSION").write_text("remote-bytes\n", encoding="utf-8", newline="\n")
+        (other / "fresh.md").write_text("remote-fresh\n", encoding="utf-8", newline="\n")
         git(other, "add", "-A")
         git(other, "commit", "-m", "remote adds two")
         git(other, "push", "origin", "main")
@@ -496,7 +507,7 @@ class SyncGuardTests(unittest.TestCase):
         sync.git_bytes = fail_on_second_blob
         self.addCleanup(setattr, sync, "git_bytes", original)
         # The operator creates this file after planning; rollback must not touch it.
-        (self.clone / "fresh.md").write_text("user-created-after-planning\n", encoding="utf-8")
+        (self.clone / "fresh.md").write_text("user-created-after-planning\n", encoding="utf-8", newline="\n")
         with self.assertRaises(sync.SyncError):
             sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
         self.assertEqual((self.clone / "fresh.md").read_text(encoding="utf-8"),
@@ -506,7 +517,7 @@ class SyncGuardTests(unittest.TestCase):
     def test_36_rename_records_both_source_and_destination(self):
         """`--raw -z` must not drop renames: the source path still needs syncing."""
         original = self.clone / "old-name.md"
-        original.write_text("rename me\n", encoding="utf-8")
+        original.write_text("rename me\n", encoding="utf-8", newline="\n")
         git(self.clone, "add", "old-name.md")
         git(self.clone, "commit", "-m", "add old name")
         git(self.clone, "mv", "old-name.md", "new-name.md")
@@ -519,7 +530,7 @@ class SyncGuardTests(unittest.TestCase):
     def test_37_non_ascii_path_is_parsed_correctly(self):
         """Byte-level -z parsing must survive names that are not plain ASCII."""
         unicode_name = self.clone / "配置说明.md"
-        unicode_name.write_text("unicode\n", encoding="utf-8")
+        unicode_name.write_text("unicode\n", encoding="utf-8", newline="\n")
         git(self.clone, "add", "-A")
         git(self.clone, "commit", "-m", "add unicode name")
         plan = sync.build_plan(self.clone, "HEAD", "HEAD~1")
@@ -588,7 +599,7 @@ class SyncGuardTests(unittest.TestCase):
 
     def test_41_remote_change_blocks_existing_unstaged_modification(self):
         self._remote_edit("dirty-remote", "remote\n")
-        (self.clone / "VERSION").write_text("user work\n", encoding="utf-8")
+        (self.clone / "VERSION").write_text("user work\n", encoding="utf-8", newline="\n")
         self.assert_uncommitted_remote_conflict("VERSION")
 
     def test_42_deleted_worktree_path_is_dirty_and_blocks_remote_restore(self):
@@ -601,19 +612,19 @@ class SyncGuardTests(unittest.TestCase):
 
     def test_43_untracked_same_name_as_new_remote_file_is_blocked(self):
         other = self._remote_edit("untracked-remote", "remote\n")
-        (other / "new.md").write_text("remote new\n", encoding="utf-8")
+        (other / "new.md").write_text("remote new\n", encoding="utf-8", newline="\n")
         git(other, "add", "new.md")
         git(other, "commit", "-m", "remote new file")
         git(other, "push", "origin", "main")
         git(self.clone, "fetch", "origin")
-        (self.clone / "new.md").write_text("user new\n", encoding="utf-8")
+        (self.clone / "new.md").write_text("user new\n", encoding="utf-8", newline="\n")
         self.assert_uncommitted_remote_conflict("new.md")
 
     def test_44_staged_change_blocks_even_if_worktree_matches_head(self):
         self._remote_edit("staged-remote", "remote\n")
         target = self.clone / "VERSION"
         before = target.read_bytes()
-        target.write_text("staged user work\n", encoding="utf-8")
+        target.write_text("staged user work\n", encoding="utf-8", newline="\n")
         git(self.clone, "add", "VERSION")
         target.write_bytes(before)
         self.assert_uncommitted_remote_conflict("VERSION")
@@ -624,7 +635,7 @@ class SyncGuardTests(unittest.TestCase):
         plan["plan_id"] = sync.plan_id_of(plan)
         target = self.clone / "VERSION"
         before = target.read_bytes()
-        target.write_text("staged only\n", encoding="utf-8")
+        target.write_text("staged only\n", encoding="utf-8", newline="\n")
         git(self.clone, "add", "VERSION")
         target.write_bytes(before)
         index = git(self.clone, "write-tree")
@@ -660,7 +671,7 @@ class SyncGuardTests(unittest.TestCase):
 
     def test_48_incomplete_rollback_preserves_original_backup(self):
         other = self._remote_edit("rollback-fault", "remote\n")
-        (other / "settings.json").write_text('{"remote":true}\n', encoding="utf-8")
+        (other / "settings.json").write_text('{"remote":true}\n', encoding="utf-8", newline="\n")
         git(other, "commit", "-am", "remote settings")
         git(other, "push", "origin", "main")
         git(self.clone, "fetch", "origin")
@@ -753,7 +764,7 @@ class SyncGuardTests(unittest.TestCase):
         with (self.clone / ".git/info/exclude").open("a", encoding="utf-8") as handle:
             handle.write("\n/reports/\n")
         other = self.base / "mode-remote"
-        subprocess.run(["git", "clone", str(self.origin), str(other)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", "-c", "core.autocrlf=false", str(self.origin), str(other)], check=True, capture_output=True)
         git(other, "config", "user.email", "mode@test.invalid")
         git(other, "config", "user.name", "mode-test")
         git(self.clone, "config", "core.filemode", "true")
@@ -798,7 +809,7 @@ class SyncGuardTests(unittest.TestCase):
     def test_56_failed_apply_restores_original_permissions_and_bytes(self):
         other = self._remote_edit("mode-rollback", "remote\n")
         git(other, "update-index", "--chmod=+x", "VERSION")
-        (other / "settings.json").write_text('{"remote":true}\n', encoding="utf-8")
+        (other / "settings.json").write_text('{"remote":true}\n', encoding="utf-8", newline="\n")
         git(other, "add", "settings.json")
         git(other, "commit", "-m", "mode and settings")
         git(other, "push", "origin", "main")
@@ -855,7 +866,7 @@ class SyncGuardTests(unittest.TestCase):
 
     def test_60_matching_remote_does_not_bypass_staged_conflict(self):
         self._remote_edit("identical-staged", "remote\n")
-        (self.clone / "VERSION").write_text("remote\n", encoding="utf-8")
+        (self.clone / "VERSION").write_text("remote\n", encoding="utf-8", newline="\n")
         git(self.clone, "add", "VERSION")
         self.assert_uncommitted_remote_conflict("VERSION")
 
@@ -929,6 +940,99 @@ class SyncGuardTests(unittest.TestCase):
                     sync.atomic_replace(self.clone, rel, data, sync.digest_file(target))
                     self.assertEqual(target.read_bytes(), data)
                     self.assertEqual(list(self.clone.glob(rel + ".sync-*")), [])
+
+    def test_64_clean_crlf_is_not_a_local_change(self):
+        self._remote_edit("crlf-clean", "remote\n")
+        (self.clone / ".git" / "info" / "exclude").write_text(
+            "reports/\n", encoding="utf-8", newline="\n")
+        target = self.clone / "VERSION"
+        for autocrlf, attributes in (("true", None), ("input", None),
+                                    ("false", "VERSION text eol=lf\n"),
+                                    ("false", "VERSION text eol=crlf\n")):
+            with self.subTest(autocrlf=autocrlf, attributes=attributes):
+                git(self.clone, "config", "core.autocrlf", autocrlf)
+                if attributes:
+                    (self.clone / ".gitattributes").write_text(
+                        attributes, encoding="utf-8", newline="\n")
+                target.write_bytes(b"1.0.0\r\n")
+                head = git(self.clone, "rev-parse", "HEAD")
+                index = git(self.clone, "write-tree")
+                plan = sync.build_plan(self.clone, "HEAD", "origin/main")
+                self.assertEqual(plan["conflicts"], [])
+                action = next(a for a in plan["actions"] if a["path"] == "VERSION")
+                self.assertEqual(action["action"], "RESTORE_REMOTE_VERSION")
+                self.assertEqual(action["planned_sha256"], sync.digest_bytes(b"1.0.0\r\n"))
+                self.assertEqual(target.read_bytes(), b"1.0.0\r\n")
+                plan["plan_id"] = sync.plan_id_of(plan)
+                result = sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
+                self.assertEqual(result["written"], ["VERSION"])
+                self.assertEqual(target.read_bytes(), b"remote\n")
+                self.assertEqual(head, git(self.clone, "rev-parse", "HEAD"))
+                self.assertEqual(index, git(self.clone, "write-tree"))
+
+    def test_65_crlf_real_local_change_still_blocks(self):
+        self._remote_edit("crlf-dirty", "remote\n")
+        for autocrlf in ("true", "input"):
+            with self.subTest(autocrlf=autocrlf):
+                git(self.clone, "config", "core.autocrlf", autocrlf)
+                (self.clone / "VERSION").write_bytes(b"real user edit\r\n")
+                self.assert_uncommitted_remote_conflict("VERSION")
+
+    def test_66_crlf_raw_disk_drift_after_plan_still_blocks(self):
+        self._remote_edit("crlf-drift", "remote\n")
+        git(self.clone, "config", "core.autocrlf", "true")
+        target = self.clone / "VERSION"
+        target.write_bytes(b"1.0.0\r\n")
+        plan = sync.build_plan(self.clone, "HEAD", "origin/main")
+        self.assertEqual(plan["conflicts"], [])
+        plan["plan_id"] = sync.plan_id_of(plan)
+        # Git-equivalent bytes are still a different reviewed disk snapshot.
+        target.write_bytes(b"1.0.0\n")
+        with self.assertRaisesRegex(sync.SyncError, "changed on disk after planning"):
+            sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
+        self.assertEqual(target.read_bytes(), b"1.0.0\n")
+
+    def test_67_custom_filter_is_rejected_before_execution(self):
+        self._remote_edit("filter-reject", "remote\n")
+        (self.clone / ".gitattributes").write_text(
+            "VERSION filter=unsafe\n", encoding="utf-8", newline="\n")
+        git(self.clone, "config", "filter.unsafe.clean", "exit 71")
+        git(self.clone, "config", "filter.unsafe.required", "true")
+        original = sync.git
+        def no_status_before_guard(root, *args, **kwargs):
+            self.assertNotIn("status", args, "status could execute the custom filter")
+            return original(root, *args, **kwargs)
+        with patch.object(sync, "git", side_effect=no_status_before_guard):
+            with self.assertRaisesRegex(sync.SyncError, "Unsupported Git normalization.*filter"):
+                sync.build_plan(self.clone, "HEAD", "origin/main")
+
+    def test_68_encoding_requires_manual_review(self):
+        self._remote_edit("encoding-reject", "remote\n")
+        (self.clone / ".gitattributes").write_text(
+            "VERSION working-tree-encoding=UTF-16\n", encoding="utf-8", newline="\n")
+        with self.assertRaisesRegex(sync.SyncError, "Unsupported Git normalization.*working-tree-encoding"):
+            sync.build_plan(self.clone, "HEAD", "origin/main")
+
+    def test_69_plan_binds_the_bytes_that_were_normalized(self):
+        self._remote_edit("normalization-race", "remote\n")
+        git(self.clone, "config", "core.autocrlf", "true")
+        target = self.clone / "VERSION"
+        target.write_bytes(b"1.0.0\r\n")
+        original = sync.git_bytes
+        def change_after_hash(root, *args, **kwargs):
+            result = original(root, *args, **kwargs)
+            if args[:2] == ("hash-object", "--path=VERSION"):
+                target.write_bytes(b"user edit during planning\r\n")
+            return result
+        with patch.object(sync, "git_bytes", side_effect=change_after_hash):
+            plan = sync.build_plan(self.clone, "HEAD", "origin/main")
+        self.assertEqual(plan["conflicts"], [])
+        action = next(a for a in plan["actions"] if a["path"] == "VERSION")
+        self.assertEqual(action["planned_sha256"], sync.digest_bytes(b"1.0.0\r\n"))
+        plan["plan_id"] = sync.plan_id_of(plan)
+        with self.assertRaisesRegex(sync.SyncError, "changed on disk after planning"):
+            sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
+        self.assertEqual(target.read_bytes(), b"user edit during planning\r\n")
 
 
 if __name__ == "__main__":

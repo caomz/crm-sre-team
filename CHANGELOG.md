@@ -1,3 +1,13 @@
+# v3.6.3 Windows 兼容修订（2026-10-10，2.8.0-rc2）
+
+- 修复 Windows 11 实测的 A/B 类钩子测试失败：统一探测并使用绝对 POSIX sh，Windows 优先从 git --exec-path 找 Git for Windows 的 usr/bin/sh.exe 或 bin/sh.exe，随后才用 PATH 的 sh，不使用 WSL bash。直接执行和清理使用同一路径；新增 Git 布局、回退和 sh 不在 PATH 的回归。
+- 故障注入直接执行使用只有明确工具替身的最小 PATH，真实 Python 只由绝对解释器包装调用；没有 Python、python/py 回退、rm/find/sort/hash 失败分支不再依赖主机 PATH。真实 Git runner 先实际运行探测钩子，只有替身未解析到时才记 SKIPPED_CAPABILITY；直接拒绝与 HEAD/索引/工作树保护断言保留，POSIX 真实提交覆盖不减。
+- 修复 C 类 sync_git 缺陷：临时仓库隔离 system/global 配置，显式 core.autocrlf=false，文本写入固定 LF。产品对同一份原始字节调用 Git hash-object --path --stdin（不加 -w）取得规范化 blob ID，支持内建 autocrlf=true/input 和 text/eol；HEAD/索引/工作树/远端按 blob ID 与模式比较，原始 SHA256 继续绑定计划、备份和漂移保护。Git status 的 stat-dirty 标记不单独判定内容冲突。
+- 取舍：同步继续写远端原始 blob，不执行 smudge 或自定义转换。规划在 status/规范化之前检查属性，filter 和 working-tree-encoding 明确要求人工评审；apply 写入前再次检查。新增 CRLF 干净/真实改动/原始换行漂移、转换拒绝和规划期间内容变化回归，未削弱 fail closed。规范化语义依据 [git-hash-object 官方说明](https://git-scm.com/docs/git-hash-object)。
+- 仓库外交付说明修复 Invoke-Checked 多入口数组、Git 各层来源核对、当前窗口 Python/PATH 一致性、clone 前 ls-remote、会话恒等 URL 规则与去敏、离线克隆/包完整核对、实际 Windows 11 记录和能力 skip 清单；21 个执行块统一点调用并支持哈希核对后读取原文。MAIN_SHA 三处使用 <V363_MAIN_SHA>，由提交后的交接人填写。
+- Mac 全量实测：401 passed / 0 failed / 1 skipped / 1513 subtests passed（105.38 秒），唯一 skip 为 POSIX 无 Windows junction；check_workbuddy pass=true，validate_bundle PASS_STATIC_ONLY（1816/1816）。最终两次重建和发布检查以仓库外交付日志为准。
+- VERSION 保持 2.8.0-rc2，提示词、acceptance、判定规则、评分承诺不变；无新增发布文件，manifest 不变。Mac 实测结果见 VALIDATION.md；本轮 Windows/PS 5.1 = NOT_RUN。未提交、推送、切分支或安装依赖。
+
 # v3.6.2 未部署前修订（2026-10-10，2.8.0-rc2）
 
 - P1：sync_git 的独占临时文件打开标志补齐平台支持的 O_BINARY、O_NOFOLLOW，保留 O_EXCL 和 v3.6.1 权限逻辑。关闭写入句柄后、os.replace 前读取临时文件实际字节并比对待写数据 SHA256；不一致抛出 SyncError、保留临时文件和原目标。

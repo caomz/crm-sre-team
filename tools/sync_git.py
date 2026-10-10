@@ -68,7 +68,8 @@ def git(root: Path, *args: str, check: bool = True) -> subprocess.CompletedProce
     return proc
 
 
-def git_bytes(root: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
+def git_bytes(root: Path, *args: str, check: bool = True,
+              input_data: bytes | None = None) -> subprocess.CompletedProcess:
     """Binary-safe git. Text mode would corrupt PNG/ZIP payloads via newline translation."""
     env = dict(os.environ)
     env["GIT_SSH_COMMAND"] = env.get(
@@ -77,7 +78,7 @@ def git_bytes(root: Path, *args: str, check: bool = True) -> subprocess.Complete
     )
     proc = subprocess.run(
         ["git", "-C", str(root), *args],
-        capture_output=True, env=env,
+        capture_output=True, env=env, input=input_data,
     )
     if check and proc.returncode != 0:
         raise SyncError(f"git {' '.join(args)} failed: {proc.stderr.decode('utf-8', 'replace').strip()}")
@@ -219,10 +220,35 @@ def blob_state(root: Path, entry) -> dict | None:
     mode, kind, blob = entry[:3]
     if kind != "blob":
         raise SyncError("Non-blob sync input requires manual review")
-    return {"mode": mode, "sha256": digest_bytes(git_bytes(root, "cat-file", "blob", blob).stdout)}
+    return {"mode": mode, "git_blob": blob,
+            "sha256": digest_bytes(git_bytes(root, "cat-file", "blob", blob).stdout)}
 
 
-def working_state(target: Path, index_state: dict | None, track_mode: bool) -> dict | None:
+def assert_supported_normalization(root: Path, paths) -> None:
+    """Reject custom conversion before status/hash-object can execute a filter.
+
+    Git's built-in text/eol/autocrlf rules are supported. External filters and
+    working-tree encodings need manual review; raw blob restores do not run
+    their smudge/re-encoding steps. check-attr itself never runs the filter.
+    """
+    names = sorted(set(paths))
+    if not names:
+        return
+    raw = git_bytes(root, "check-attr", "-z", "--stdin", "filter", "working-tree-encoding",
+                    input_data=b"".join(n.encode("utf-8", "surrogateescape") + b"\0" for n in names)).stdout
+    fields = raw.split(b"\0")
+    if fields[-1:] != [b""] or len(fields) - 1 != len(names) * 6:
+        raise SyncError("Cannot safely read Git normalization attributes")
+    for index in range(0, len(fields) - 1, 3):
+        name, attribute, value = fields[index:index + 3]
+        if value not in (b"unspecified", b"unset"):
+            raise SyncError("Unsupported Git normalization: " +
+                            name.decode("utf-8", "replace") + " " +
+                            attribute.decode("ascii") + " requires manual review")
+
+
+def working_state(root: Path, rel: str, target: Path,
+                  index_state: dict | None, track_mode: bool) -> dict | None:
     if not target.exists():
         return None
     if not target.is_file():
@@ -230,16 +256,32 @@ def working_state(target: Path, index_state: dict | None, track_mode: bool) -> d
     mode = "100755" if track_mode and target.stat().st_mode & 0o111 else "100644"
     if not track_mode and index_state:
         mode = index_state["mode"]
-    return {"mode": mode, "sha256": digest_file(target)}
+    # No -w: dry-run hashes the same normalized bytes as git add without
+    # writing an object or staging anything. Keep SHA256 over the disk bytes
+    # separately so a later CRLF/LF-only change still invalidates the plan.
+    data = target.read_bytes()
+    blob = git_bytes(root, "hash-object", f"--path={rel}", "--stdin",
+                     input_data=data).stdout.decode("ascii").strip()
+    if len(blob) not in (40, 64) or any(c not in "0123456789abcdef" for c in blob):
+        raise SyncError(f"Cannot safely normalize working-tree content: {rel}")
+    return {"mode": mode, "git_blob": blob, "sha256": digest_bytes(data)}
+
+
+def same_git_state(left: dict | None, right: dict | None) -> bool:
+    if left is None or right is None:
+        return left is right
+    return (left["mode"], left.get("git_blob")) == (right["mode"], right.get("git_blob"))
 
 def build_plan(root: Path, local: str, remote: str) -> dict:
     """Classify every divergence without touching the working tree."""
     base = merge_base(root, local, remote)
     behind, ahead = (ahead_behind(root, local, remote) if base else (0, 0))
-    dirty = set(dirty_paths(root))
     heads = tree_entries(root, "HEAD")
     remotes = tree_entries(root, remote)
     indices, index_digest = index_entries(root)
+    untracked = set(untracked_paths(root))
+    assert_supported_normalization(root, set(heads) | set(remotes) | set(indices) | untracked)
+    dirty = set(dirty_paths(root))
     filemode = git(root, "config", "--bool", "core.filemode", check=False).stdout.strip() == "true"
     plan = {
         "schema_version": 1,
@@ -304,7 +346,6 @@ def build_plan(root: Path, local: str, remote: str) -> dict:
             "reason": reason,
             "strategy": "STRUCTURAL_JSON_MERGE" if rel.endswith(".json") else "EXPLICIT_RESCOLUTION_REQUIRED",
         })
-    untracked = set(untracked_paths(root))
     conflicted = {c["path"] for c in plan["conflicts"]}
     # Untracked local files are part of the divergence too; omitting them here
     # would let a plan look clean while new work sat unsynced.
@@ -320,13 +361,16 @@ def build_plan(root: Path, local: str, remote: str) -> dict:
         remote_state = blob_state(root, remotes.get(rel))
         stages = indices.get(rel, [])
         index_state = blob_state(root, stages[0]) if len(stages) == 1 and stages[0][3] == "0" else None
-        worktree_state = working_state(target, index_state, filemode)
-        local_sha = digest_file(target)
-        has_uncommitted = (rel in dirty or len(stages) > 1 or index_state != head_state
-                           or worktree_state != index_state)
+        worktree_state = working_state(root, rel, target, index_state, filemode)
+        local_sha = worktree_state["sha256"] if worktree_state else None
+        # status can retain a stat-dirty marker after an autocrlf/eol change.
+        # The index-vs-HEAD and normalized worktree comparisons decide content;
+        # untracked files, deletions, staged edits and mode changes still differ.
+        has_uncommitted = (len(stages) > 1 or index_state != head_state
+                           or not same_git_state(worktree_state, index_state))
         if (rel in plan["remote_ahead"] and rel not in plan["local_ahead"]
                 and rel not in conflicted and len(stages) == 1 and stages[0][3] == "0"
-                and index_state == head_state and worktree_state == remote_state):
+                and index_state == head_state and same_git_state(worktree_state, remote_state)):
             # A previous restore leaves HEAD/index untouched. Matching remote
             # bytes AND mode need no further write; staged work still blocks.
             action = "NOOP_ALREADY_IDENTICAL"
@@ -339,7 +383,7 @@ def build_plan(root: Path, local: str, remote: str) -> dict:
         elif rel in untracked and rel not in plan["remote_ahead"]:
             action = "LOCAL_NEW_UNDECLARED"
         elif rel in plan["remote_ahead"] and rel not in plan["local_ahead"]:
-            same = remote_state == worktree_state
+            same = same_git_state(remote_state, worktree_state)
             action = "NOOP_ALREADY_IDENTICAL" if same else "RESTORE_REMOTE_VERSION"
         elif rel in plan["local_ahead"] and rel not in plan["remote_ahead"]:
             action = "KEEP_LOCAL_PUSH_LATER"
@@ -501,6 +545,7 @@ def apply_plan(root: Path, plan: dict, confirm: str, remote: str, local: str) ->
     writable = [a for a in plan["actions"] if a["action"] == "RESTORE_REMOTE_VERSION"]
     if not writable:
         return {"written": [], "rolled_back": False, "note": "NOTHING_TO_WRITE"}
+    assert_supported_normalization(root, (a["path"] for a in writable))
     # Compare against the digest captured at plan time, not a fresh read: reading
     # here would bless whatever is on disk now and defeat the drift check.
     before = {a["path"]: a.get("planned_sha256") for a in writable}

@@ -15,10 +15,12 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 HOOK = ROOT / "tools" / "git-hooks" / "pre-commit"
 INSTALLER = ROOT / "tools" / "install_git_hooks.py"
+GIT_PATH = str(Path(shutil.which("git")).resolve())
 
 FAKE_BUILD = (
     "import pathlib, sys\n"
@@ -36,22 +38,52 @@ FAKE_BUILD = (
 
 def git(repo: Path, *args: str, check: bool = True,
         env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
-    proc = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True,
+    proc = subprocess.run([GIT_PATH, "-C", str(repo), *args], capture_output=True, text=True,
                           encoding="utf-8", errors="replace", env=env)
     if check and proc.returncode != 0:
         raise AssertionError(f"git {args} failed: {proc.stdout}\n{proc.stderr}")
     return proc
 
 
+def resolve_posix_sh(*, windows: bool = os.name == "nt") -> str | None:
+    """Use Git for Windows' own sh first; never substitute a WSL bash launcher."""
+    candidates = []
+    if windows:
+        proc = subprocess.run([GIT_PATH, "--exec-path"], capture_output=True, text=True,
+                              encoding="utf-8", errors="replace", timeout=10)
+        if proc.returncode == 0 and proc.stdout.strip():
+            for ancestor in Path(proc.stdout.strip()).resolve().parents:
+                candidates.extend((ancestor / "usr" / "bin" / "sh.exe",
+                                   ancestor / "bin" / "sh.exe"))
+    on_path = shutil.which("sh")
+    if on_path:
+        candidates.append(Path(on_path))
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        absolute = str(candidate.resolve())
+        if Path(absolute).name.casefold() in {"bash.exe", "wsl.exe"}:
+            continue
+        try:
+            probe = subprocess.run([absolute, "-c", "printf '%s' crm-posix-sh"],
+                                   capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if probe.returncode == 0 and probe.stdout == "crm-posix-sh":
+            return absolute
+    return None
+
+
+SH_PATH = resolve_posix_sh()
+
+
 def can_run_sh() -> bool:
-    """The hook is a POSIX sh script; git for Windows supplies it, bare shells may not."""
-    for candidate in ("sh", "bash"):
-        if shutil.which(candidate):
-            return True
-    return False
+    """Capability and execution share the same previously probed absolute path."""
+    return SH_PATH is not None
 
 
-requires_sh = unittest.skipUnless(can_run_sh(), "SKIPPED_CAPABILITY: no sh/bash on PATH")
+requires_sh = unittest.skipUnless(
+    can_run_sh(), "SKIPPED_CAPABILITY: no working POSIX sh in Git for Windows or PATH; WSL is not sh")
 
 
 def run_hook(repo: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
@@ -65,7 +97,7 @@ def run_hook(repo: Path, env: dict[str, str] | None = None) -> subprocess.Comple
     2.55.0.windows.3 and 2.49.0.windows.1 propagate a pre-commit hook's
     non-zero exit as a failed `git commit` with HEAD unchanged.
     """
-    return subprocess.run(["sh", str(repo / "tools" / "git-hooks" / "pre-commit")],
+    return subprocess.run([SH_PATH, str(repo / "tools" / "git-hooks" / "pre-commit")],
                           cwd=str(repo), capture_output=True, text=True,
                           encoding="utf-8", errors="replace", env=env, timeout=30)
 
@@ -339,7 +371,7 @@ class PreCommitHookTests(unittest.TestCase):
                   'fi\n'
                   'tmp_root=$(CDPATH= cd -P "$tmp_root" && pwd -P)\n' + cleanup +
                   'trap cleanup EXIT\nexit "$4"\n')
-        return subprocess.run(["sh", "-c", script, "cleanup-test", str(temp_root.resolve()),
+        return subprocess.run([SH_PATH, "-c", script, "cleanup-test", str(temp_root.resolve()),
                                candidate, str(self.repo), str(status)], cwd=self.repo,
                               capture_output=True, text=True, encoding="utf-8", errors="replace",
                               env=self.env, timeout=30)
@@ -359,17 +391,92 @@ class PreCommitHookTests(unittest.TestCase):
             shim.chmod(0o755)
         return shim_dir
 
+    def shell_command_path(self, command: str) -> str:
+        if command == "git":
+            return GIT_PATH
+        # Prefer POSIX utilities beside Git's sh over Windows find.exe.
+        beside_sh = Path(SH_PATH).parent / (command + ".exe")
+        if os.name == "nt" and beside_sh.is_file():
+            return beside_sh.as_posix()
+        script = ('p=$(command -v "$1") || exit 1\n'
+                  'if command -v cygpath >/dev/null 2>&1; then cygpath -m "$p"; '
+                  'else printf "%s\\n" "$p"; fi\n')
+        proc = subprocess.run([SH_PATH, "-c", script, "resolve-command", command],
+                              capture_output=True, text=True, encoding="utf-8", errors="replace",
+                              env=self.env, timeout=10)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        return Path(proc.stdout.strip()).as_posix()
+
+    def controlled_environment(self, env: dict[str, str], shim_dir: Path) -> dict[str, str]:
+        """One bin directory, no host Python dirs, and only explicit utilities.
+
+        Existing fault/interpreter shims win. Wrappers work in MSYS without
+        symlink privileges; Python uses an absolute path. sh stays off PATH.
+        """
+        commands = ("git", "mktemp", "mkdir", "find", "sort", "cmp", "diff", "grep", "sed", "rm", "cat")
+        for command in commands:
+            shim = shim_dir / command
+            if not shim.exists():
+                real = shlex.quote(self.shell_command_path(command))
+                shim.write_text(f'#!/bin/sh\nexec {real} "$@"\n', encoding="utf-8", newline="\n")
+                shim.chmod(0o755)
+        if os.name == "nt":
+            cygpath = shim_dir / "cygpath"
+            cygpath.write_text(f'#!/bin/sh\nexec {shlex.quote(self.shell_command_path("cygpath"))} "$@"\n',
+                               encoding="utf-8", newline="\n")
+            cygpath.chmod(0o755)
+        for command in ("python3", "python", "py"):
+            shim = shim_dir / command
+            if not shim.exists():
+                body = f'exec {shlex.quote(Path(sys.executable).as_posix())} "$@"\n' if command == "python3" else "exit 127\n"
+                shim.write_text("#!/bin/sh\n" + body, encoding="utf-8", newline="\n")
+                shim.chmod(0o755)
+        controlled = env.copy()
+        controlled["PATH"] = str(shim_dir)
+        return controlled
+
+    def require_git_runner_shims(self, env: dict[str, str], shim_dir: Path, commands) -> None:
+        """Probe git's actual hook runner, without committing or running faults."""
+        probe_dir = Path(self.tmp.name) / (shim_dir.name + "-probe")
+        probe_dir.mkdir()
+        script = (f'#!/bin/sh\nexpected={shlex.quote(shim_dir.as_posix())}\n'
+                  'if command -v cygpath >/dev/null 2>&1; then expected=$(cygpath -u "$expected"); fi\n')
+        for command in commands:
+            script += (f'p=$(command -v {command}) || p=MISSING\n'
+                       'if [ "$p" != MISSING ] && command -v cygpath >/dev/null 2>&1; then p=$(cygpath -u "$p"); fi\n'
+                       f'if [ "$p" != "$expected/{command}" ]; then\n'
+                       f'  echo "SKIPPED_CAPABILITY: git hook runner resolves {command} to $p instead of the injected shim" >&2\n'
+                       '  exit 78\nfi\n')
+        script += 'echo SHIMS_RESOLVED\n'
+        probe = probe_dir / "pre-commit"
+        probe.write_text(script, encoding="utf-8", newline="\n")
+        probe.chmod(0o755)
+        result = self.git(self.repo, "-c", f"core.hooksPath={probe_dir}", "hook", "run", "pre-commit",
+                          check=False, env=env)
+        if result.returncode == 78 and "SKIPPED_CAPABILITY: git hook runner resolves" in result.stderr:
+            self.skipTest(result.stderr.strip())
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("SHIMS_RESOLVED", result.stdout + result.stderr)
+
     @requires_sh
     def test_15_no_working_python_rejects_real_commit(self):
         """Unavailable interpreters must fail closed under git's actual hook runner."""
         env = self.hook_environment("no-python-temp")
         shim_dir = self.interpreter_shims("no-python-bin")
-        env["PATH"] = str(shim_dir) + os.pathsep + env.get("PATH", "")
+        env = self.controlled_environment(env, shim_dir)
         extra = self.repo / "MARKER.md"
         extra.write_text("pending\n", encoding="utf-8", newline="\n")
         self.git(self.repo, "add", "MARKER.md")
         before_head = self.git(self.repo, "rev-parse", "HEAD").stdout
         before_index = self.git(self.repo, "write-tree").stdout
+        direct = self.run_hook(self.repo, env=env)
+        self.assertNotEqual(direct.returncode, 0, direct.stdout + direct.stderr)
+        self.assertIn("no working python3/python/py -3", direct.stderr)
+        self.assertIn("commit aborted", direct.stderr)
+        self.assertEqual(before_head, self.git(self.repo, "rev-parse", "HEAD").stdout)
+        self.assertEqual(before_index, self.git(self.repo, "write-tree").stdout)
+        self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
+        self.require_git_runner_shims(env, shim_dir, ("python3", "python", "py"))
         blocked = self.git(self.repo, "commit", "-m", "must reject without Python",
                       check=False, env=env)
         self.assertNotEqual(blocked.returncode, 0, blocked.stdout + blocked.stderr)
@@ -472,7 +579,7 @@ class PreCommitHookTests(unittest.TestCase):
             with self.subTest(interpreter=candidate):
                 env = self.hook_environment("fallback-temp-" + candidate)
                 shim_dir = self.interpreter_shims("fallback-bin-" + candidate, working=candidate)
-                env["PATH"] = str(shim_dir) + os.pathsep + env.get("PATH", "")
+                env = self.controlled_environment(env, shim_dir)
                 allowed = self.run_hook(self.repo, env=env)
                 self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
                 self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
@@ -488,7 +595,7 @@ class PreCommitHookTests(unittest.TestCase):
         for status in (0, 1):
             with self.subTest(verdict=status):
                 env = self.hook_environment("rm-failure-" + str(status))
-                env["PATH"] = str(shim_dir) + os.pathsep + env.get("PATH", "")
+                env = self.controlled_environment(env, shim_dir)
                 build.write_text(FAKE_BUILD if status == 0 else "import sys\nsys.exit(3)\n",
                                  encoding="utf-8", newline="\n")
                 self.git(self.repo, "add", "tools/build_bundle.py")
@@ -525,7 +632,7 @@ class PreCommitHookTests(unittest.TestCase):
                 bin_dir = Path(self.tmp.name) / (name + "-bin")
                 bin_dir.mkdir()
                 counter = Path(self.tmp.name) / (name + "-count")
-                real = shlex.quote(Path(shutil.which(command)).as_posix())
+                real = shlex.quote(self.shell_command_path(command))
                 count_file = shlex.quote(counter.as_posix())
                 body = "#!/bin/sh\n"
                 if command == "git":
@@ -537,10 +644,19 @@ class PreCommitHookTests(unittest.TestCase):
                 shim = bin_dir / command
                 shim.write_text(body, encoding="utf-8", newline="\n")
                 shim.chmod(0o755)
-                env["PATH"] = str(bin_dir) + os.pathsep + env["PATH"]
+                env = self.controlled_environment(env, bin_dir)
                 # git prepends its exec-path to hook PATH; put the fault shim there too.
                 if command == "git":
                     env["GIT_EXEC_PATH"] = str(bin_dir)
+                direct = self.run_hook(self.repo, env=env)
+                self.assertNotEqual(direct.returncode, 0, direct.stdout + direct.stderr)
+                self.assertIn("FAILED", direct.stderr)
+                self.assertEqual(before_head, self.git(self.repo, "rev-parse", "HEAD").stdout)
+                self.assertEqual(before_index, self.git(self.repo, "write-tree").stdout)
+                self.assertEqual(before_tree, snapshot())
+                self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
+                counter.write_text("0\n", encoding="utf-8", newline="\n")
+                self.require_git_runner_shims(env, bin_dir, (command,))
                 blocked = self.git(self.repo, "commit", "-m", name, check=False, env=env)
                 self.assertNotEqual(blocked.returncode, 0, blocked.stdout + blocked.stderr)
                 self.assertIn("FAILED", blocked.stderr)
@@ -579,6 +695,44 @@ class PreCommitHookTests(unittest.TestCase):
         self.assertNotIn("WARNING", result.stderr)
         self.assertTrue(alias.is_symlink())
         self.assert_no_temp_snapshots()
+
+
+    @requires_sh
+    def test_23_absolute_shell_works_without_sh_on_path(self):
+        bin_dir = Path(self.tmp.name) / "no-sh-bin"
+        bin_dir.mkdir()
+        env = self.controlled_environment(self.hook_environment("no-sh-temp"), bin_dir)
+        self.assertIsNone(shutil.which("sh", path=env["PATH"]))
+        self.assertTrue(Path(SH_PATH).is_absolute())
+        result = self.run_hook(self.repo, env=env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_24_windows_shell_resolution_prefers_git_and_falls_back(self):
+        install = Path(self.tmp.name) / "Git with spaces"
+        exec_path = install / "mingw64" / "libexec" / "git-core"
+        exec_path.mkdir(parents=True)
+        fallback = Path(self.tmp.name) / "fallback-sh"
+        fallback.write_bytes(b"synthetic")
+        for location in ("usr/bin/sh.exe", "bin/sh.exe"):
+            shell = install / location
+            shell.parent.mkdir(parents=True, exist_ok=True)
+            shell.write_bytes(b"synthetic")
+        for chosen in ("usr/bin/sh.exe", "bin/sh.exe", None):
+            with self.subTest(chosen=chosen):
+                selected = str((install / chosen).resolve()) if chosen else str(fallback.resolve())
+                def probe(args, **kwargs):
+                    if args == [GIT_PATH, "--exec-path"]:
+                        return subprocess.CompletedProcess(args, 0, str(exec_path) + "\n", "")
+                    return subprocess.CompletedProcess(args, 0 if args[0] == selected else 1,
+                                                       "crm-posix-sh" if args[0] == selected else "", "")
+                with patch("shutil.which", return_value=str(fallback)), patch("subprocess.run", side_effect=probe):
+                    self.assertEqual(resolve_posix_sh(windows=True), selected)
+
+    def test_25_wsl_bash_is_never_a_shell_fallback(self):
+        with patch("shutil.which", return_value=None) as which, \
+             patch("subprocess.run", return_value=subprocess.CompletedProcess([], 1, "", "")):
+            self.assertIsNone(resolve_posix_sh(windows=True))
+        which.assert_called_once_with("sh")
 
 
 if __name__ == "__main__":

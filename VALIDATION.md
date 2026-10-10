@@ -1,3 +1,21 @@
+## v3.6.3 / 2.8.0-rc2 · Windows 兼容修订（2026-10-10）
+
+基线 c924b323bcfe0c3800796111da56dadc439d27e9（本轮起点 origin/main），分支 codex/v3.6.3。仓库内手工修改仅 tools/sync_git.py、tests/test_git_sync.py、tests/test_git_hooks.py、CHANGELOG.md、VALIDATION.md；锁与报告仅由工具生成。起始 524 个跟踪文件的字节/权限指纹及五个手工修改文件、交付说明副本已备份到 /private/tmp/claude-codex-v363.6xR1HB/v363-backup/。VERSION、全部 policy-source/、policies/、acceptance、评分承诺和 manifest 冻结；不新增发布文件，不提交、不推送、不安装依赖。
+
+修复原理与限制：Git hash-object --path --stdin 在单份磁盘快照上执行内建 text/eol/autocrlf 规范化，不加 -w，比较 blob ID 和模式；保留原始 SHA256 以阻断规划后 CRLF/LF-only 漂移。真实编辑、暂存、删除、未跟踪同名文件、索引/远端移动的保护仍由回归检查。规划前拒绝 filter/working-tree-encoding，避免 status 或规范化执行自定义转换；apply 写入前重查，不猜测转换结果。恢复仍按远端 blob 原字节写入，不重建 CRLF 或调用 smudge。受控钩子 PATH 不含主机 Python 目录；真实 runner 的能力 skip 必须来自实际探测，不能替代直接拒绝和不修改状态的断言。
+
+macOS 26.4.1 arm64 + Python 3.14.7 / pytest 9.1.1 / Git 2.54.0，全部检查使用 /private/tmp/crm-v341-venv/bin/python，TMPDIR=/private/tmp、PATH 前置该 venv bin；未安装依赖。全量 pytest -q -rs：401 passed、0 failed、1 skipped、1513 subtests passed（105.38 秒），1 条既有重复 ZIP 条目负例 UserWarning。唯一 skip 是 tests/test_git_sync.py::test_32_windows_junction_rejected：POSIX: no junction concept；符号链接、执行位/umask、POSIX 信号和独立评分边界检查在本次 Mac 全量中实际执行，没有额外能力 skip。
+
+钩子定向回归 26 passed / 29 subtests passed（68.45 秒）；同步最终定向回归 68 passed / 1 skipped / 85 subtests passed（18.01 秒）。CRLF 覆盖 autocrlf=true/input、text eol=lf/crlf，真实编辑仍阻断；新增同份字节快照回归防止规划过程中变化被后续摘要认可。真实 Git runner 8 个 hash/find/sort 故障提交和无 Python 提交在 POSIX 全部非零拒绝；另用实际 runner 制造替身未解析到的探测，正确得到 SKIPPED_CAPABILITY，并验证 runner 错误/缺少成功标记仍为失败，HEAD/索引不变。
+
+check_workbuddy pass=true/errors=[]；validate_bundle PASS_STATIC_ONLY，1816/1816、137 offline unit tests、root lock 508；517 项 manifest 排序无重复。补写本文/CHANGELOG 后重建同步锁，再执行两次重建零差异、最终静态检查、build_release / validate_release 和解包字节核对；每项实际退出码、文件哈希与最终 ZIP SHA256 保留在 /private/tmp/claude-codex-v363.6xR1HB/verification.json 及日志，不把外层包自身哈希写入载荷。
+
+冻结的 73 个源/策略/版本/manifest 文件与起始指纹逐字节一致；Runbook 21 个代码块都有点调用包装、三处 <V363_MAIN_SHA> 占位，5B/5C 原安装/恢复代码去除包装后逐字节相同。本机没有 PowerShell，Runbook 仅作文本与人工核对，不能据此声称 PS 5.1 运行通过。修复前回归 6 failed（含子用例）/2 passed；首轮修复后的同步 5 failed 源于 status stat-dirty 的过度阻断，钩子 9 failed 源于探测输出被 Git 转到 stderr，修正后全部通过；失败原日志保留，未放松拒绝断言。最终额外权限核对发现当前进程默认 umask 令构建自有文件变为 0600；通过只在独立构建进程设 umask 0022 重新生成恢复起始 0644，再核对全部文件权限，不手工编辑产物。该首次终检失败记录保留。
+
+本轮 Windows 11 全量复测 = NOT_RUN；PowerShell 5.1 新说明执行 = NOT_RUN；真实 Git for Windows shell/PATH/fault-runner = NOT_RUN。由值班机补本轮实际数字与每项能力 skip 原因；独立评分目录不交给被测工作区。WorkBuddy 加载/缓存/工具审计、故障演练与模型关口仍 NOT_RUN，生产执行仍未实现。
+
+上一轮值班机实测是 c924b32 的 24 failed / 359 passed / 18 skipped / 1477 subtests passed（348.11 秒），属于修复前证据。18 个 skip 为符号链接权限 11、POSIX 执行位/umask 5、POSIX 信号 1、执行端无独立评分目录 1；Windows 真实 junction 与二进制写入用例已在上一轮执行通过。本轮结果不能由此推断。
+
 ## v3.6.2 / 2.8.0-rc2 · 未部署前工具修订（2026-10-10）
 
 在 v3.6.1 的 116 个未提交修改之上修复二进制临时写入与执行 agent 模式选择两项问题。基线仍为 35d9193fa1b71fd9cd05c151e774fd6338b0e4e2，分支 codex/v3.6。动手前保存完整 git diff --binary，SHA256 a16fb59b9e2403c753ebfe027592b6db47052f8bcc47f221132c3538c569117c，与交接的 v3.6.1 补丁逐字节相同。仓库内仅手工修改 tools/sync_git.py、tests/test_git_sync.py、CHANGELOG.md 和本文；生成内容仅由工具更新。版本、提示词、权限契约、评分输入及判据保持不变。
