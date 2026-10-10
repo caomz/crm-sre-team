@@ -159,7 +159,7 @@ test_14_global_managed_requirement_is_rejected (test_workbuddy_native.WorkBuddyN
 test_15_production_tool_escalation_is_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_15_production_tool_escalation_is_rejected) ... ok
 test_16_additional_user_settings_are_allowed (test_workbuddy_native.WorkBuddyNativeTests.test_16_additional_user_settings_are_allowed) ... ok
 test_17_settings_missing_invalid_nonobject_wrong_lead_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_17_settings_missing_invalid_nonobject_wrong_lead_rejected) ... ok
-test_18_settings_symlink_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_18_settings_symlink_rejected) ... ok
+test_18_settings_symlink_rejected (test_workbuddy_native.WorkBuddyNativeTests.test_18_settings_symlink_rejected) ... skipped 'SKIPPED_CAPABILITY: real filesystem symlinks unavailable on this host'
 test_19_lead_path_must_exist (test_workbuddy_native.WorkBuddyNativeTests.test_19_lead_path_must_exist) ... ok
 test_20_all_seven_members_and_skill_pairs (test_workbuddy_native.WorkBuddyNativeTests.test_20_all_seven_members_and_skill_pairs) ... ok
 test_21_no_unsupported_tools_field (test_workbuddy_native.WorkBuddyNativeTests.test_21_no_unsupported_tools_field) ... ok
@@ -172,7 +172,7 @@ test_26_old_patch_script_not_shipped (test_workbuddy_native.WorkBuddyNativeTests
 ----------------------------------------------------------------------
 Ran 26 tests in <elapsed>
 
-OK
+OK (skipped=1)
 test_validation_md_counts_match_static_checks (test_knowledge_docs.KnowledgeDocumentationTests.test_validation_md_counts_match_static_checks)
 V5: VALIDATION.md 的静态校验数字必须与 tests/static-checks.json ... ok
 

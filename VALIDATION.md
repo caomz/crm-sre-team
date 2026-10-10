@@ -1,3 +1,32 @@
+## v3.6.4 / 2.8.0-rc2 · Windows 11 值班机离线复核（2026-10-10）
+
+源提交 5965261637c1413813116e08f074b2355d3f135e（v3.6.4，Mac 端推送的 main），实测时间 2026-10-10 23:27。值班机复用已有验证克隆 D:\Dev\crm-sre-team-v363-20261010-211438（core.autocrlf=false，起始工作区干净）：从 GitHub fetch，快进后核对 HEAD、VERSION=2.8.0-rc2 与干净工作区，未新建克隆。
+
+Microsoft Windows 11 家庭版 10.0.22631（Build 22631），Windows PowerShell 5.1.22621.4391，Python 3.12.10（C:\Users\AI\AppData\Local\Programs\Python\Python312\python.exe），pytest 9.1.1，git version 2.49.0.windows.1。只设置当前进程 PATH（Python312、Python312\Scripts、Git cmd、System32、Windows），未修改系统或用户配置，未安装或升级依赖。
+
+| 检查 | 本机实际结果 |
+|---|---|
+| 两次 build_bundle | 517 个 manifest 文件逐字节零差异（全量 pytest 前、静态校验后各一次） |
+| 全量 pytest -q -rs -p no:cacheprovider | 384 passed / 0 failed / 23 skipped / 1493 subtests passed，441.22 秒 |
+| warning | 1 条既有 ZIP 重复条目负例 UserWarning：dummy-skill/SKILL.md，与 Mac 相同 |
+| check_workbuddy | pass=true / errors=[] |
+| validate_bundle | PASS_STATIC_ONLY / errors=[]，静态校验 1816/1816，137 offline unit tests，root lock 508 |
+| build_release / validate_release --zip | 517/517 文件通过，pass=true / errors=[]；记录前包 SHA256 4d8fd42c81ba7ee6d91c6bded093d0782ae4c9f0a0e4f62b33b803795941b7db，与 Mac v3.6.4 发布包逐字节一致 |
+| 真实 Git 钩子解释器 | git hook run pre-commit 中 python3 -> /c/Users/AI/bin/python3（HOME/bin 启动脚本），实际运行 C:\Users\AI\AppData\Local\Programs\Python\Python312\python.exe 3.12.10，可导入 yaml/jsonschema/referencing |
+
+23 个 skip 均为能力或环境跳过，按 pytest -rs 原文归类（本地化的系统错误文本未抄录）：
+- 无符号链接创建权限：11 个，tests/test_git_hooks.py:514、547、706；tests/test_git_sync.py:101、659；tests/test_release_safety.py:88、93、166、183；tests/test_v35_regressions.py:78；tests/test_workbuddy_native.py:119
+- Windows 不实现 POSIX 执行位/umask：5 个，tests/test_git_sync.py:736、749、761、790、808
+- 需要 POSIX 信号投递：1 个，tests/test_git_hooks.py:690
+- Git 钩子 runner 把命令解析到注入替身之外：5 个，python3 -> /c/Users/AI/bin/python3（tests/test_git_hooks.py:483）；find -> /usr/bin/find（tests/test_git_hooks.py:635×2）；sort -> /usr/bin/sort（tests/test_git_hooks.py:635×2）
+- 执行端没有评分目录（按设计，承诺格式与发布字段边界另行检查）：1 个，tests/test_v35_regressions.py:232
+
+tests/contract-test-results.txt 是 validate_bundle 生成的报告，列在 release-manifest.json 的 excluded_generated_reports，不进入发布包。本机不能创建符号链接，test_18_settings_symlink_rejected 记为 skipped，所以本提交收录的这份报告与 Mac 版只差这一行和该组汇总行 OK (skipped=1)。
+
+写入本节后已重新构建并完整复核：两次 build_bundle 零差异，全量 pytest、check_workbuddy、validate_bundle、build_release 与 validate_release 全部通过；记录后包与记录前包相比只有 VALIDATION.md 和 prompt-bundles.lock 两项不同。记录后包 SHA256 只写在仓库外交付日志，避免自指。
+
+WORKBUDDY_HOST、MODEL_BEHAVIOR 仍为 NOT_RUN；5D 故障演练、REAL 安装与关口尚未执行。生产写只产人工评审需求。
+
 ## v3.6.4 / 2.8.0-rc2 · 钩子测试环境修订（2026-10-10）
 
 基线 c147b4f8c506f38ebb59b0cc2f75d2f538c77e2a（本轮起点 origin/main），分支 codex/v3.6.4，起始工作区干净。手工修改仅 tests/test_git_hooks.py、CHANGELOG.md 和本文，根锁由构建器生成；仓库无新增文件，release-manifest.json 仍为 517 项排序无重复精确白名单。起始 524 个跟踪文件的字节/权限、HEAD/索引指纹及四个文件、两份仓库外说明备份在 /private/tmp/claude-codex-v364.CGco0G/v364-backup/。policy-source/、policies/、VERSION、acceptance 和评分承诺保持冻结。
