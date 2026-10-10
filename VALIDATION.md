@@ -1,5 +1,15 @@
 # 验证状态 · 2.8.0-rc1（PRE-GATE）
 
+## v3.5.2 Mac 工具修订复核（2026-10-10）
+
+基于 main=917b31e7cab94811235c0e9bc72f6de6eacffe4b，工作分支 codex/v3.5.2；插件版本仍为 2.8.0-rc1，属于值班机安装前的工具和测试修订。macOS + Python 3.14.7，使用已装 /private/tmp/crm-v341-venv，检查命令显式设置 PATH 与 TMPDIR=/private/tmp。完整 pytest 354 passed、0 failed、1 skipped、1312 subtests passed，1 条 ZIP 重复条目负例的 UserWarning；唯一 skip 为 tests/test_git_sync.py 的 POSIX: no junction concept。check_workbuddy pass=true/errors=[]；静态校验 1816/1816（validate_bundle PASS_STATIC_ONLY，errors=[]），root lock 集 508，137 offline unit tests。
+
+test_git_hooks 共 22 项、18 个 subtests，覆盖真实提交成功和检查失败后自动清理、临时根内哨兵文件/目录/外部符号链接及快照内外部链接保护、6 类路径校验拒绝并保留退出码、清理失败只警告、INT/TERM 分别返回 130/143、临时根符号链接解析、Python 不可用时拒绝提交与 python/py -3 回退。各测试有独立 TMPDIR，结束检查无 crm-precommit.* 残留。另在同一合成仓库实跑一次成功提交（exit 0）和一次 stale 拒绝（exit 1），失败时 HEAD/暂存区不变，两个路径的独立临时根均为空。全量 pytest 前后 /private/tmp 下 crm-precommit.* 目录均为 66 个，未新增、未删除已有目录。
+
+用户 2026-10-10 决定钩子仅自动清理自己创建的 mktemp 目录。清理前校验非空、目录且非符号链接、父目录与创建时解析出的临时根一致、crm-precommit.* 前缀；不通过只警告，清理失败不改变提交结果。v3.5.1 的快照人工管理说明已被本节取代。保留 B-01 与 Windows Git Bash/cygpath 兼容；Windows 10 值班机复核待执行。
+
+最终重建、发行 ZIP 与解包复核以仓库外 /private/tmp/crm-v352-handoff/logs/ 的实际日志为准；生成报告仅由工具写出。提示词、权限契约、首次关口判定规则及版本未修改。WorkBuddy 加载、版本往返、工具审计与关口仍 NOT_RUN；生产写仅产人工评审需求。本轮未在真实克隆提交、推送或执行宿主/生产操作。
+
 ## v3.5.1 Mac 工具修订复核（2026-10-10）
 
 基于 main=5fbe9e02214ca8f1b51fcb63c7fb8447a751da69，工作分支 codex/v3.5.1；插件版本保持 2.8.0-rc1，属于值班机安装前的工具和测试修订。macOS + Python 3.14.7，使用已装 /private/tmp/crm-v341-venv，检查命令显式设置 PATH 与 TMPDIR=/private/tmp。静态校验 1816/1816（validate_bundle PASS_STATIC_ONLY，errors=[]），root lock 集 508；完整 pytest 351 passed、0 failed、1 skipped、1296 subtests passed，1 条 ZIP 重复条目负例的 UserWarning；check_workbuddy pass=true/errors=[]。唯一 skip 为 tests/test_git_sync.py 的 POSIX: no junction concept，Windows 10 仍需实际执行该能力检查。

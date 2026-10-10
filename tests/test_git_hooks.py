@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -66,13 +67,16 @@ def run_hook(repo: Path, env: dict[str, str] | None = None) -> subprocess.Comple
     """
     return subprocess.run(["sh", str(repo / "tools" / "git-hooks" / "pre-commit")],
                           cwd=str(repo), capture_output=True, text=True,
-                          encoding="utf-8", errors="replace", env=env)
+                          encoding="utf-8", errors="replace", env=env, timeout=30)
 
 
 class PreCommitHookTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(prefix="hook-tests-", dir=ROOT)
         self.addCleanup(self.tmp.cleanup)
+        self.temp_roots: list[Path] = []
+        self.env = self.hook_environment("hook-temp")
+        self.addCleanup(self.assert_no_temp_snapshots)
         self.repo = Path(self.tmp.name) / "synthetic"
         (self.repo / "policy-source").mkdir(parents=True)
         (self.repo / "tools").mkdir()
@@ -91,58 +95,61 @@ class PreCommitHookTests(unittest.TestCase):
             (hooks / "pre-commit").chmod(0o755)
         except OSError:
             pass
-        git(self.repo, "init", "-b", "main")
-        git(self.repo, "config", "user.email", "hook@test.invalid")
-        git(self.repo, "config", "user.name", "hook-test")
-        git(self.repo, "add", "-A")
+        self.git(self.repo, "init", "-b", "main")
+        self.git(self.repo, "config", "user.email", "hook@test.invalid")
+        self.git(self.repo, "config", "user.name", "hook-test")
+        self.git(self.repo, "add", "-A")
         # V2: record the hook executable in the index (Windows checkouts have
         # core.fileMode=false; without this, POSIX git would ignore the hook
         # and test_13's real-commit rejection would pass vacuously there).
-        git(self.repo, "update-index", "--chmod=+x", "tools/git-hooks/pre-commit")
-        git(self.repo, "commit", "-m", "baseline")
-        git(self.repo, "config", "core.hooksPath", "tools/git-hooks")
+        self.git(self.repo, "update-index", "--chmod=+x", "tools/git-hooks/pre-commit")
+        self.git(self.repo, "commit", "-m", "baseline")
+        self.git(self.repo, "config", "core.hooksPath", "tools/git-hooks")
 
     def test_01_hook_and_installer_are_versioned(self):
         self.assertTrue(HOOK.is_file(), "versioned hook missing")
         self.assertTrue(INSTALLER.is_file(), "installer missing")
         # V2: the hook must be recorded executable in the index so POSIX
         # checkouts honor it when core.hooksPath points here.
-        listed = git(ROOT, "ls-files", "-s", "tools/git-hooks/pre-commit")
+        listed = self.git(ROOT, "ls-files", "-s", "tools/git-hooks/pre-commit")
         self.assertTrue(listed.stdout.startswith("100755"),
                         f"hook must be indexed as 100755, got: {listed.stdout!r}")
 
     def test_02_installer_sets_hooks_path_and_is_idempotent(self):
         proc = subprocess.run([sys.executable, str(INSTALLER), "--root", str(self.repo)],
-                              capture_output=True, text=True, encoding="utf-8", errors="replace")
+                              capture_output=True, text=True, encoding="utf-8", errors="replace",
+                              env=self.env)
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        self.assertEqual(git(self.repo, "config", "--get", "core.hooksPath").stdout.strip(),
+        self.assertEqual(self.git(self.repo, "config", "--get", "core.hooksPath").stdout.strip(),
                          "tools/git-hooks")
         again = subprocess.run([sys.executable, str(INSTALLER), "--root", str(self.repo)],
-                               capture_output=True, text=True, encoding="utf-8", errors="replace")
+                               capture_output=True, text=True, encoding="utf-8", errors="replace",
+                               env=self.env)
         self.assertEqual(again.returncode, 0, again.stdout + again.stderr)
-        self.assertEqual(git(self.repo, "config", "--get", "core.hooksPath").stdout.strip(),
+        self.assertEqual(self.git(self.repo, "config", "--get", "core.hooksPath").stdout.strip(),
                          "tools/git-hooks")
 
     def test_03_installer_uninstall_restores_default(self):
         subprocess.run([sys.executable, str(INSTALLER), "--root", str(self.repo)], check=True,
-                       capture_output=True)
+                       capture_output=True, env=self.env)
         proc = subprocess.run([sys.executable, str(INSTALLER), "--root", str(self.repo), "--uninstall"],
-                              capture_output=True, text=True, encoding="utf-8", errors="replace")
+                              capture_output=True, text=True, encoding="utf-8", errors="replace",
+                              env=self.env)
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        current = git(self.repo, "config", "--get", "core.hooksPath", check=False)
+        current = self.git(self.repo, "config", "--get", "core.hooksPath", check=False)
         self.assertNotEqual(current.returncode, 0, "hooksPath should be removed after uninstall")
 
     def rebuild_and_stage(self):
         """Simulate the documented repair path: rebuild in the repo, re-stage."""
         subprocess.run([sys.executable, str(self.repo / "tools" / "build_bundle.py")],
-                       check=True, capture_output=True)
-        git(self.repo, "add", "-A")
+                       check=True, capture_output=True, env=self.env)
+        self.git(self.repo, "add", "-A")
 
     @requires_sh
     def test_04_stale_artifact_is_blocked_without_repair(self):
         self.src.write_text("canonical v2\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "-A")
-        blocked = run_hook(self.repo)
+        self.git(self.repo, "add", "-A")
+        blocked = self.run_hook(self.repo)
         self.assertNotEqual(blocked.returncode, 0, "hook must block a stale build artifact")
         self.assertIn("stale", (blocked.stderr or "").lower())
         # F6: the gate judges the staged tree and never repairs in place.
@@ -153,18 +160,18 @@ class PreCommitHookTests(unittest.TestCase):
     def test_05_consistent_tree_commits_cleanly(self):
         extra = self.repo / "policy-source" / "extra.md"
         extra.write_text("extra\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "-A")
-        allowed = git(self.repo, "commit", "-m", "source only", check=False)
+        self.git(self.repo, "add", "-A")
+        allowed = self.git(self.repo, "commit", "-m", "source only", check=False)
         self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
 
     @requires_sh
     def test_06_source_edit_forces_rebuild_then_allows_landing(self):
         self.src.write_text("canonical v3\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "-A")
-        first = run_hook(self.repo)
+        self.git(self.repo, "add", "-A")
+        first = self.run_hook(self.repo)
         self.assertNotEqual(first.returncode, 0, "source edit must not commit a stale artifact")
         self.rebuild_and_stage()
-        second = git(self.repo, "commit", "-m", "land rebuild", check=False)
+        second = self.git(self.repo, "commit", "-m", "land rebuild", check=False)
         self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
         self.assertIn("canonical v3\n", self.gen.read_text(encoding="utf-8"))
 
@@ -172,23 +179,23 @@ class PreCommitHookTests(unittest.TestCase):
     def test_07_no_perpetual_blocking_after_rebuild(self):
         """A correct gate must let the follow-up commit through, not deadlock."""
         self.src.write_text("canonical v4\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "-A")
-        run_hook(self.repo)
+        self.git(self.repo, "add", "-A")
+        self.run_hook(self.repo)
         self.rebuild_and_stage()
-        landed = git(self.repo, "commit", "-m", "land", check=False)
+        landed = self.git(self.repo, "commit", "-m", "land", check=False)
         self.assertEqual(landed.returncode, 0, landed.stdout + landed.stderr)
         # A subsequent unrelated commit must not be blocked either.
         marker = self.repo / "MARKER.md"
         marker.write_text("ok\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "-A")
-        after = git(self.repo, "commit", "-m", "unrelated", check=False)
+        self.git(self.repo, "add", "-A")
+        after = self.git(self.repo, "commit", "-m", "unrelated", check=False)
         self.assertEqual(after.returncode, 0, after.stdout + after.stderr)
 
     @requires_sh
     def test_08_no_verify_bypasses_the_gate(self):
         self.src.write_text("canonical v5\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "-A")
-        bypass = git(self.repo, "commit", "--no-verify", "-m", "bypass", check=False)
+        self.git(self.repo, "add", "-A")
+        bypass = self.git(self.repo, "commit", "--no-verify", "-m", "bypass", check=False)
         self.assertEqual(bypass.returncode, 0, bypass.stdout + bypass.stderr)
         self.assertEqual(self.gen.read_text(encoding="utf-8"), "canonical\n",
                          "--no-verify skips the gate entirely; the working tree stays stale")
@@ -212,10 +219,10 @@ class PreCommitHookTests(unittest.TestCase):
         new source while the working tree keeps the old source must be
         blocked (the old worktree-based gate would have let it through)."""
         self.src.write_text("canonical v6\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "policy-source/shared.md")
+        self.git(self.repo, "add", "policy-source/shared.md")
         # Working tree is reverted to the old source; the index keeps v6.
         self.src.write_text("canonical\n", encoding="utf-8", newline="\n")
-        blocked = run_hook(self.repo)
+        blocked = self.run_hook(self.repo)
         self.assertNotEqual(blocked.returncode, 0,
                             "staged-tree gate must block staged-source/stale-output drift")
         self.assertIn("stale", (blocked.stderr or "").lower())
@@ -229,9 +236,9 @@ class PreCommitHookTests(unittest.TestCase):
         content: the hook builds the index, not the worktree."""
         tracked = self.repo / "NOISE.md"
         tracked.write_text("staged noise\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "NOISE.md")
+        self.git(self.repo, "add", "NOISE.md")
         tracked.write_text("dirty worktree noise\n", encoding="utf-8", newline="\n")
-        allowed = git(self.repo, "commit", "-m", "clean index, dirty worktree",
+        allowed = self.git(self.repo, "commit", "-m", "clean index, dirty worktree",
                       check=False)
         self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
         self.assertEqual(tracked.read_text(encoding="utf-8"), "dirty worktree noise\n",
@@ -246,9 +253,9 @@ class PreCommitHookTests(unittest.TestCase):
                     if p.is_file() and ".git" not in p.parts}
 
         self.src.write_text("canonical v7\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "-A")
+        self.git(self.repo, "add", "-A")
         before = snap()
-        run_hook(self.repo)
+        self.run_hook(self.repo)
         self.assertEqual(before, snap(),
                          "hook must leave the working tree untouched even when blocking")
 
@@ -259,13 +266,13 @@ class PreCommitHookTests(unittest.TestCase):
         non-zero and HEAD does not move. This is the evidence that was
         missing since the rejection cases moved to direct hook execution."""
         self.src.write_text("canonical v13\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "-A")
-        before = git(self.repo, "rev-parse", "HEAD").stdout.strip()
-        blocked = git(self.repo, "commit", "-m", "must be rejected by the gate",
+        self.git(self.repo, "add", "-A")
+        before = self.git(self.repo, "rev-parse", "HEAD").stdout.strip()
+        blocked = self.git(self.repo, "commit", "-m", "must be rejected by the gate",
                       check=False)
         self.assertNotEqual(blocked.returncode, 0,
                             "real git commit must fail when staged outputs are stale")
-        after = git(self.repo, "rev-parse", "HEAD").stdout.strip()
+        after = self.git(self.repo, "rev-parse", "HEAD").stdout.strip()
         self.assertEqual(before, after,
                          "HEAD must not move when the gate blocks the commit")
 
@@ -284,15 +291,15 @@ class PreCommitHookTests(unittest.TestCase):
             extra.write_text("extra\n", encoding="utf-8", newline="\n")
             self.rebuild_and_stage()
             build.write_text(broken, encoding="utf-8", newline="\n")
-            allowed = git(self.repo, "commit",
+            allowed = self.git(self.repo, "commit",
                           "-m", "consistent staged tree, broken worktree script",
                           check=False)
             self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
             # Negative: stale staged outputs must be rejected as STALE —
             # proof the staged (working) script ran, not the broken copy.
             self.src.write_text("canonical v14\n", encoding="utf-8", newline="\n")
-            git(self.repo, "add", "policy-source/shared.md")
-            blocked = run_hook(self.repo)
+            self.git(self.repo, "add", "policy-source/shared.md")
+            blocked = self.run_hook(self.repo)
             self.assertNotEqual(blocked.returncode, 0)
             self.assertIn("stale", (blocked.stderr or "").lower(),
                           "must report STALE (staged script ran), not a broken-script failure")
@@ -303,8 +310,39 @@ class PreCommitHookTests(unittest.TestCase):
         env = os.environ.copy()
         temp_root = Path(self.tmp.name) / name
         temp_root.mkdir()
+        self.temp_roots.append(temp_root)
         env["TMPDIR"] = str(temp_root)
         return env
+
+    def git(self, repo: Path, *args: str, check: bool = True,
+            env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+        return git(repo, *args, check=check, env=self.env if env is None else env)
+
+    def run_hook(self, repo: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+        return run_hook(repo, env=self.env if env is None else env)
+
+    def assert_no_temp_snapshots(self):
+        for temp_root in self.temp_roots:
+            self.assertEqual(list(temp_root.glob("crm-precommit.*")), [],
+                             f"hook leaked a temporary snapshot in {temp_root}")
+
+    def run_cleanup(self, temp_root: Path, candidate: str, status: int) -> subprocess.CompletedProcess:
+        """Exercise the actual cleanup function with controlled path/status inputs."""
+        text = HOOK.read_text(encoding="utf-8")
+        cleanup = text[text.index("cleanup() {"):text.index("trap cleanup EXIT")]
+        # Python supplies Windows paths; normalize them to the hook's shell view.
+        script = ('set -eu\ntmp_root=$1\ntmp_base=$2\nrepo_root=$3\n'
+                  'if command -v cygpath >/dev/null 2>&1; then\n'
+                  '    tmp_root=$(cygpath -u "$tmp_root")\n'
+                  '    [ -z "$tmp_base" ] || tmp_base=$(cygpath -u "$tmp_base")\n'
+                  '    repo_root=$(cygpath -u "$repo_root")\n'
+                  'fi\n'
+                  'tmp_root=$(CDPATH= cd -P "$tmp_root" && pwd -P)\n' + cleanup +
+                  'trap cleanup EXIT\nexit "$4"\n')
+        return subprocess.run(["sh", "-c", script, "cleanup-test", str(temp_root.resolve()),
+                               candidate, str(self.repo), str(status)], cwd=self.repo,
+                              capture_output=True, text=True, encoding="utf-8", errors="replace",
+                              env=self.env, timeout=30)
 
     def interpreter_shims(self, name: str, working: str | None = None) -> Path:
         """Shadow every candidate, including Store aliases, without changing the host."""
@@ -329,61 +367,103 @@ class PreCommitHookTests(unittest.TestCase):
         env["PATH"] = str(shim_dir) + os.pathsep + env.get("PATH", "")
         extra = self.repo / "MARKER.md"
         extra.write_text("pending\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "MARKER.md")
-        before_head = git(self.repo, "rev-parse", "HEAD").stdout
-        before_index = git(self.repo, "write-tree").stdout
-        blocked = git(self.repo, "commit", "-m", "must reject without Python",
+        self.git(self.repo, "add", "MARKER.md")
+        before_head = self.git(self.repo, "rev-parse", "HEAD").stdout
+        before_index = self.git(self.repo, "write-tree").stdout
+        blocked = self.git(self.repo, "commit", "-m", "must reject without Python",
                       check=False, env=env)
         self.assertNotEqual(blocked.returncode, 0, blocked.stdout + blocked.stderr)
         self.assertIn("no working python3/python/py -3", blocked.stderr)
         self.assertIn("commit aborted", blocked.stderr)
         self.assertNotIn("SKIPPED", blocked.stderr)
-        self.assertEqual(before_head, git(self.repo, "rev-parse", "HEAD").stdout)
-        self.assertEqual(before_index, git(self.repo, "write-tree").stdout)
+        self.assertEqual(before_head, self.git(self.repo, "rev-parse", "HEAD").stdout)
+        self.assertEqual(before_index, self.git(self.repo, "write-tree").stdout)
         self.assertEqual(extra.read_text(encoding="utf-8"), "pending\n")
         self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [],
                          "missing Python must abort before exporting the staged tree")
 
-    def test_16_hook_never_deletes_recursively(self):
-        text = HOOK.read_text(encoding="utf-8")
-        self.assertNotRegex(text, r"(?m)^\s*rm\b[^\n]*(?:\s-[A-Za-z]*[rR]|--recursive)")
-        self.assertNotRegex(text, r"(?m)^\s*find\b[^\n]*-delete\b")
-        self.assertNotIn("rmtree", text)
+    @requires_sh
+    def test_16_cleanup_refuses_invalid_paths_and_preserves_status(self):
+        temp_root = Path(self.env["TMPDIR"])
+        outside = Path(self.tmp.name) / "guard-data"
+        outside.mkdir()
+        foreign = outside / "crm-precommit.foreign"
+        foreign.mkdir()
+        marker = foreign / "keep.txt"
+        marker.write_text("outside survives\n", encoding="utf-8")
+        wrong_prefix = temp_root / "sentinel-directory"
+        wrong_prefix.mkdir()
+        regular_file = temp_root / "sentinel-file"
+        regular_file.write_text("file survives\n", encoding="utf-8")
+        link = outside / "crm-precommit.link"
+        try:
+            link.symlink_to(foreign, target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"SKIPPED_CAPABILITY: cannot create a directory symlink: {exc}")
+        candidates = ["", str(temp_root / "missing"), str(regular_file),
+                      str(link), str(foreign), str(wrong_prefix)]
+        for candidate in candidates:
+            for status in (0, 1):
+                with self.subTest(path=candidate, status=status):
+                    result = self.run_cleanup(temp_root, candidate, status)
+                    self.assertEqual(result.returncode, status, result.stdout + result.stderr)
+                    self.assertIn("WARNING - cleanup refused", result.stderr)
+                    self.assertTrue(foreign.is_dir())
+                    self.assertTrue(wrong_prefix.is_dir())
+                    self.assertTrue(link.is_symlink())
+                    self.assertEqual(marker.read_text(encoding="utf-8"), "outside survives\n")
+                    self.assertEqual(regular_file.read_text(encoding="utf-8"), "file survives\n")
+        self.assert_no_temp_snapshots()
 
     @requires_sh
-    def test_17_cleanup_keeps_snapshot_and_unexpected_files(self):
+    def test_17_successful_commit_cleans_only_its_own_snapshot(self):
+        env = self.hook_environment("cleanup-success")
+        temp_root = Path(env["TMPDIR"])
+        sentinel = temp_root / "sentinel.txt"
+        sentinel.write_text("retain me\n", encoding="utf-8")
+        sentinel_dir = temp_root / "sentinel-directory"
+        sentinel_dir.mkdir()
+        (sentinel_dir / "keep.txt").write_text("directory survives\n", encoding="utf-8")
+        outside = Path(self.tmp.name) / "outside-success"
+        outside.mkdir()
+        (outside / "keep.txt").write_text("external survives\n", encoding="utf-8")
+        link = temp_root / "external-link"
+        try:
+            link.symlink_to(outside, target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"SKIPPED_CAPABILITY: cannot create a directory symlink: {exc}")
         build = self.repo / "tools" / "build_bundle.py"
         build.write_text(FAKE_BUILD +
-                         "(root.parent/'unexpected.txt').write_text('retain me', encoding='utf-8')\n",
+                         "(root.parent/'unexpected.txt').write_text('temporary', encoding='utf-8')\n" +
+                         f"(root.parent/'external-link').symlink_to({str(outside)!r}, target_is_directory=True)\n",
                          encoding="utf-8", newline="\n")
-        git(self.repo, "add", "tools/build_bundle.py")
-        env = self.hook_environment("cleanup-success")
-        allowed = run_hook(self.repo, env=env)
+        self.git(self.repo, "add", "tools/build_bundle.py")
+        before_head = self.git(self.repo, "rev-parse", "HEAD").stdout
+        allowed = self.git(self.repo, "commit", "-m", "cleanup success", check=False, env=env)
         self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
-        retained = list(Path(env["TMPDIR"]).glob("crm-precommit.*"))
-        self.assertEqual(len(retained), 1)
-        snapshot = retained[0]
-        self.assertIn(snapshot.name, allowed.stderr)
-        self.assertIn("retained non-empty staged snapshot", allowed.stderr)
-        self.assertEqual((snapshot / "unexpected.txt").read_text(encoding="utf-8"), "retain me")
-        self.assertEqual((snapshot / "export" / "skills" / "out.md").read_bytes(),
-                         self.gen.read_bytes())
-        self.assertFalse((snapshot / "before.txt").exists())
-        self.assertFalse((snapshot / "after.txt").exists())
+        self.assertNotEqual(self.git(self.repo, "rev-parse", "HEAD").stdout, before_head)
+        self.assertNotIn("WARNING", allowed.stderr)
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "retain me\n")
+        self.assertEqual((sentinel_dir / "keep.txt").read_text(encoding="utf-8"), "directory survives\n")
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(link.resolve(), outside.resolve())
+        self.assertEqual((outside / "keep.txt").read_text(encoding="utf-8"), "external survives\n")
+        self.assertEqual({p.name for p in temp_root.iterdir()},
+                         {"sentinel.txt", "sentinel-directory", "external-link"})
+        self.assert_no_temp_snapshots()
 
     @requires_sh
     def test_18_cleanup_preserves_build_failure(self):
         build = self.repo / "tools" / "build_bundle.py"
         build.write_text("import sys\nsys.exit(3)\n", encoding="utf-8", newline="\n")
-        git(self.repo, "add", "tools/build_bundle.py")
+        self.git(self.repo, "add", "tools/build_bundle.py")
         env = self.hook_environment("cleanup-failure")
-        blocked = run_hook(self.repo, env=env)
-        self.assertNotEqual(blocked.returncode, 0, blocked.stdout + blocked.stderr)
+        before_head = self.git(self.repo, "rev-parse", "HEAD").stdout
+        blocked = self.git(self.repo, "commit", "-m", "cleanup failure", check=False, env=env)
+        self.assertEqual(blocked.returncode, 1, blocked.stdout + blocked.stderr)
         self.assertIn("staged copy) exited non-zero", blocked.stderr)
-        retained = list(Path(env["TMPDIR"]).glob("crm-precommit.*"))
-        self.assertEqual(len(retained), 1)
-        self.assertTrue((retained[0] / "export" / "tools" / "build_bundle.py").is_file())
-        self.assertFalse((retained[0] / "before.txt").exists())
+        self.assertEqual(self.git(self.repo, "rev-parse", "HEAD").stdout, before_head)
+        self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
         self.assertEqual(self.gen.read_text(encoding="utf-8"), "canonical\n")
 
     @requires_sh
@@ -393,8 +473,66 @@ class PreCommitHookTests(unittest.TestCase):
                 env = self.hook_environment("fallback-temp-" + candidate)
                 shim_dir = self.interpreter_shims("fallback-bin-" + candidate, working=candidate)
                 env["PATH"] = str(shim_dir) + os.pathsep + env.get("PATH", "")
-                allowed = run_hook(self.repo, env=env)
+                allowed = self.run_hook(self.repo, env=env)
                 self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
+                self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
+
+    @requires_sh
+    def test_20_cleanup_failure_warns_without_changing_verdict(self):
+        shim_dir = Path(self.tmp.name) / "cleanup-bin"
+        shim_dir.mkdir()
+        shim = shim_dir / "rm"
+        shim.write_text("#!/bin/sh\nexit 71\n", encoding="utf-8", newline="\n")
+        shim.chmod(0o755)
+        build = self.repo / "tools" / "build_bundle.py"
+        for status in (0, 1):
+            with self.subTest(verdict=status):
+                env = self.hook_environment("rm-failure-" + str(status))
+                env["PATH"] = str(shim_dir) + os.pathsep + env.get("PATH", "")
+                build.write_text(FAKE_BUILD if status == 0 else "import sys\nsys.exit(3)\n",
+                                 encoding="utf-8", newline="\n")
+                self.git(self.repo, "add", "tools/build_bundle.py")
+                result = self.run_hook(self.repo, env=env)
+                self.assertEqual(result.returncode, status, result.stdout + result.stderr)
+                self.assertIn("WARNING - cleanup failed for temporary directory", result.stderr)
+                snapshots = list(Path(env["TMPDIR"]).glob("crm-precommit.*"))
+                self.assertEqual(len(snapshots), 1)
+                # Retry the hook's guarded cleanup with the real rm, never delete manually.
+                retry = self.run_cleanup(Path(env["TMPDIR"]), str(snapshots[0]), status)
+                self.assertEqual(retry.returncode, status, retry.stdout + retry.stderr)
+                self.assertNotIn("WARNING", retry.stderr)
+                self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
+
+    @requires_sh
+    @unittest.skipUnless(os.name == "posix", "SKIPPED_CAPABILITY: POSIX signal delivery required")
+    def test_21_interrupts_clean_snapshot_and_exit_nonzero(self):
+        build = self.repo / "tools" / "build_bundle.py"
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            with self.subTest(signal=signum.name):
+                env = self.hook_environment("signal-" + signum.name)
+                build.write_text(FAKE_BUILD + "import os, signal\n" +
+                                 f"os.kill(os.getppid(), signal.{signum.name})\n",
+                                 encoding="utf-8", newline="\n")
+                self.git(self.repo, "add", "tools/build_bundle.py")
+                result = self.run_hook(self.repo, env=env)
+                self.assertEqual(result.returncode, 128 + signum, result.stdout + result.stderr)
+                self.assertNotIn("WARNING", result.stderr)
+                self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
+
+    @requires_sh
+    def test_22_symlinked_temp_root_is_resolved_before_creation(self):
+        env = self.hook_environment("physical-root")
+        alias = Path(self.tmp.name) / "temp-root-alias"
+        try:
+            alias.symlink_to(Path(env["TMPDIR"]), target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"SKIPPED_CAPABILITY: cannot create a directory symlink: {exc}")
+        env["TMPDIR"] = str(alias)
+        result = self.run_hook(self.repo, env=env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("WARNING", result.stderr)
+        self.assertTrue(alias.is_symlink())
+        self.assert_no_temp_snapshots()
 
 
 if __name__ == "__main__":

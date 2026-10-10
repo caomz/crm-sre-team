@@ -39,33 +39,55 @@ if [ -z "$PY" ]; then
     exit 1
 fi
 
-tmp_base=$(mktemp -d "${TMPDIR:-/tmp}/crm-precommit.XXXXXX")
-# MSYS/git-bash only: align every child process (git, python) with the
-# shell's view of the temp dir. Without this, sh sees one directory while
-# git/python resolve the same "/tmp/..." string to "<cwd-drive>:\tmp\...".
-# macOS has no cygpath and its /tmp is a real path for every process.
-if command -v cygpath >/dev/null 2>&1; then
-    tmp_base=$(cygpath -m "$tmp_base")
-fi
-export_dir="$tmp_base/export"
+tmp_root=$(CDPATH= cd -P "${TMPDIR:-/tmp}" && pwd -P)
+tmp_base=$(mktemp -d "$tmp_root/crm-precommit.XXXXXX")
+# Keep the original shell path immutable for cleanup, even on MSYS.
+readonly tmp_root tmp_base
 cleanup() {
     cleanup_status=$?
-    # Leave the staged snapshot intact. Only these two fixed metadata files
-    # are ours to remove; never traverse or batch-delete the exported tree.
-    cd "$repo_root" || return "$cleanup_status"
-    if [ -f "$tmp_base/before.txt" ] && [ ! -L "$tmp_base/before.txt" ]; then
-        rm -- "$tmp_base/before.txt" 2>/dev/null || true
+    trap - EXIT
+    trap '' INT TERM
+    # User decision, 2026-10-10: the hook cleans only its own mktemp directory.
+    # Refuse ambiguous paths; a warning must never change the commit verdict.
+    if [ -z "$tmp_base" ]; then
+        echo "pre-commit: WARNING - cleanup refused: empty temporary path." >&2
+        exit "$cleanup_status"
     fi
-    if [ -f "$tmp_base/after.txt" ] && [ ! -L "$tmp_base/after.txt" ]; then
-        rm -- "$tmp_base/after.txt" 2>/dev/null || true
+    if [ ! -d "$tmp_base" ] || [ -L "$tmp_base" ]; then
+        echo "pre-commit: WARNING - cleanup refused: not a directory or is a symlink: $tmp_base" >&2
+        exit "$cleanup_status"
     fi
-    rmdir "$export_dir" 2>/dev/null || true
-    if ! rmdir "$tmp_base" 2>/dev/null; then
-        echo "pre-commit: retained non-empty staged snapshot at $tmp_base; inspect it manually." >&2
+    cleanup_parent=$(CDPATH= cd -P "${tmp_base%/*}" 2>/dev/null && pwd -P) || cleanup_parent=""
+    if [ "${tmp_base%/*}" != "$tmp_root" ] || [ "$cleanup_parent" != "$tmp_root" ]; then
+        echo "pre-commit: WARNING - cleanup refused: temporary parent changed: $tmp_base" >&2
+        exit "$cleanup_status"
     fi
-    return "$cleanup_status"
+    case "${tmp_base##*/}" in
+        crm-precommit.?*) ;;
+        *)
+            echo "pre-commit: WARNING - cleanup refused: unexpected directory prefix: $tmp_base" >&2
+            exit "$cleanup_status"
+            ;;
+    esac
+    # Windows cannot remove a directory that is still the current directory.
+    if ! cd "$repo_root"; then
+        echo "pre-commit: WARNING - cleanup failed: cannot leave the staged directory: $tmp_base" >&2
+    elif ! rm -rf -- "$tmp_base" 2>/dev/null; then
+        echo "pre-commit: WARNING - cleanup failed for temporary directory: $tmp_base" >&2
+    fi
+    exit "$cleanup_status"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# MSYS/git-bash only: give git/python a mixed Windows path while retaining
+# the recorded shell path above for validation and cleanup.
+export_base="$tmp_base"
+if command -v cygpath >/dev/null 2>&1; then
+    export_base=$(cygpath -m "$tmp_base")
+fi
+export_dir="$export_base/export"
 mkdir -p "$export_dir"
 
 # Export the STAGED tree (the index), not the working tree, then work there.
