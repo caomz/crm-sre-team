@@ -1,3 +1,11 @@
+# v3.6.4 钩子测试环境修订（2026-10-10，2.8.0-rc2）
+
+- v3.6.3 值班机全量的 6 个失败来自测试直接执行 sh 时缺少 Git for Windows POSIX 工具目录。tests/test_git_hooks.py 的默认环境现在前置 SH_PATH 所在目录；存在时再加入同一 Git 安装的 mingw64/bin。setUp、cleanup 重试和工具探测复用该环境，不注入 HOME/bin，不修改主机 PATH；POSIX 环境保持原样。
+- controlled_environment 仍只有 shim_dir，显式传入的环境不再经过默认 PATH 准备；故障和无 Python 替身优先级不变。新增 1 个可在 Mac 运行的测试，3 个子用例覆盖 usr/bin 与 bin 布局、mingw64/bin 有/无、默认直接执行、cleanup、探测、主机环境不变和受控替身保留；旧测试断言及能力 skip 逻辑不变。
+- 仓库外 Runbook 更新为 v3.6.4：原 3 处 main SHA 改为 <V364_MAIN_SHA>，新增真实 Git runner 的解释器/版本/依赖探测，以及独立的 GitHub 克隆、验证、Mac ZIP SHA256 比对和日志打包入口。值班机会话仍不加 Git usr/bin；Windows 预期 0 failed，保留每项实际能力 skip 原因。
+- Mac 全量回归：402 passed / 0 failed / 1 skipped / 1516 subtests passed（111.69 秒）；唯一 skip 为 POSIX 无 Windows junction。check_workbuddy pass=true；validate_bundle PASS_STATIC_ONLY（1816/1816）。两次重建均为 517 个申报文件零差异，build_release / validate_release 为 517/517；文档收尾后的最终包、日志与 SHA256 见仓库外交付记录。
+- 版本仍为 2.8.0-rc2；提示词、策略、manifest、acceptance 和关口承诺冻结。仓库只手工修改本测试、CHANGELOG.md、VALIDATION.md，prompt-bundles.lock 由构建器重建。Windows / PowerShell 5.1 / WorkBuddy = NOT_RUN；未提交、推送、切分支或安装依赖。
+
 # v3.6.3 Windows 兼容修订（2026-10-10，2.8.0-rc2）
 
 - 修复 Windows 11 实测的 A/B 类钩子测试失败：统一探测并使用绝对 POSIX sh，Windows 优先从 git --exec-path 找 Git for Windows 的 usr/bin/sh.exe 或 bin/sh.exe，随后才用 PATH 的 sh，不使用 WSL bash。直接执行和清理使用同一路径；新增 Git 布局、回退和 sh 不在 PATH 的回归。

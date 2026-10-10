@@ -1,3 +1,31 @@
+## v3.6.4 / 2.8.0-rc2 · 钩子测试环境修订（2026-10-10）
+
+基线 c147b4f8c506f38ebb59b0cc2f75d2f538c77e2a（本轮起点 origin/main），分支 codex/v3.6.4，起始工作区干净。手工修改仅 tests/test_git_hooks.py、CHANGELOG.md 和本文，根锁由构建器生成；仓库无新增文件，release-manifest.json 仍为 517 项排序无重复精确白名单。起始 524 个跟踪文件的字节/权限、HEAD/索引指纹及四个文件、两份仓库外说明备份在 /private/tmp/claude-codex-v364.CGco0G/v364-backup/。policy-source/、policies/、VERSION、acceptance 和评分承诺保持冻结。
+
+修复只作用于钩子测试环境：Windows 直接 sh 的默认 PATH 前置 SH_PATH 所在目录，存在时再加同一 Git 根下 mingw64/bin；setUp、run_cleanup 和 shell_command_path 的探测共用准备后的环境。不会注入 HOME/bin 或额外主机用户目录，不改变 os.environ。run_hook 明确传入环境时直接使用它，controlled_environment 的 PATH 仍只有 shim_dir，故障替身及无 Python 替身原字节保留；POSIX 环境不变。所有旧测试方法与能力探测/跳过逻辑保持原样。
+
+macOS + Python 3.14.7 / pytest 9.1.1；全部检查使用 /private/tmp/crm-v341-venv/bin/python，TMPDIR=/private/tmp，PATH 前置该 venv bin。构建在 umask 0022 的独立进程执行，未安装或升级依赖。
+
+| 检查 | 本轮实际结果 |
+|---|---|
+| 新增回归修复前 | 原实现被捕获：默认 run_hook 没有准备 env；3 个布局子用例失败，原日志 hooks-before-fix.txt 保留 |
+| 新增回归修复后 | 1 passed / 3 subtests passed；usr/bin、bin 回退及 mingw64/bin 有/无分支全部执行，无 skip |
+| 全量 pytest -q -rs -p no:cacheprovider | 402 passed / 0 failed / 1 skipped / 1516 subtests passed，111.69 秒 |
+| 唯一 skip | tests/test_git_sync.py::test_32_windows_junction_rejected：POSIX: no junction concept；Windows 必须实际执行 |
+| warning | 1 条既有 ZIP 重复条目负例 UserWarning：dummy-skill/SKILL.md |
+| check_workbuddy | pass=true / errors=[] |
+| validate_bundle | PASS_STATIC_ONLY / errors=[]，静态校验 1816/1816，137 offline unit tests，root lock 508 |
+| 两次 build_bundle | 517 个 manifest 文件逐字节零差异；文档收尾后同步根锁并再次核对两次零差异 |
+| build_release / validate_release --zip | 517/517 文件通过，pass=true / errors=[]；最终包 SHA256 只记录在仓库外，避免自指 |
+
+详细命令、真实退出码、最终重建/静态/发布结果与包哈希在 /private/tmp/claude-codex-v364.CGco0G/verification.json、CHANGES.md 及各项日志。文档记录补写后的最终产物另作重建、静态和发布复核，不复用收尾前的 ZIP。
+
+仓库外 ONCALL_RUNBOOK.md 增加真实 git hook run pre-commit 解释器探测：按产品相同的 python3 → python → py -3 可运行顺序选择，打印解析位置、sys.executable 与版本，要求 >=3.11 且能导入 yaml/jsonschema/referencing，否则停下，不自动修改主机配置或依赖。另提供 3 个独立点调用块，直接从 GitHub 核对 main、克隆、两次重建/全量测试/打包、比对 Claude 告知的 <V364_ZIP_SHA256> 并打包去敏日志，不依赖 Mac 交付文件夹。Runbook/测试自审 22/22：25 个块的包装和编号、最小 PATH、冻结的 5B/5C、旧测试 AST、解释器选择一致性均通过；提取出的 shell 语法检查和 Mac 真实 Git runner 探测实际通过（选中 venv python3，3.14.7，依赖导入成功）。真实 Git for Windows 前置 HOME/bin 的说明来自 v3.6.3 实测；这些 Mac 检查不代表 PowerShell 5.1 或 Windows 执行通过。
+
+v3.6.3 Windows 11 已实测 6 failed / 379 passed / 23 skipped / 1488 subtests passed；仅在该窗口前置 Git usr/bin 后钩子定向复跑为 21 passed / 9 skipped。此为根因证据，不能代替 v3.6.4 Windows 全量。v3.6.4 Windows 11 / PS 5.1 / Git for Windows 真实 runner = NOT_RUN；预期 0 failed，由值班机补实际计数和每项 skip 原因。test_15 的 HOME/bin/python3、test_22 的 find/sort 注入能力 skip 仍需真实探测证据；既有符号链接权限、POSIX 执行位/信号及执行端无评分目录的 skip 不变。
+
+WorkBuddy 加载/缓存/工具审计、故障演练与模型关口仍 NOT_RUN；生产写只产人工评审需求。未提交、推送、切换分支或操作值班机。回滚采用仓库外增量补丁的 reverse --check 后人工应用，或在确认后按备份单文件恢复；不会自动回滚或删除目录。
+
 ## v3.6.3 / 2.8.0-rc2 · Windows 兼容修订（2026-10-10）
 
 基线 c924b323bcfe0c3800796111da56dadc439d27e9（本轮起点 origin/main），分支 codex/v3.6.3。仓库内手工修改仅 tools/sync_git.py、tests/test_git_sync.py、tests/test_git_hooks.py、CHANGELOG.md、VALIDATION.md；锁与报告仅由工具生成。起始 524 个跟踪文件的字节/权限指纹及五个手工修改文件、交付说明副本已备份到 /private/tmp/claude-codex-v363.6xR1HB/v363-backup/。VERSION、全部 policy-source/、policies/、acceptance、评分承诺和 manifest 冻结；不新增发布文件，不提交、不推送、不安装依赖。

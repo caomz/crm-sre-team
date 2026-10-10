@@ -86,6 +86,26 @@ requires_sh = unittest.skipUnless(
     can_run_sh(), "SKIPPED_CAPABILITY: no working POSIX sh in Git for Windows or PATH; WSL is not sh")
 
 
+def direct_shell_environment() -> dict[str, str]:
+    """Supply Git's POSIX tools when sh is launched without the git runner.
+
+    Do not inject HOME/bin or other host directories. Explicit controlled
+    environments bypass this helper so fault/interpreter shims stay first.
+    """
+    env = os.environ.copy()
+    if os.name == "nt" and SH_PATH is not None:
+        shell_dir = Path(SH_PATH).parent
+        git_root = shell_dir.parent.parent if shell_dir.parent.name.casefold() == "usr" else shell_dir.parent
+        paths = [str(shell_dir)]
+        mingw_bin = git_root / "mingw64" / "bin"
+        if mingw_bin.is_dir():
+            paths.append(str(mingw_bin))
+        if env.get("PATH"):
+            paths.append(env["PATH"])
+        env["PATH"] = os.pathsep.join(paths)
+    return env
+
+
 def run_hook(repo: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     """Run the hook directly via sh (cwd=repo), bypassing git's hook runner.
 
@@ -99,7 +119,8 @@ def run_hook(repo: Path, env: dict[str, str] | None = None) -> subprocess.Comple
     """
     return subprocess.run([SH_PATH, str(repo / "tools" / "git-hooks" / "pre-commit")],
                           cwd=str(repo), capture_output=True, text=True,
-                          encoding="utf-8", errors="replace", env=env, timeout=30)
+                          encoding="utf-8", errors="replace",
+                          env=direct_shell_environment() if env is None else env, timeout=30)
 
 
 class PreCommitHookTests(unittest.TestCase):
@@ -339,7 +360,8 @@ class PreCommitHookTests(unittest.TestCase):
             build.write_text(original, encoding="utf-8", newline="\n")
 
     def hook_environment(self, name: str) -> dict[str, str]:
-        env = os.environ.copy()
+        # setUp, cleanup retries and tool probes all use this prepared baseline.
+        env = direct_shell_environment()
         temp_root = Path(self.tmp.name) / name
         temp_root.mkdir()
         self.temp_roots.append(temp_root)
@@ -733,6 +755,64 @@ class PreCommitHookTests(unittest.TestCase):
              patch("subprocess.run", return_value=subprocess.CompletedProcess([], 1, "", "")):
             self.assertIsNone(resolve_posix_sh(windows=True))
         which.assert_called_once_with("sh")
+
+    def test_26_windows_direct_shell_path_preserves_controlled_environment(self):
+        # Keep the host Path implementation while mocking Windows on macOS.
+        host_path = type(Path())
+        for index, (layout, has_mingw) in enumerate(
+                (("usr/bin", True), ("usr/bin", False), ("bin", True))):
+            with self.subTest(layout=layout, mingw64=has_mingw):
+                install = Path(self.tmp.name) / f"Git with spaces {index}"
+                shell_dir = install / layout
+                shell_dir.mkdir(parents=True)
+                shell = shell_dir / "sh.exe"
+                shell.write_bytes(b"synthetic shell")
+                mingw = install / "mingw64" / "bin"
+                if has_mingw:
+                    mingw.mkdir(parents=True)
+                home_bin = Path(self.tmp.name) / "user-home" / "bin"
+                original_path = str(install / "cmd") + ";C:/Windows/System32"
+                shim_dir = self.interpreter_shims(f"layout-shims-{index}")
+                fault = shim_dir / "find"
+                fault.write_text("#!/bin/sh\nexit 71\n", encoding="utf-8", newline="\n")
+                expected_path = ";".join([str(shell_dir)] +
+                                         ([str(mingw)] if has_mingw else []) + [original_path])
+                probe = subprocess.CompletedProcess([], 0, str(shell_dir / "probe-tool.exe") + "\n", "")
+                with patch("os.name", "nt"), patch("os.pathsep", ";"), \
+                     patch(f"{__name__}.Path", host_path), \
+                     patch(f"{__name__}.SH_PATH", str(shell)), \
+                     patch.dict(os.environ, {"PATH": original_path, "HOME": str(home_bin.parent)}), \
+                     patch("subprocess.run", return_value=probe) as run:
+                    run_hook(self.repo)
+                    default_env = run.call_args.kwargs["env"]
+                    self.assertIsNotNone(default_env, "direct hooks must prepare their default PATH")
+                    self.assertEqual(default_env["PATH"], expected_path)
+                    self.assertNotIn(str(home_bin), default_env["PATH"].split(";"))
+                    env = self.hook_environment(f"layout-temp-{index}")
+                    self.assertEqual(env["PATH"], expected_path)
+                    with patch.object(self, "env", env):
+                        self.run_hook(self.repo)
+                        self.assertEqual(run.call_args.kwargs["env"]["PATH"], expected_path)
+                        self.run_cleanup(Path(env["TMPDIR"]), "", 0)
+                        self.assertEqual(run.call_args.kwargs["env"]["PATH"], expected_path)
+                        self.shell_command_path("probe-tool")
+                        self.assertEqual(run.call_args.kwargs["env"]["PATH"], expected_path)
+                    with patch.object(self, "shell_command_path",
+                                      side_effect=lambda command: str(shell_dir / (command + ".exe"))):
+                        controlled = self.controlled_environment(env, shim_dir)
+                    self.assertEqual(controlled["PATH"], str(shim_dir))
+                    self.assertEqual(fault.read_text(encoding="utf-8"), "#!/bin/sh\nexit 71\n")
+                    for candidate in ("python3", "python", "py"):
+                        self.assertEqual((shim_dir / candidate).read_text(encoding="utf-8"),
+                                         "#!/bin/sh\nexit 127\n")
+                    self.assertIn(shlex.quote(str(shell_dir / "mktemp.exe")),
+                                  (shim_dir / "mktemp").read_text(encoding="utf-8"))
+                    run_hook(self.repo, env=controlled)
+                    self.assertIs(run.call_args.kwargs["env"], controlled)
+                    self.assertEqual(os.environ["PATH"], original_path,
+                                     "PATH preparation must not modify the host environment")
+        with patch("os.name", "posix"):
+            self.assertEqual(direct_shell_environment(), os.environ.copy())
 
 
 if __name__ == "__main__":
