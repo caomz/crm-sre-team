@@ -8,6 +8,7 @@ the verdict; the hook never modifies the working tree.
 from __future__ import annotations
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -32,9 +33,10 @@ FAKE_BUILD = (
 )
 
 
-def git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
+def git(repo: Path, *args: str, check: bool = True,
+        env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     proc = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True,
-                          encoding="utf-8", errors="replace")
+                          encoding="utf-8", errors="replace", env=env)
     if check and proc.returncode != 0:
         raise AssertionError(f"git {args} failed: {proc.stdout}\n{proc.stderr}")
     return proc
@@ -51,7 +53,7 @@ def can_run_sh() -> bool:
 requires_sh = unittest.skipUnless(can_run_sh(), "SKIPPED_CAPABILITY: no sh/bash on PATH")
 
 
-def run_hook(repo: Path) -> subprocess.CompletedProcess:
+def run_hook(repo: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     """Run the hook directly via sh (cwd=repo), bypassing git's hook runner.
 
     Real-`git commit` coverage lives in test_13 (rejection + HEAD unchanged)
@@ -64,7 +66,7 @@ def run_hook(repo: Path) -> subprocess.CompletedProcess:
     """
     return subprocess.run(["sh", str(repo / "tools" / "git-hooks" / "pre-commit")],
                           cwd=str(repo), capture_output=True, text=True,
-                          encoding="utf-8", errors="replace")
+                          encoding="utf-8", errors="replace", env=env)
 
 
 class PreCommitHookTests(unittest.TestCase):
@@ -110,21 +112,21 @@ class PreCommitHookTests(unittest.TestCase):
                         f"hook must be indexed as 100755, got: {listed.stdout!r}")
 
     def test_02_installer_sets_hooks_path_and_is_idempotent(self):
-        proc = subprocess.run(["python3", str(INSTALLER), "--root", str(self.repo)],
+        proc = subprocess.run([sys.executable, str(INSTALLER), "--root", str(self.repo)],
                               capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertEqual(git(self.repo, "config", "--get", "core.hooksPath").stdout.strip(),
                          "tools/git-hooks")
-        again = subprocess.run(["python3", str(INSTALLER), "--root", str(self.repo)],
+        again = subprocess.run([sys.executable, str(INSTALLER), "--root", str(self.repo)],
                                capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(again.returncode, 0, again.stdout + again.stderr)
         self.assertEqual(git(self.repo, "config", "--get", "core.hooksPath").stdout.strip(),
                          "tools/git-hooks")
 
     def test_03_installer_uninstall_restores_default(self):
-        subprocess.run(["python3", str(INSTALLER), "--root", str(self.repo)], check=True,
+        subprocess.run([sys.executable, str(INSTALLER), "--root", str(self.repo)], check=True,
                        capture_output=True)
-        proc = subprocess.run(["python3", str(INSTALLER), "--root", str(self.repo), "--uninstall"],
+        proc = subprocess.run([sys.executable, str(INSTALLER), "--root", str(self.repo), "--uninstall"],
                               capture_output=True, text=True, encoding="utf-8", errors="replace")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         current = git(self.repo, "config", "--get", "core.hooksPath", check=False)
@@ -296,6 +298,103 @@ class PreCommitHookTests(unittest.TestCase):
                           "must report STALE (staged script ran), not a broken-script failure")
         finally:
             build.write_text(original, encoding="utf-8", newline="\n")
+
+    def hook_environment(self, name: str) -> dict[str, str]:
+        env = os.environ.copy()
+        temp_root = Path(self.tmp.name) / name
+        temp_root.mkdir()
+        env["TMPDIR"] = str(temp_root)
+        return env
+
+    def interpreter_shims(self, name: str, working: str | None = None) -> Path:
+        """Shadow every candidate, including Store aliases, without changing the host."""
+        shim_dir = Path(self.tmp.name) / name
+        shim_dir.mkdir()
+        executable = shlex.quote(Path(sys.executable).as_posix())
+        for candidate in ("python3", "python", "py"):
+            body = "exit 127\n"
+            if candidate == working:
+                body = ('[ "$1" = "-3" ] || exit 126\nshift\n' if candidate == "py" else "")
+                body += f'exec {executable} "$@"\n'
+            shim = shim_dir / candidate
+            shim.write_text("#!/bin/sh\n" + body, encoding="utf-8", newline="\n")
+            shim.chmod(0o755)
+        return shim_dir
+
+    @requires_sh
+    def test_15_no_working_python_rejects_real_commit(self):
+        """Unavailable interpreters must fail closed under git's actual hook runner."""
+        env = self.hook_environment("no-python-temp")
+        shim_dir = self.interpreter_shims("no-python-bin")
+        env["PATH"] = str(shim_dir) + os.pathsep + env.get("PATH", "")
+        extra = self.repo / "MARKER.md"
+        extra.write_text("pending\n", encoding="utf-8", newline="\n")
+        git(self.repo, "add", "MARKER.md")
+        before_head = git(self.repo, "rev-parse", "HEAD").stdout
+        before_index = git(self.repo, "write-tree").stdout
+        blocked = git(self.repo, "commit", "-m", "must reject without Python",
+                      check=False, env=env)
+        self.assertNotEqual(blocked.returncode, 0, blocked.stdout + blocked.stderr)
+        self.assertIn("no working python3/python/py -3", blocked.stderr)
+        self.assertIn("commit aborted", blocked.stderr)
+        self.assertNotIn("SKIPPED", blocked.stderr)
+        self.assertEqual(before_head, git(self.repo, "rev-parse", "HEAD").stdout)
+        self.assertEqual(before_index, git(self.repo, "write-tree").stdout)
+        self.assertEqual(extra.read_text(encoding="utf-8"), "pending\n")
+        self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [],
+                         "missing Python must abort before exporting the staged tree")
+
+    def test_16_hook_never_deletes_recursively(self):
+        text = HOOK.read_text(encoding="utf-8")
+        self.assertNotRegex(text, r"(?m)^\s*rm\b[^\n]*(?:\s-[A-Za-z]*[rR]|--recursive)")
+        self.assertNotRegex(text, r"(?m)^\s*find\b[^\n]*-delete\b")
+        self.assertNotIn("rmtree", text)
+
+    @requires_sh
+    def test_17_cleanup_keeps_snapshot_and_unexpected_files(self):
+        build = self.repo / "tools" / "build_bundle.py"
+        build.write_text(FAKE_BUILD +
+                         "(root.parent/'unexpected.txt').write_text('retain me', encoding='utf-8')\n",
+                         encoding="utf-8", newline="\n")
+        git(self.repo, "add", "tools/build_bundle.py")
+        env = self.hook_environment("cleanup-success")
+        allowed = run_hook(self.repo, env=env)
+        self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
+        retained = list(Path(env["TMPDIR"]).glob("crm-precommit.*"))
+        self.assertEqual(len(retained), 1)
+        snapshot = retained[0]
+        self.assertIn(snapshot.name, allowed.stderr)
+        self.assertIn("retained non-empty staged snapshot", allowed.stderr)
+        self.assertEqual((snapshot / "unexpected.txt").read_text(encoding="utf-8"), "retain me")
+        self.assertEqual((snapshot / "export" / "skills" / "out.md").read_bytes(),
+                         self.gen.read_bytes())
+        self.assertFalse((snapshot / "before.txt").exists())
+        self.assertFalse((snapshot / "after.txt").exists())
+
+    @requires_sh
+    def test_18_cleanup_preserves_build_failure(self):
+        build = self.repo / "tools" / "build_bundle.py"
+        build.write_text("import sys\nsys.exit(3)\n", encoding="utf-8", newline="\n")
+        git(self.repo, "add", "tools/build_bundle.py")
+        env = self.hook_environment("cleanup-failure")
+        blocked = run_hook(self.repo, env=env)
+        self.assertNotEqual(blocked.returncode, 0, blocked.stdout + blocked.stderr)
+        self.assertIn("staged copy) exited non-zero", blocked.stderr)
+        retained = list(Path(env["TMPDIR"]).glob("crm-precommit.*"))
+        self.assertEqual(len(retained), 1)
+        self.assertTrue((retained[0] / "export" / "tools" / "build_bundle.py").is_file())
+        self.assertFalse((retained[0] / "before.txt").exists())
+        self.assertEqual(self.gen.read_text(encoding="utf-8"), "canonical\n")
+
+    @requires_sh
+    def test_19_working_python_and_py_launcher_fallbacks(self):
+        for candidate in ("python", "py"):
+            with self.subTest(interpreter=candidate):
+                env = self.hook_environment("fallback-temp-" + candidate)
+                shim_dir = self.interpreter_shims("fallback-bin-" + candidate, working=candidate)
+                env["PATH"] = str(shim_dir) + os.pathsep + env.get("PATH", "")
+                allowed = run_hook(self.repo, env=env)
+                self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
 
 
 if __name__ == "__main__":

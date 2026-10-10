@@ -1,5 +1,13 @@
 # 验证状态 · 2.8.0-rc1（PRE-GATE）
 
+## v3.5.1 Mac 工具修订复核（2026-10-10）
+
+基于 main=5fbe9e02214ca8f1b51fcb63c7fb8447a751da69，工作分支 codex/v3.5.1；插件版本保持 2.8.0-rc1，属于值班机安装前的工具和测试修订。macOS + Python 3.14.7，使用已装 /private/tmp/crm-v341-venv，检查命令显式设置 PATH 与 TMPDIR=/private/tmp。静态校验 1816/1816（validate_bundle PASS_STATIC_ONLY，errors=[]），root lock 集 508；完整 pytest 351 passed、0 failed、1 skipped、1296 subtests passed，1 条 ZIP 重复条目负例的 UserWarning；check_workbuddy pass=true/errors=[]。唯一 skip 为 tests/test_git_sync.py 的 POSIX: no junction concept，Windows 10 仍需实际执行该能力检查。
+
+test_git_hooks 共 19 项、2 个 subtests，新增 Python 不可用时真实提交被拒且 HEAD/暂存区不变、无递归删除、保留暂存快照与意外残留、清理不掩盖构建失败、python/py -3 回退；安装器子进程使用 sys.executable。钩子只逐项删除两个固定元数据文件并尝试 rmdir 空目录，非空暂存快照保留并提示路径，需人工管理磁盘占用。
+
+两次重建的精确发布文件哈希、发行 ZIP 的文件数/SHA256/validate_release --zip、解包静态复核与评分材料边界检查均记录在仓库外 crm-v351-handoff 的实际日志；生成报告只由工具更新。提示词、权限契约与首次关口判定规则保持冻结。Windows 10 值班机复核待执行；WorkBuddy 的加载、版本往返、工具审计与关口均 NOT_RUN。PowerShell 执行说明经过人工逐行自审，未在 PS 5.1 实测；本轮没有提交、推送或宿主/生产操作。生产写只产人工评审需求。
+
 ## v3.5 Mac 候选复核（2026-10-09）
 
 基于 GitHub 9f06afd（v3.4.1），审查基线 main=3ae6769（v3.3.2）。macOS + Python 3.14.7，使用已装 /private/tmp/crm-v341-venv；命令显式设置 PATH 与 TMPDIR=/private/tmp。静态校验 1816/1816（validate_bundle PASS_STATIC_ONLY，errors=[]），root lock 集 508。完整 pytest 346 passed、0 failed、1 skipped、1294 subtests passed；唯一 skip 为 tests/test_git_sync.py 的 POSIX: no junction concept，1 条 UserWarning 为 ZIP 重复条目负例。check_workbuddy pass=true/errors=[]，check_thinking_tools 251/251。build_release 产出 517 文件，validate_release --zip pass=true/errors=[]（最终包与 SHA256 见仓库外交付记录）；最终重建零差异检查与 ZIP 解压后静态复核由交付命令实际执行并留日志。Windows 10 值班机复核待执行。新增 14 项 v3.5 回归覆盖干净 ZIP 首次校验与文档错数拒绝、构建输出防覆盖/越界/链接/Windows reparse point（含 Python 3.11 回退）/未申报文件、实际输入哈希、探测参数、参考条款冲突与关口路由/材料边界；不调用宿主或模型。

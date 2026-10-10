@@ -34,8 +34,9 @@ elif command -v py >/dev/null 2>&1 && py -3 -c "import sys" >/dev/null 2>&1; the
     PY="py -3"
 fi
 if [ -z "$PY" ]; then
-    echo "pre-commit: SKIPPED - no working python3/python/py -3 on PATH" >&2
-    exit 0
+    echo "pre-commit: FAILED - no working python3/python/py -3 on PATH; commit aborted." >&2
+    echo "pre-commit: activate an existing Python environment and retry; the gate cannot run without Python." >&2
+    exit 1
 fi
 
 tmp_base=$(mktemp -d "${TMPDIR:-/tmp}/crm-precommit.XXXXXX")
@@ -46,8 +47,25 @@ tmp_base=$(mktemp -d "${TMPDIR:-/tmp}/crm-precommit.XXXXXX")
 if command -v cygpath >/dev/null 2>&1; then
     tmp_base=$(cygpath -m "$tmp_base")
 fi
-trap 'rm -rf "$tmp_base" 2>/dev/null || true' EXIT
 export_dir="$tmp_base/export"
+cleanup() {
+    cleanup_status=$?
+    # Leave the staged snapshot intact. Only these two fixed metadata files
+    # are ours to remove; never traverse or batch-delete the exported tree.
+    cd "$repo_root" || return "$cleanup_status"
+    if [ -f "$tmp_base/before.txt" ] && [ ! -L "$tmp_base/before.txt" ]; then
+        rm -- "$tmp_base/before.txt" 2>/dev/null || true
+    fi
+    if [ -f "$tmp_base/after.txt" ] && [ ! -L "$tmp_base/after.txt" ]; then
+        rm -- "$tmp_base/after.txt" 2>/dev/null || true
+    fi
+    rmdir "$export_dir" 2>/dev/null || true
+    if ! rmdir "$tmp_base" 2>/dev/null; then
+        echo "pre-commit: retained non-empty staged snapshot at $tmp_base; inspect it manually." >&2
+    fi
+    return "$cleanup_status"
+}
+trap cleanup EXIT
 mkdir -p "$export_dir"
 
 # Export the STAGED tree (the index), not the working tree, then work there.
