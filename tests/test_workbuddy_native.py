@@ -167,7 +167,17 @@ class WorkBuddyNativeTests(unittest.TestCase):
         b = json.loads((ROOT / "policy-source/thinking-tools/baseline-contract.json").read_text(encoding="utf-8"))
         for rel, expected in b["immutable_files"].items():
             if rel.startswith(("schemas/", "tests/")):
-                self.assertEqual(hashlib.sha256((ROOT / rel).read_bytes()).hexdigest(), expected)
+                raw = (ROOT / rel).read_bytes()
+                if rel == "tests/test_contracts.py":
+                    approval = json.loads((ROOT / "policy-source/thinking-tools/workbuddy-allowed-changes.json").read_text(encoding="utf-8"))["immutable_files"][rel]
+                    self.assertEqual(approval["baseline_sha256"], expected)
+                    self.assertEqual(hashlib.sha256(raw).hexdigest(), approval["revised_sha256"])
+                    # R-12 permits exactly two tautological lines to be removed.
+                    # Reinsert them and demand the complete historical hash: any other edit fails.
+                    anchor = b'            with self.subTest(kind=kind, risk="invented_expectation"):\n'
+                    self.assertEqual(raw.count(anchor), 1)
+                    raw = raw.replace(anchor, anchor + b'                authorized_baseline = None\n                self.assertIsNone(authorized_baseline)\n', 1)
+                self.assertEqual(hashlib.sha256(raw).hexdigest(), expected)
 
     def test_26_old_patch_script_not_shipped(self):
         self.assertFalse((ROOT / "apply_workbuddy_native_fix.py").exists())

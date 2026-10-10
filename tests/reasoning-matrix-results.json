@@ -1,5 +1,5 @@
 {
-  "version": "2.8.0-rc1",
+  "version": "2.8.0-rc2",
   "scope": "LISTED_DIMENSIONS_SHARED_CANDIDATE_SCHEMA_ONLY_NOT_HOST_SEMANTICS",
   "validator": "jsonschema.Draft202012Validator",
   "expected_outcome_source": "Independent documented-rule functions; not Schema condition introspection",

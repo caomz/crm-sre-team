@@ -1,5 +1,5 @@
 {
-  "version": "2.8.0-rc1",
+  "version": "2.8.0-rc2",
   "status": "DESIGN_LOCKED_BEFORE_FIRST_RUN",
   "execution_status": "NOT_RUN_IN_TARGET_HOST",
   "synthetic_only": true,
@@ -31,7 +31,7 @@
       "gold_sha256": "39ec79b85ff1f92c2ac1ed2a8f54f8034224c238973f2963897387b4e40e8a22"
     }
   ],
-  "scoring_protocol_sha256": "3a66ac26d99d7879e11817f4aa546ebfda584c21635f5e8b900f97fae5584781",
+  "scoring_protocol_sha256": "e72cabce17dffa847213add19d7c0ccf93a47478ab9ac1c17b015d27df5340cf",
   "commitment_algorithm": "SHA256",
   "gold_canonicalization": "UTF-8; JSON ensure_ascii=false, sort_keys=true, separators=(comma,colon); one trailing LF; no BOM. Protocol: exact UTF-8 bytes.",
   "routing_assertions_sha256": "7d8c580c7cdaf47069a6642c7c2b62321743b4254a53daa40df4457d6a7bf82d",

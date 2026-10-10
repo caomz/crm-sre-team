@@ -1,11 +1,16 @@
 {
-  "version": "2.8.0-rc1",
+  "version": "2.8.0-rc2",
   "scope": "EXPLICIT_OFFLINE_CHANGE_REVIEW_NOT_SOURCE_AUTHENTICITY",
   "immutable_files": {
     "policy-source/roles-source.json": {
       "baseline_sha256": "12d764aaf772b0aeda55b9f0ce5ffd908709702e49bf105541f85c9743013c16",
       "revised_sha256": "4220cfb96e2dd7ac4c027ce8f7fd41482a43a750fe81b086498b2fd6888862bd",
       "reason": "Canonicalize existing Skill interface metadata; all Agent/Skill IDs preserved."
+    },
+    "tests/test_contracts.py": {
+      "baseline_sha256": "b1060aa5f5d5e27e68272e40edc78e580949f75bf2d2a3bf99d4fee9943c675c",
+      "revised_sha256": "85e6f30902704be775b03a8423cd8c067e1ced9653896a9f38d5685698f75698",
+      "reason": "2026-10-10 v3.6 R-12：用户明确批准移除 test_42 的 None 自赋值及恒真 assertIsNone；保留真实 fixture Schema 验证及 Schema 不能证明参考真实性的说明。仅此文件修订使用精确 SHA256 审核。"
     },
     "tools/check_determinism.py": {
       "baseline_sha256": "d95fa30df8a0244b8bfaeb8da723cd678c5a09cb3d53d8e05894e54532ca425f",
@@ -17,12 +22,12 @@
     "policies/runtime-contract.json": {
       "baseline_sha256": "2ab91101b41d9ecdf0a1106816a030911210c2b704aaf786e4ed09870efe5fad",
       "revised_sha256": "18731c83f9c78916c03e96e92969e4c7cd76e1991af52a354a3768fe19b7248b",
-      "reason": "用户 2026-10-09 同意放开自主检索，底线为不外发用户信息；public_read_execution 改 AUTHORIZED_PUBLIC_READ_AND_SEARCH_NO_USER_DATA_EGRESS（同时覆盖用户点名公开读取与自主联网检索）。production_read_execution 与 production_write 保持不变。"
+      "reason": "用户 2026-10-09 同意放开自主检索，底线为不外发用户信息；public_read_execution 改 AUTHORIZED_PUBLIC_READ_AND_SEARCH_NO_USER_DATA_EGRESS（同时覆盖用户点名公开读取与自主联网检索）。production_read_execution 与 production_write 保持不变。 2026-10-10 v3.6：用户批准候选版本升为 2.8.0-rc2；本次仅改 version，归一化后指纹不变。"
     },
     ".codebuddy-plugin/plugin.json": {
       "baseline_sha256": "46b33a4bc5e3865781e5b854df89fe8a593d5f158162c897a7e5dd55444b1acb",
       "revised_sha256": "6e109ebaac967edb4c072a25f122d0e21ef52dfdef4cae21e0ddf221155814f9",
-      "reason": "2026-10-09 v3.5：主会话不预加载团长 Agent 正文，在初始化/首条快捷提示先引导加载 stability-director，并明示已授权自主公开检索及不外发材料、不登录上传、不读凭据/环境变量的底线。生产权限与人工评审边界不变。"
+      "reason": "2026-10-09 v3.5：主会话不预加载团长 Agent 正文，在初始化/首条快捷提示先引导加载 stability-director，并明示已授权自主公开检索及不外发材料、不登录上传、不读凭据/环境变量的底线。生产权限与人工评审边界不变。 2026-10-10 v3.6：用户批准候选版本升为 2.8.0-rc2；本次仅改 version，归一化后指纹不变。"
     }
   }
 }

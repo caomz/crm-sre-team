@@ -17,6 +17,28 @@ sys.path.insert(0, str(ROOT / "tools"))
 from release import compute_tree_digest, PIPELINE_STEPS, run_pipeline
 
 
+def bundle_report():
+    counts = ["additional_static_tests", "offline_contract_tests_run", "reasoning_matrix_test_methods",
+              "judgment_contract_tests_run", "judgment_matrix_test_methods", "thinking_tool_tests_run"]
+    zeros = ["offline_contract_test_failures", "offline_contract_test_errors", "reasoning_matrix_test_failures",
+             "reasoning_matrix_test_errors", "reasoning_matrix_mismatches", "judgment_contract_test_failures",
+             "judgment_contract_test_errors", "judgment_matrix_test_failures", "judgment_matrix_test_errors",
+             "judgment_matrix_mismatches", "thinking_tool_test_failures", "thinking_tool_test_errors"]
+    return {"version": "2.6.1", "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
+            "result": "PASS_STATIC_ONLY", "errors": [], "checks_total": 1788, "checks_passed": 1788,
+            "offline_unit_tests_total": 6, **dict.fromkeys(counts, 1), **dict.fromkeys(zeros, 0)}
+
+
+def determinism_report():
+    flags = ["pass", "generated_artifacts_deterministic", "release_tree_deterministic",
+             "input_release_already_built", "validation_output_deterministic", "validation_tree_deterministic",
+             "source_tree_unchanged_during_comparisons"]
+    return {"version": "2.6.1", "scope": "TEMPORARY_RELEASE_COPY_SAME_ENVIRONMENT_NO_MODEL_OR_HOST_CALLS",
+            **dict.fromkeys(flags, True), "checked_files": 1, "hashes": {"VERSION": "a" * 64},
+            "release_tree_file_count": 1, "build_exit_codes": [0, 0], "validation_exit_codes": [0, 0, 0],
+            "sorting_guard_negative_test": {"exit_code": 1, "detected": True, "failed_check_ids": ["synthetic_guard"]}}
+
+
 # ---------------------------------------------------------------------------
 # Fake runner -- returns preset results, creates minimal real ZIP for unpack
 # ---------------------------------------------------------------------------
@@ -32,9 +54,9 @@ class FakeRunner:
         self.calls.append(("validate_bundle", str(root)))
         root_str = str(root).lower()
         if "unpack" in root_str:
-            default = (0, {"result": "PASS", "checks_total": 1788, "checks_passed": 1788})
+            default = (0, bundle_report())
             return self.overrides.get("validate_bundle_unpack", default)
-        default = (0, {"result": "PASS", "checks_total": 1788, "checks_passed": 1788})
+        default = (0, bundle_report())
         return self.overrides.get("validate_bundle", default)
 
     def run_unittest(self, root):
@@ -44,7 +66,7 @@ class FakeRunner:
 
     def run_determinism(self, root):
         self.calls.append(("determinism", str(root)))
-        default = (0, {"pass": True})
+        default = (0, determinism_report())
         return self.overrides.get("determinism", default)
 
     def build_release(self, root, output):
@@ -64,11 +86,13 @@ class FakeRunner:
                 info.external_attr = 0o100644 << 16
                 z.writestr(info, content, compress_type=ZIP_DEFLATED, compresslevel=9)
         sha = hashlib.sha256(output.read_bytes()).hexdigest()
-        return {"files": 2, "sha256": sha, "archive": str(output), "scope": "FAKE"}
+        return {"files": 2, "sha256": sha, "archive": str(output), "scope": "MANIFEST_CONTENT_INTEGRITY_NOT_HOST_VERIFICATION"}
 
     def run_validate_release(self, zip_path):
         self.calls.append(("validate_release", str(zip_path)))
-        default = (0, {"pass": True, "errors": [], "scope": "ZIP_INTEGRITY_NOT_RUNTIME"})
+        default = (0, {"pass": True, "errors": [], "scope": "ZIP_INTEGRITY_NOT_RUNTIME",
+                       "files_total": 2, "files_checked": 2,
+                       "sha256": hashlib.sha256(Path(zip_path).read_bytes()).hexdigest()})
         return self.overrides.get("validate_release", default)
 
 
@@ -298,6 +322,69 @@ class ReleasePipelineTests(unittest.TestCase):
         self.assertFalse(result["ok"])
         assert_six_points(self, result, self.root, "unpack_revalidate",
                           expected_error_contains="unpack revalidate", before_digest=before)
+
+    def test_11_exit_zero_with_empty_or_wrong_scope_reports_is_rejected(self):
+        mapping = {"validate_bundle": "input_consistency", "determinism": "determinism",
+                   "validate_release": "validate_release", "validate_bundle_unpack": "unpack_revalidate"}
+        for override, step in mapping.items():
+            for report in (None, {}, [], {"scope": "WRONG", "pass": True, "result": "PASS_STATIC_ONLY"}):
+                with self.subTest(step=step, report=report), tempfile.TemporaryDirectory() as td:
+                    root = make_minimal_project(Path(td) / "project")
+                    before = compute_tree_digest(root)
+                    result = run_pipeline(root, runner=FakeRunner(**{override: (0, report)}))
+                    self.assertFalse(result["ok"])
+                    assert_six_points(self, result, root, step, "invalid report", before)
+
+    def test_12_zero_or_inconsistent_validation_counts_are_rejected(self):
+        mutations = [{"checks_total": 0, "checks_passed": 0}, {"checks_passed": 1787},
+                     {"checks_total": True, "checks_passed": True}, {"offline_unit_tests_total": 0},
+                     {"offline_unit_tests_total": 7}, {"offline_contract_test_errors": 1},
+                     {"scope": "WRONG"}, {"errors": ["synthetic"]}]
+        for mutation in mutations:
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as td:
+                root = make_minimal_project(Path(td) / "project")
+                report = {**bundle_report(), **mutation}
+                result = run_pipeline(root, runner=FakeRunner(validate_bundle=(0, report)))
+                assert_six_points(self, result, root, "input_consistency", "invalid report")
+
+    def test_13_exit_zero_without_nonzero_test_success_is_rejected(self):
+        for summary in ("", "OK", "Ran 0 tests\nOK", "Ran 2 tests\nOK (skipped=2)",
+                        "Ran 2 tests\nFAILED\nOK", "Ran 2 tests\nOK\nRan 3 tests\nOK"):
+            with self.subTest(summary=summary), tempfile.TemporaryDirectory() as td:
+                root = make_minimal_project(Path(td) / "project")
+                result = run_pipeline(root, runner=FakeRunner(unittest=(0, "", summary)))
+                self.assertFalse(result["ok"])
+                assert_six_points(self, result, root, "tests", "unittest")
+
+    def test_14_determinism_report_must_prove_nonzero_checks(self):
+        for mutation in ({"checked_files": 0}, {"hashes": {}}, {"validation_exit_codes": [0, 1, 0]},
+                         {"release_tree_file_count": 0}, {"validation_output_deterministic": False}):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as td:
+                root = make_minimal_project(Path(td) / "project")
+                result = run_pipeline(root, runner=FakeRunner(determinism=(0, {**determinism_report(), **mutation})))
+                assert_six_points(self, result, root, "determinism", "invalid report")
+
+    def test_15_release_report_must_prove_file_count_and_digest(self):
+        for mutation in ({"files_total": 0, "files_checked": 0}, {"files_checked": 1},
+                         {"files_total": 3, "files_checked": 3}, {"sha256": "0" * 64}):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as td:
+                root = make_minimal_project(Path(td) / "project")
+                class MutatedRunner(FakeRunner):
+                    def run_validate_release(self, zip_path):
+                        code, report = super().run_validate_release(zip_path)
+                        return code, {**report, **mutation}
+                result = run_pipeline(root, runner=MutatedRunner())
+                assert_six_points(self, result, root, "validate_release", "invalid report")
+
+    def test_16_build_report_must_match_actual_zip(self):
+        for mutation in ({"scope": "WRONG"}, {"files": 0}, {"files": 3}, {"sha256": None}):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as td:
+                root = make_minimal_project(Path(td) / "project")
+                class MutatedRunner(FakeRunner):
+                    def build_release(self, root, output):
+                        return {**super().build_release(root, output), **mutation}
+                result = run_pipeline(root, runner=MutatedRunner())
+                assert_six_points(self, result, root, "build_staging", "invalid report")
 
 
 if __name__ == "__main__":

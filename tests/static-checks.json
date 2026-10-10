@@ -1,5 +1,5 @@
 {
-  "version": "2.8.0-rc1",
+  "version": "2.8.0-rc2",
   "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
   "result": "PASS_STATIC_ONLY",
   "checks_total": 1816,
@@ -8729,6 +8729,11 @@
       "detail": ""
     },
     {
+      "id": "thinking_tools:reviewed_change:tests/test_contracts.py",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "thinking_tools:reviewed_change:tools/check_determinism.py",
       "passed": true,
       "detail": ""
@@ -9070,11 +9075,6 @@
     },
     {
       "id": "thinking_tools:unchanged:tests/judgment-evaluation-cases.json",
-      "passed": true,
-      "detail": ""
-    },
-    {
-      "id": "thinking_tools:unchanged:tests/test_contracts.py",
       "passed": true,
       "detail": ""
     },

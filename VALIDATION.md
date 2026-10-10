@@ -1,4 +1,40 @@
-# 验证状态 · 2.8.0-rc1（PRE-GATE）
+## v3.6.2 / 2.8.0-rc2 · 未部署前工具修订（2026-10-10）
+
+在 v3.6.1 的 116 个未提交修改之上修复二进制临时写入与执行 agent 模式选择两项问题。基线仍为 35d9193fa1b71fd9cd05c151e774fd6338b0e4e2，分支 codex/v3.6。动手前保存完整 git diff --binary，SHA256 a16fb59b9e2403c753ebfe027592b6db47052f8bcc47f221132c3538c569117c，与交接的 v3.6.1 补丁逐字节相同。仓库内仅手工修改 tools/sync_git.py、tests/test_git_sync.py、CHANGELOG.md 和本文；生成内容仅由工具更新。版本、提示词、权限契约、评分输入及判据保持不变。
+
+macOS 26.4.1 arm64 + Python 3.14.7，使用既有 /private/tmp/crm-v341-venv；检查显式设置 PATH=/private/tmp/crm-v341-venv/bin:$PATH 与 TMPDIR=/private/tmp，未安装依赖。全量 pytest -q -rs 为 392 passed、0 failed、1 skipped、1504 subtests passed（50.35 秒），1 条既有重复 ZIP 条目负例 UserWarning。唯一 skip 为真实 Windows junction（POSIX: no junction concept）。本轮新增 3 个测试方法均无平台跳过，14 个子用例全部执行；全量检查显式用 CRM_GATE_GOLD_DIR 指向本轮交付评分副本，评分承诺和内容边界测试实际执行。
+
+回归先在未修实现上实跑：捕获到 8 个失败子用例（两个打开标志分支及六个写损坏分支），日志保留；修复后定向检查 3 passed / 14 subtests passed。实际临时字节摘要在替换前核对，不依赖写入返回值或事后账本；不一致抛 SyncError，原目标或目标不存在状态保持，临时文件保留。成功路径对空数据、混合换行、全部 256 种字节执行逐字节断言。v3.6.1 的权限及 umask 断言未修改。
+
+静态校验 1816/1816（PASS_STATIC_ONLY、errors=[]），137 offline unit tests，root lock 508；check_workbuddy pass=true/errors=[]，check_thinking_tools 251/251（PASS_STATIC_ONLY）。补写本节与 CHANGELOG 实测记录后重建并复核静态一致性，最终重建零差异、发布 ZIP 与解包逐字节检查的数字及 SHA256 记录在 /private/tmp/crm-v362-handoff/Mac记录/verification.json 和各项日志；包自身 SHA256 只记录在仓库外交付材料。
+
+Runbook 改为两个拒绝占位值的显式赋值，由执行 agent 按对话批准内容填写，回显后等待用户确认再继续。5B、5C 完整代码及生成全新演练根的逻辑与 v3.6.1 逐字节一致，三处 MAIN_SHA 保留。Mac 文本核对 24/24；首轮检查因 5D 赋值说明的措辞未匹配而报 1 项失败，调整说明后复核通过，日志保留。这些代码只在 Mac 上人工审查过，未在 PS 5.1 实测；静态检查不替代 Windows、PS 5.1 故障演练或 WorkBuddy 宿主验收。生产写仍只产人工评审需求，本轮未提交、推送或部署。
+
+## v3.6.1 / 2.8.0-rc2 · 未部署前工具修订（2026-10-10）
+
+在 v3.6 的 116 个未提交修改之上修复独立复核的四项问题，版本保持 2.8.0-rc2。基线仍为 35d9193fa1b71fd9cd05c151e774fd6338b0e4e2，分支 codex/v3.6。开始前保存完整二进制补丁，SHA256 为 f2545a58f9e9d89dac20128a202d63a3a372682ba82d0dce60df36b2d1a2b0e2，与持久 v3.6 交付一致。只手工修改 tools/sync_git.py、tests/test_git_sync.py、tests/test_v35_regressions.py 及本次 CHANGELOG/VALIDATION 记录；生成文件仅由构建器/校验器写入，仓库外另修 P1 值班机说明。
+
+macOS + Python 3.14.7，使用既有 /private/tmp/crm-v341-venv，所有检查显式设置 PATH 与 TMPDIR=/private/tmp。完整 pytest 389 passed、0 failed、1 skipped、1490 subtests passed（51.01 秒），1 条既有重复 ZIP 条目负例 UserWarning。唯一 skip 为真实 Windows junction（POSIX: no junction concept）。11 个新增测试方法覆盖原有 0755/0644、读写位保留、新文件 umask、远端仅改 100755 后再规划收敛、移除执行位及失败回滚，JSON bool/int/float 与嵌套比较、单侧变更/非对象根、暂存冲突保护、评分目录环境变量和文档默认值。POSIX 权限专属用例在 Windows 明确 skip，因为 Windows 不提供对应执行位/umask 语义。
+
+静态校验 1816/1816（PASS_STATIC_ONLY、errors=[]），137 offline unit tests，root lock 508；check_workbuddy pass=true/errors=[]，check_thinking_tools 251/251（PASS_STATIC_ONLY）。manifest 仍为排序无重复的 517 项。最终重建零差异、发布与解包 517 文件逐字节核验、评分目录显式覆盖检查和 ZIP SHA256，以仓库外 Mac记录/verification.json 及各项日志为准；ZIP 自身哈希不写入载荷。
+
+首轮定向检查的锁未重建失败、全量检查的新测试夹具受宿主 umask 影响失败，以及后续再次规划时合成仓库遗漏 reports/ 排除的失败日志均保留。补齐夹具初始权限和与项目一致的排除规则后，新修复定向检查 13 passed / 43 subtests passed，全量结果如上；未放宽旧断言。
+
+评分材料 7 个文件与持久交付逐字节一致，6 项 SHA256 承诺匹配。P1 代码只在 Mac 上人工审查过，未在 PS 5.1 实测；REAL/DRILL 的七路径断言、故障恢复与客户端跳过条件须由值班机实测。Windows、WorkBuddy 加载/缓存/审计与关口仍待执行；本轮未提交、推送或部署。提示词与判定规则冻结不变，生产写仍仅产人工评审需求。
+
+## v3.6 / 2.8.0-rc2 · Mac 修复端实测（2026-10-10）
+
+基于 main=35d9193fa1b71fd9cd05c151e774fd6338b0e4e2，工作分支 codex/v3.6；首次关口前按 R-01/R-05 修订并重新冻结为 2.8.0-rc2。macOS + Python 3.14.7，使用既有 /private/tmp/crm-v341-venv，检查显式设置 PATH 与 TMPDIR=/private/tmp，未安装依赖。
+
+最终完整 pytest 378 passed、0 failed、1 skipped、1463 subtests passed，1 条 ZIP 重复条目负例的 UserWarning；唯一 skip 仍为真实 Windows junction 测试（POSIX: no junction concept），Python 3.11 重解析点回退与不存在目标已由 Mac 元数据负例覆盖，Windows 实测待执行。test_version_consistency 单独重跑 5 passed；check_workbuddy pass=true/errors=[]；静态校验 1816/1816（PASS_STATIC_ONLY、errors=[]），137 offline unit tests、root lock 508，manifest 517。全量 pytest 前后 /private/tmp/crm-precommit.* 为 66→66，未新增、未处理既有目录。
+
+R-02 真实提交故障注入覆盖重建前后 generated file/lock 的 hash-object、文件枚举和排序失败，确认 HEAD/暂存区/工作树不变；R-04/R-09 覆盖独占临时文件、固定名用户文件/链接、回滚未完成留备份，以及本地未提交修改/删除/未跟踪同名文件/暂存修改保护。R-08 覆盖空报告/错误 scope/零测试/不一致计数/ZIP 实际哈希；R-10 覆盖缺键与 null；R-11 覆盖禁止类别混合大小写。R-12 用精确审核哈希及重建完整历史字节哈希限定只有两行恒真断言被移除；未削弱其余断言。
+
+公开/独立评分协议的硬规则逐字一致，评分协议承诺 e72cabce17dffa847213add19d7c0ccf93a47478ab9ac1c17b015d27df5340cf，案例答案及 routing-assertions 原字节保持。凭据/环境变量禁读覆盖所有任务与渲染入口，自主公开检索继续无需逐次审批，生产写操作只产人工评审需求。除 R-01/R-05 外不改提示词、案例和判据。
+
+最终两次重建零差异、打包/解包校验、ZIP SHA256 和统一流水线的实际结果另留仓库外交付 FINDINGS.md 与日志，避免把外层包自身哈希写入载荷。Windows 10 值班机复核、PS 5.1 三种安装故障演练、WorkBuddy 加载/版本往返/工具审计/WB07/WB09H/18 次关口均待执行；Mac 未提交、推送或部署。
+
+# 历史验证状态 · 2.8.0-rc1（PRE-GATE，以下保留原实测记录）
 
 ## v3.5.2 Mac 工具修订复核（2026-10-10）
 

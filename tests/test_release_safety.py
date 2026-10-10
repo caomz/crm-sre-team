@@ -50,6 +50,17 @@ class ReleaseSafetyTests(unittest.TestCase):
         build_release.build_release(self.root, self.zip)
         self.assertTrue(validate_release.validate(self.root, self.zip)["pass"])
 
+    def test_forbidden_release_categories_are_casefolded_without_renaming_paths(self):
+        for rel in ("REPORTS/incident.json", ".GIT/config.json", ".ENV.production.json",
+                    "a/.Env.local", "NODE_Modules/p/module.py", "a/__PyCache__/m.py",
+                    "DIST/archive.json", "Incident-Evidence/note.md", "ID_RsA.json", "id_ED25519.txt"):
+            with self.subTest(path=rel):
+                self.assertFalse(release_rules.safe_relative(rel))
+        self.assertTrue(release_rules.safe_relative("docs/Guide.JSON"))
+        manifest = json.loads((self.root / "release-manifest.json").read_text(encoding="utf-8"))
+        original_names = manifest["files"][:]
+        self.assertEqual(release_rules.manifest_names(self.root), original_names)
+
     def test_02_sensitive_workspace_files_never_added(self):
         names = [".env", ".env.local", ".venv/lib/a.py", "incident-evidence/sample.log", "local-copy.bak", "tools/unlisted.py", "skills/stability-director/references/unlisted.md"]
         for name in names:

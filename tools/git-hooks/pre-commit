@@ -95,19 +95,41 @@ git checkout-index -a --prefix="$export_dir/"
 cd "$export_dir"
 
 owned_find() {
-    find agents skills templates manual-mode individual-packages -type f 2>/dev/null || true
+    for owned_dir in agents skills templates manual-mode individual-packages; do
+        if [ -e "$owned_dir" ] || [ -L "$owned_dir" ]; then
+            find "$owned_dir" -type f || return 1
+        fi
+    done
 }
 
 hashes() {
-    owned_find | LC_ALL=C sort | while IFS= read -r f; do
-        printf '%s  %s\n' "$(git hash-object -- "$f")" "$f"
-    done
-    if [ -f prompt-bundles.lock ]; then
-        printf '%s  %s\n' "$(git hash-object -- prompt-bundles.lock)" "prompt-bundles.lock"
+    # Keep enumeration and sorting out of pipelines: POSIX sh has no pipefail.
+    if ! owned_find > "$tmp_base/owned-raw.txt"; then
+        echo "pre-commit: FAILED - build-owned file enumeration failed; commit aborted." >&2
+        return 1
     fi
+    if ! LC_ALL=C sort "$tmp_base/owned-raw.txt" > "$tmp_base/owned-sorted.txt"; then
+        echo "pre-commit: FAILED - build-owned file sorting failed; commit aborted." >&2
+        return 1
+    fi
+    while IFS= read -r f; do
+        if ! file_hash=$(git hash-object -- "$f") || [ -z "$file_hash" ]; then
+            echo "pre-commit: FAILED - git hash-object failed for $f; commit aborted." >&2
+            return 1
+        fi
+        printf '%s  %s\n' "$file_hash" "$f" || return 1
+    done < "$tmp_base/owned-sorted.txt"
+    if [ -f prompt-bundles.lock ]; then
+        if ! file_hash=$(git hash-object -- prompt-bundles.lock) || [ -z "$file_hash" ]; then
+            echo "pre-commit: FAILED - git hash-object failed for prompt-bundles.lock; commit aborted." >&2
+            return 1
+        fi
+        printf '%s  %s\n' "$file_hash" "prompt-bundles.lock" || return 1
+    fi
+    return 0
 }
 
-hashes > "$tmp_base/before.txt"
+hashes > "$tmp_base/before.txt" || exit 1
 
 # Build from the exported staged tree; --root keeps every write inside it.
 # Run the STAGED copy of tools/build_bundle.py from the export dir (not the
@@ -120,7 +142,7 @@ if ! $PY "$export_dir/tools/build_bundle.py" --root "$export_dir" >/dev/null 2>&
     exit 1
 fi
 
-hashes > "$tmp_base/after.txt"
+hashes > "$tmp_base/after.txt" || exit 1
 
 if ! cmp -s "$tmp_base/before.txt" "$tmp_base/after.txt"; then
     echo "pre-commit: FAILED - staged build-owned outputs are stale." >&2

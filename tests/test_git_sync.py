@@ -5,13 +5,17 @@ build-owned output protection, JSON structural merge and rollback. It does not
 prove anything about the real origin remote or any runtime privilege.
 """
 from __future__ import annotations
+from contextlib import contextmanager
 import importlib.util
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
+import stat
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("sync_git_under_test", ROOT / "tools/sync_git.py")
@@ -34,6 +38,8 @@ def _can_symlink() -> bool:
 
 requires_real_symlink = unittest.skipUnless(
     _can_symlink(), "SKIPPED_CAPABILITY: real filesystem symlinks unavailable on this host")
+requires_posix_mode = unittest.skipUnless(
+    os.name == "posix", "SKIPPED_CAPABILITY: Windows does not implement POSIX executable bits/umask")
 
 
 def git(root: Path, *args: str) -> str:
@@ -397,9 +403,11 @@ class SyncGuardTests(unittest.TestCase):
         except (OSError, subprocess.CalledProcessError):
             self.skipTest("SKIPPED_CAPABILITY: junction creation not permitted")
         try:
-            if os.path.isjunction(junction):
-                with self.assertRaises(sync.SyncError):
-                    sync.guard_path(self.clone, "linked/target.md")
+            self.assertTrue(junction.is_dir(), "mklink succeeded but junction is absent")
+            self.assertTrue(sync.release_rules.is_link(junction), "junction was not identified as a reparse point")
+            for rel in ("linked/target.md", "linked/nonexistent.md"):
+                with self.subTest(path=rel), self.assertRaises(sync.SyncError):
+                    sync.guard_path(self.clone, rel)
         finally:
             if junction.is_dir():
                 junction.rmdir()
@@ -558,6 +566,369 @@ class SyncGuardTests(unittest.TestCase):
         self.assertFalse(sync.is_link_like(self.clone))
         self.assertFalse(sync.is_link_like(self.base))
         self.assertFalse(sync.is_link_like(self.clone / "policy-source"))
+
+    def assert_uncommitted_remote_conflict(self, rel):
+        head = git(self.clone, "rev-parse", "HEAD")
+        index = git(self.clone, "write-tree")
+        before = {p.relative_to(self.clone).as_posix(): p.read_bytes()
+                  for p in sorted(self.clone.rglob("*")) if p.is_file() and ".git" not in p.parts}
+        plan = sync.build_plan(self.clone, "HEAD", "origin/main")
+        plan["plan_id"] = sync.plan_id_of(plan)
+        self.assertIn({"path": rel, "reason": "LOCAL_UNCOMMITTED_CHANGE"}, plan["conflicts"])
+        action = next(a for a in plan["actions"] if a["path"] == rel)
+        self.assertEqual(action["action"], "BLOCKED_CONFLICT_REQUIRES_RESOLUTION")
+        for field in ("head_state", "index_state", "worktree_state", "remote_state"):
+            self.assertIn(field, action)
+        with self.assertRaises(sync.SyncError):
+            sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
+        self.assertEqual(head, git(self.clone, "rev-parse", "HEAD"))
+        self.assertEqual(index, git(self.clone, "write-tree"))
+        self.assertEqual(before, {p.relative_to(self.clone).as_posix(): p.read_bytes()
+                                 for p in sorted(self.clone.rglob("*")) if p.is_file() and ".git" not in p.parts})
+
+    def test_41_remote_change_blocks_existing_unstaged_modification(self):
+        self._remote_edit("dirty-remote", "remote\n")
+        (self.clone / "VERSION").write_text("user work\n", encoding="utf-8")
+        self.assert_uncommitted_remote_conflict("VERSION")
+
+    def test_42_deleted_worktree_path_is_dirty_and_blocks_remote_restore(self):
+        self._remote_edit("deleted-remote", "remote\n")
+        target = self.clone / "VERSION"
+        self.assertTrue(target.is_file())
+        target.unlink()  # Synthetic deletion input, never the real project.
+        self.assertIn("VERSION", sync.dirty_paths(self.clone))
+        self.assert_uncommitted_remote_conflict("VERSION")
+
+    def test_43_untracked_same_name_as_new_remote_file_is_blocked(self):
+        other = self._remote_edit("untracked-remote", "remote\n")
+        (other / "new.md").write_text("remote new\n", encoding="utf-8")
+        git(other, "add", "new.md")
+        git(other, "commit", "-m", "remote new file")
+        git(other, "push", "origin", "main")
+        git(self.clone, "fetch", "origin")
+        (self.clone / "new.md").write_text("user new\n", encoding="utf-8")
+        self.assert_uncommitted_remote_conflict("new.md")
+
+    def test_44_staged_change_blocks_even_if_worktree_matches_head(self):
+        self._remote_edit("staged-remote", "remote\n")
+        target = self.clone / "VERSION"
+        before = target.read_bytes()
+        target.write_text("staged user work\n", encoding="utf-8")
+        git(self.clone, "add", "VERSION")
+        target.write_bytes(before)
+        self.assert_uncommitted_remote_conflict("VERSION")
+
+    def test_45_index_change_after_plan_blocks_apply_without_clobber(self):
+        self._remote_edit("index-drift", "remote\n")
+        plan = sync.build_plan(self.clone, "HEAD", "origin/main")
+        plan["plan_id"] = sync.plan_id_of(plan)
+        target = self.clone / "VERSION"
+        before = target.read_bytes()
+        target.write_text("staged only\n", encoding="utf-8")
+        git(self.clone, "add", "VERSION")
+        target.write_bytes(before)
+        index = git(self.clone, "write-tree")
+        with self.assertRaisesRegex(sync.SyncError, "Index changed after planning"):
+            sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
+        self.assertEqual(target.read_bytes(), before)
+        self.assertEqual(git(self.clone, "write-tree"), index)
+
+    def test_46_fixed_staging_and_restore_names_are_never_overwritten(self):
+        self._remote_edit("fixed-files", "remote\n")
+        sentinels = [self.clone / "VERSION.sync-part", self.clone / "VERSION.sync-restore"]
+        for target in sentinels:
+            target.write_bytes(b"user sentinel")
+        plan = sync.build_plan(self.clone, "HEAD", "origin/main")
+        plan["plan_id"] = sync.plan_id_of(plan)
+        sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
+        self.assertEqual((self.clone / "VERSION").read_bytes(), b"remote\n")
+        for target in sentinels:
+            self.assertEqual(target.read_bytes(), b"user sentinel")
+
+    @requires_real_symlink
+    def test_47_fixed_staging_links_created_after_plan_cannot_escape(self):
+        self._remote_edit("fixed-links", "remote\n")
+        plan = sync.build_plan(self.clone, "HEAD", "origin/main")
+        plan["plan_id"] = sync.plan_id_of(plan)
+        outside = self.base / "outside-sentinel"
+        outside.write_bytes(b"outside unchanged")
+        for name in ("VERSION.sync-part", "VERSION.sync-restore"):
+            (self.clone / name).symlink_to(outside)
+        sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
+        self.assertEqual(outside.read_bytes(), b"outside unchanged")
+        self.assertTrue((self.clone / "VERSION.sync-part").is_symlink())
+
+    def test_48_incomplete_rollback_preserves_original_backup(self):
+        other = self._remote_edit("rollback-fault", "remote\n")
+        (other / "settings.json").write_text('{"remote":true}\n', encoding="utf-8")
+        git(other, "commit", "-am", "remote settings")
+        git(other, "push", "origin", "main")
+        git(self.clone, "fetch", "origin")
+        before = (self.clone / "VERSION").read_bytes()
+        plan = sync.build_plan(self.clone, "HEAD", "origin/main")
+        plan["plan_id"] = sync.plan_id_of(plan)
+        original = sync.atomic_replace
+        calls = []
+        def fail_after_first(*args):
+            calls.append(args[1])
+            if len(calls) >= 2:
+                raise OSError("synthetic disk failure on apply and restore")
+            return original(*args)
+        with patch.object(sync, "atomic_replace", side_effect=fail_after_first):
+            with self.assertRaisesRegex(sync.SyncError, "rollback incomplete.*backup retained"):
+                sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
+        backups = list((self.clone / "reports").glob("sync-backup-*"))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual((backups[0] / "VERSION").read_bytes(), before)
+        self.assertEqual(calls, ["VERSION", "settings.json", "VERSION"])
+
+    def test_49_python_311_reparse_fallback_rejects_missing_descendant(self):
+        junction = self.clone / "reparse"
+        junction.mkdir()
+        original = Path.lstat
+        def lstat(path, *args, **kwargs):
+            if path == junction:
+                return SimpleNamespace(st_mode=stat.S_IFDIR, st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT)
+            return original(path, *args, **kwargs)
+        with patch.object(Path, "is_junction", return_value=False, create=True), patch.object(Path, "lstat", lstat):
+            self.assertTrue(sync.is_link_like(junction))
+            with self.assertRaises(sync.SyncError):
+                sync.guard_path(self.clone, "reparse/nonexistent.md")
+
+    def test_50_json_missing_keys_are_distinct_from_null(self):
+        cases = [
+            ({"a": 1, "b": 2}, {"b": 2}, {"a": 1, "b": 3}, {"b": 3}, []),
+            ({"a": 1}, {}, {"a": None}, None, ["a"]),
+            ({"a": None}, {}, {"a": None}, {}, []),
+            ({"a": 1}, {}, {"a": 2}, None, ["a"]),
+            ({"a": 1}, {}, {}, {}, []),
+            ({}, {"a": None}, {}, {"a": None}, []),
+            ({}, {"a": None}, {"a": 1}, None, ["a"]),
+            ({"outer": {"a": None, "b": 1}}, {"outer": {"b": 1}},
+             {"outer": {"a": None, "b": 2}}, {"outer": {"b": 2}}, []),
+        ]
+        for base, local, remote, expected, errors in cases:
+            for left, right in ((local, remote), (remote, local)):
+                with self.subTest(base=base, local=left, remote=right):
+                    merged, conflicts = sync.three_way_merge_json(*(json.dumps(v) for v in (base, left, right)))
+                    self.assertEqual(conflicts, errors)
+                    if errors:
+                        self.assertIsNone(merged)
+                    else:
+                        self.assertEqual(json.loads(merged), expected)
+
+    def test_51_dirty_rename_includes_original_and_destination(self):
+        git(self.clone, "mv", "VERSION", "RENAMED.md")
+        self.assertIn("VERSION", sync.dirty_paths(self.clone))
+        self.assertIn("RENAMED.md", sync.dirty_paths(self.clone))
+
+    @requires_posix_mode
+    def test_52_atomic_replace_preserves_existing_read_write_bits(self):
+        target = self.clone / "VERSION"
+        for before, remote, expected in ((0o755, "100755", 0o755),
+                                         (0o644, "100644", 0o644),
+                                         (0o640, "100755", 0o751),
+                                         (0o775, "100644", 0o664)):
+            with self.subTest(before=oct(before), remote=remote):
+                target.chmod(before)
+                sync.atomic_replace(self.clone, "VERSION", b"restored\n", sync.digest_file(target), remote)
+                self.assertEqual(stat.S_IMODE(target.stat().st_mode), expected)
+                self.assertEqual(target.read_bytes(), b"restored\n")
+
+    @requires_posix_mode
+    def test_53_new_file_permissions_follow_umask(self):
+        for mask, expected in ((0o022, 0o644), (0o027, 0o640), (0o077, 0o600)):
+            with self.subTest(umask=oct(mask)):
+                old_mask = os.umask(mask)
+                try:
+                    rel = f"new-{mask}.txt"
+                    sync.atomic_replace(self.clone, rel, b"new\n", None, "100644")
+                finally:
+                    os.umask(old_mask)
+                self.assertEqual(stat.S_IMODE((self.clone / rel).stat().st_mode), expected)
+
+    @requires_posix_mode
+    def test_54_remote_mode_only_restore_converges_without_staging(self):
+        # Match this project's reports/ exclusion in the synthetic repository.
+        with (self.clone / ".git/info/exclude").open("a", encoding="utf-8") as handle:
+            handle.write("\n/reports/\n")
+        other = self.base / "mode-remote"
+        subprocess.run(["git", "clone", str(self.origin), str(other)], check=True, capture_output=True)
+        git(other, "config", "user.email", "mode@test.invalid")
+        git(other, "config", "user.name", "mode-test")
+        git(self.clone, "config", "core.filemode", "true")
+        git(other, "update-index", "--chmod=+x", "VERSION")
+        git(other, "commit", "-m", "remote executable bit only")
+        git(other, "push", "origin", "main")
+        git(self.clone, "fetch", "origin")
+        (self.clone / "VERSION").chmod(0o644)
+        index = git(self.clone, "write-tree")
+        plan = sync.build_plan(self.clone, "HEAD", "origin/main")
+        plan["plan_id"] = sync.plan_id_of(plan)
+        result = sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
+        self.assertEqual(result["written"], ["VERSION"])
+        self.assertEqual(stat.S_IMODE((self.clone / "VERSION").stat().st_mode), 0o755)
+        self.assertEqual(index, git(self.clone, "write-tree"))
+        again = sync.build_plan(self.clone, "HEAD", "origin/main")
+        self.assertEqual(again["conflicts"], [])
+        self.assertEqual(next(a["action"] for a in again["actions"] if a["path"] == "VERSION"),
+                         "NOOP_ALREADY_IDENTICAL")
+        again["plan_id"] = sync.plan_id_of(again)
+        self.assertEqual(sync.apply_plan(self.clone, again, again["plan_id"], "origin/main", "HEAD")["written"], [])
+
+    @requires_posix_mode
+    def test_55_remote_nonexecutable_mode_removes_execute_bits(self):
+        target = self.clone / "VERSION"
+        target.chmod(0o755)
+        git(self.clone, "add", "VERSION")
+        git(self.clone, "commit", "-m", "executable baseline")
+        git(self.clone, "push", "origin", "main")
+        other = self._remote_edit("nonexec-remote", "new remote\n")
+        git(other, "update-index", "--chmod=-x", "VERSION")
+        git(other, "commit", "-m", "remote removes executable bit")
+        git(other, "push", "origin", "main")
+        git(self.clone, "fetch", "origin")
+        plan = sync.build_plan(self.clone, "HEAD", "origin/main")
+        plan["plan_id"] = sync.plan_id_of(plan)
+        sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
+        self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o644)
+        self.assertEqual(target.read_bytes(), b"new remote\n")
+
+    @requires_posix_mode
+    def test_56_failed_apply_restores_original_permissions_and_bytes(self):
+        other = self._remote_edit("mode-rollback", "remote\n")
+        git(other, "update-index", "--chmod=+x", "VERSION")
+        (other / "settings.json").write_text('{"remote":true}\n', encoding="utf-8")
+        git(other, "add", "settings.json")
+        git(other, "commit", "-m", "mode and settings")
+        git(other, "push", "origin", "main")
+        git(self.clone, "fetch", "origin")
+        target = self.clone / "VERSION"
+        target.chmod(0o640)
+        before = target.read_bytes()
+        plan = sync.build_plan(self.clone, "HEAD", "origin/main")
+        plan["plan_id"] = sync.plan_id_of(plan)
+        original = sync.atomic_replace
+        calls = []
+        def fail_on_second(*args):
+            calls.append(args[1])
+            if len(calls) == 2:
+                self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o751)
+                raise OSError("synthetic second-file failure")
+            return original(*args)
+        with patch.object(sync, "atomic_replace", side_effect=fail_on_second):
+            with self.assertRaisesRegex(sync.SyncError, "was rolled back"):
+                sync.apply_plan(self.clone, plan, plan["plan_id"], "origin/main", "HEAD")
+        self.assertEqual(calls, ["VERSION", "settings.json", "VERSION"])
+        self.assertEqual(target.read_bytes(), before)
+        self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o640)
+
+    def test_57_json_type_changes_conflict_recursively(self):
+        for before, left, right, key in (
+            ({"a": 1}, {"a": True}, {"a": 2}, "a"),
+            ({"a": 1}, {"a": 1.0}, {"a": 2}, "a"),
+            ({"a": 0}, {"a": True}, {"a": 1}, "a"),
+            ({"a": 0}, {"a": 1.0}, {"a": 1}, "a"),
+            ({"a": {"b": 1}}, {"a": {"b": True}}, {"a": {"b": 2}}, "a.b"),
+            ({"a": [{"b": 1}]}, {"a": [{"b": 1.0}]}, {"a": [{"b": 2}]}, "a"),
+        ):
+            for local, remote in ((left, right), (right, left)):
+                with self.subTest(base=before, local=local, remote=remote):
+                    merged, conflicts = sync.three_way_merge_json(*(json.dumps(v) for v in (before, local, remote)))
+                    self.assertIsNone(merged)
+                    self.assertEqual(conflicts, [key])
+
+    def test_58_json_one_sided_type_change_is_preserved(self):
+        for value in (True, 1.0):
+            for local, remote in ((value, 1), (1, value)):
+                with self.subTest(local=local, remote=remote):
+                    merged, conflicts = sync.three_way_merge_json(
+                        '{"a":1}', json.dumps({"a": local}), json.dumps({"a": remote}))
+                    self.assertEqual(conflicts, [])
+                    self.assertIs(type(json.loads(merged)["a"]), type(value))
+
+    def test_59_json_nonobject_roots_use_strict_equality(self):
+        for left, right in (("true", "1"), ("1.0", "1"), ("[true]", "[1]"), ("[{\"a\":1.0}]", "[{\"a\":1}]")):
+            with self.subTest(left=left, right=right):
+                self.assertEqual(sync.three_way_merge_json("[]", left, right), (None, ["ROOT_NOT_OBJECT"]))
+        self.assertEqual(sync.three_way_merge_json("[]", "[true]", "[true]"), ("[true]", []))
+
+    def test_60_matching_remote_does_not_bypass_staged_conflict(self):
+        self._remote_edit("identical-staged", "remote\n")
+        (self.clone / "VERSION").write_text("remote\n", encoding="utf-8")
+        git(self.clone, "add", "VERSION")
+        self.assert_uncommitted_remote_conflict("VERSION")
+
+    def test_61_atomic_replace_uses_binary_exclusive_nofollow_flags(self):
+        target = self.clone / "VERSION"
+        native_open = os.open
+        native_binary = getattr(os, "O_BINARY", 0)
+        native_nofollow = getattr(os, "O_NOFOLLOW", 0)
+        # Exercise optional flags even on hosts that do not expose both of them.
+        for emulate in (False, True):
+            with self.subTest(emulate_missing_flags=emulate):
+                binary = native_binary or ((1 << 28) if emulate else 0)
+                nofollow = native_nofollow or ((1 << 29) if emulate else 0)
+                synthetic = (binary if not native_binary else 0) | (nofollow if not native_nofollow else 0)
+
+                def open_native(path, flags, mode):
+                    return native_open(path, flags & ~synthetic, mode)
+
+                with patch.object(sync.os, "O_BINARY", binary, create=True), \
+                     patch.object(sync.os, "O_NOFOLLOW", nofollow, create=True), \
+                     patch.object(sync.os, "open", side_effect=open_native) as opened:
+                    sync.atomic_replace(self.clone, "VERSION", b"new\n", sync.digest_file(target))
+                opened.assert_called_once()
+                staging, flags, _ = opened.call_args.args
+                self.assertEqual(staging.parent, target.parent)
+                for required in (os.O_CREAT, os.O_EXCL, os.O_WRONLY, binary, nofollow):
+                    self.assertEqual(flags & required, required)
+
+    def test_62_corrupted_staging_is_retained_without_replacing_target(self):
+        data = b"first\nsecond\n" + bytes(range(256)) * 8
+        native_fdopen = os.fdopen
+        for label, corrupted in (("crlf", data.replace(b"\n", b"\r\n")),
+                                 ("truncated", data[:-1]),
+                                 ("changed", b"X" + data[1:])):
+            for exists in (False, True):
+                with self.subTest(corruption=label, existing_target=exists):
+                    rel = f"payload-{label}-{exists}.bin"
+                    target = self.clone / rel
+                    before = b"original\n"
+                    if exists:
+                        target.write_bytes(before)
+
+                    @contextmanager
+                    def corrupt_fdopen(fd, mode):
+                        with native_fdopen(fd, mode) as handle:
+                            native_write = handle.write
+                            with patch.object(handle, "write", side_effect=lambda _: native_write(corrupted)):
+                                yield handle
+
+                    with patch.object(sync.os, "fdopen", side_effect=corrupt_fdopen), \
+                         patch.object(sync.os, "replace", wraps=os.replace) as replaced:
+                        with self.assertRaisesRegex(sync.SyncError, "digest mismatch.*temporary file retained"):
+                            sync.atomic_replace(self.clone, rel, data, sync.digest_file(target))
+                    replaced.assert_not_called()
+                    if exists:
+                        self.assertEqual(target.read_bytes(), before)
+                    else:
+                        self.assertFalse(target.exists())
+                    staging = list(self.clone.glob(rel + ".sync-*"))
+                    self.assertEqual(len(staging), 1)
+                    self.assertEqual(staging[0].read_bytes(), corrupted)
+
+    def test_63_atomic_replace_preserves_exact_payload_bytes(self):
+        for index, data in enumerate((b"", b"LF\nCRLF\r\n\x1a\x00\xff", bytes(range(256)) * 8)):
+            for exists in (False, True):
+                with self.subTest(payload=index, existing_target=exists):
+                    rel = f"exact-{index}-{exists}.bin"
+                    target = self.clone / rel
+                    if exists:
+                        target.write_bytes(b"original\n")
+                    sync.atomic_replace(self.clone, rel, data, sync.digest_file(target))
+                    self.assertEqual(target.read_bytes(), data)
+                    self.assertEqual(list(self.clone.glob(rel + ".sync-*")), [])
 
 
 if __name__ == "__main__":

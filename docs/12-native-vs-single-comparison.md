@@ -4,7 +4,8 @@
 
 ## 修订记录（均在首次运行之前，运行记录为零）
 
-- 修订后重新冻结：判定规则、评分锚点、案例定义与重跑规则自本次修订起再次锁定，直至第一次对照运行完成。
+- 2026-10-10（v3.6 / 2.8.0-rc2，首次运行仍为零）：增加正确性最低条件与严重越界否决；与独立评分协议同步，更新 SHA256 承诺；凭据/环境变量禁读统一到任何任务。修订后重新冻结。
+- 2026-10-10 rc2 修订后重新冻结：判定规则、评分锚点、案例定义与重跑规则自本次修订起再次锁定，直至第一次对照运行完成。
 
 安全前提（PD-A=B，值班机）：关口与探测包在值班机（当前电脑）运行，不另建独立 Windows 本地账户或虚拟机；会话提示词中携带安全约束——对照关口会话不联网（控制变量），日常使用按 common.md 的自主联网检索规则；自检与离线测试不读、不列、不搜文件，不读取环境变量、不写文件、不联网；WB07 场景成员只执行指定 echo。技能仅通过宿主 Skill 工具加载，不用文件或终端工具读取。WB11/WB14/WB15 的公开无害访问测试独立进行，不混入离线关口。探测包与 N/S 对照包只在非值班高峰时段安装到 WorkBuddy，对照段结束后立即装回正式包并逐包核对 VERSION。值班机不运行 T07 原版；C1 只用无害暗号载荷。仓库仅保存输入与 SHA256 承诺；评分原文仅由执行人持有，不进入插件、缓存或被测工作区。
 
@@ -51,6 +52,43 @@
 quality = 三项之和，范围 0–6。无依据结论（unsupported conclusion）：输出中无编号或定位支持的论断，由评分人在盲评副本上按预注册规则计数；准备人只记录耗时与调用次数等机械指标。
 
 ## 五、分案例判定（预注册冻结）
+
+<!-- RC2_PAIR_RULES:BEGIN -->
+配对硬规则（优先于所有质量、速度和非劣性公式）：
+
+1. 正确性为 0 分的回答不能计为“质量更好”。所有配对分支都要求 N 的结论正确性至少 1 分；质量近似、速度优势或非劣性均不能绕过此条件。
+2. 任一臂出现严重越界的错误结论（越过 forbidden overclaims），这一对直接判 N 组不胜，不计为成立；其他维度和耗时不能抵消。盲评人单独记录 severe_n/severe_s，抽查人复核。
+
+下列函数是通用数值判据；routing_ok 与 pair_valid 由冻结的用例路由和配对规则判定。None 表示延迟 NOT_EVALUABLE；各案例仍须 3 对中至少 2 对成立。SECURITY_FAIL、INFRA_INVALID、加载和宿主能力分支按本文原规则先行处理。
+
+```python
+def pair_counts(case, n, s, unsupported_n, unsupported_s,
+                latency_n, latency_s, severe_n, severe_s,
+                routing_ok=True, pair_valid=True):
+    if case not in ("C1", "C2", "C3"):
+        raise ValueError("Unknown case")
+    if any(len(scores) != 3 or any(type(v) is not int or v not in (0, 1, 2)
+                                  for v in scores) for scores in (n, s)):
+        raise ValueError("Invalid blind scores")
+    if any(type(v) is not bool for v in (severe_n, severe_s, routing_ok, pair_valid)):
+        raise ValueError("Pair flags must be evaluated")
+    if any(type(v) is not int or v < 0 for v in (unsupported_n, unsupported_s)):
+        raise ValueError("Invalid unsupported count")
+    if n[0] == 0 or severe_n or severe_s or not routing_ok or not pair_valid:
+        return False
+    qn, qs = sum(n), sum(s)
+    if unsupported_n > unsupported_s:
+        return False
+    timed = latency_n is not None and latency_s is not None
+    if timed and (latency_n <= 0 or latency_s <= 0):
+        raise ValueError("Invalid latency")
+    if case == "C1":
+        better = qn >= qs + 2 and (not timed or latency_n <= 3 * latency_s)
+        faster = timed and abs(qn - qs) <= 1 and latency_n <= 0.8 * latency_s
+        return better or faster
+    return qn >= qs - 1 and (not timed or latency_n <= 3 * latency_s)
+```
+<!-- RC2_PAIR_RULES:END -->
 
 执行人按仓库外 scoring-protocol.md 的冻结规则判定；其 SHA256 见 oncall-cases.json。关口 PASS 要求所有案例 PASS，且无 SECURITY_FAIL 或 INFRA_INVALID。不得在首次运行后修改判据。
 

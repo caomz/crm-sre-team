@@ -20,8 +20,10 @@ MAX_MEMBER_BYTES = 20 * 1024 * 1024
 
 def validate(root: Path, archive: Path) -> dict:
     errors = []
+    files_total = files_checked = 0
     try:
         expected = {PREFIX + "/" + p.relative_to(root.resolve()).as_posix(): p for p in release_files(root)}
+        files_total = len(expected)
         with ZipFile(archive) as z:
             entries = z.infolist()
             # Preserve actual archive order. Sorting before comparison would hide the defect.
@@ -49,13 +51,15 @@ def validate(root: Path, archive: Path) -> dict:
                     crc = stream_member_compare(z, entry.filename, expected[entry.filename])
                     if crc is None: errors.append("content_mismatch:" + entry.filename)
                     elif crc != entry.CRC: errors.append("crc:" + entry.filename)
+                    else: files_checked += 1
     except (OSError, ValueError, KeyError, BadZipFile, RuntimeError) as exc:
         errors.append(type(exc).__name__ + ":" + str(exc))
     sha = None
     if archive.is_file():
         try: sha = sha256_file_bounded(archive)
         except (OSError, RuntimeError): pass
-    return {"pass": not errors, "errors": errors, "scope": "ZIP_INTEGRITY_NOT_RUNTIME", "sha256": sha}
+    return {"pass": not errors, "errors": errors, "scope": "ZIP_INTEGRITY_NOT_RUNTIME",
+            "sha256": sha, "files_total": files_total, "files_checked": files_checked}
 
 
 if __name__ == "__main__":

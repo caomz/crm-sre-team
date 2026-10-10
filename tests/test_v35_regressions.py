@@ -1,6 +1,7 @@
 """Safety regressions found while reviewing main through v3.4.1. No host claims."""
 import json
 import hashlib
+import os
 import re
 import ast
 from pathlib import Path
@@ -206,6 +207,28 @@ class V35Regressions(unittest.TestCase):
         for field in fields:
             self.assertIsNotNone(pattern.search(json.dumps({field: ['synthetic']})))
 
+    def test_scoring_directory_override_reports_missing_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            private = str(Path(directory) / 'missing-gold')
+            with patch.dict(os.environ, {'CRM_GATE_GOLD_DIR': private}):
+                with self.assertRaises(unittest.SkipTest) as caught:
+                    self.test_external_scoring_commitments_and_content_boundary()
+            self.assertIn(private, str(caught.exception))
+
+    def test_scoring_directory_default_follows_documented_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            private = str(Path(directory) / 'documented-gold')
+            original = Path.read_text
+            def read_text(path, *args, **kwargs):
+                if path == ROOT / 'docs/13-oncall-gate-materials.md':
+                    return f'评分原文：Mac 路径 `{private}/`。'
+                return original(path, *args, **kwargs)
+            with patch.dict(os.environ), patch.object(Path, 'read_text', read_text):
+                os.environ.pop('CRM_GATE_GOLD_DIR', None)
+                with self.assertRaises(unittest.SkipTest) as caught:
+                    self.test_external_scoring_commitments_and_content_boundary()
+            self.assertIn(private, str(caught.exception))
+
     def test_external_scoring_commitments_and_content_boundary(self):
         data = json.loads((ROOT / 'policy-source/acceptance/oncall-cases.json').read_text(encoding='utf-8'))
         self.assertEqual(data['commitment_algorithm'], 'SHA256')
@@ -214,9 +237,15 @@ class V35Regressions(unittest.TestCase):
                             'routing-assertions.txt': data['routing_assertions_sha256']})
         for digest in commitments.values():
             self.assertRegex(digest, r'^[0-9a-f]{64}$')
-        private = ROOT.parent / 'crm-v35-handoff/gate-gold'
+        configured = os.environ.get('CRM_GATE_GOLD_DIR')
+        if configured is None:
+            materials = (ROOT / 'docs/13-oncall-gate-materials.md').read_text(encoding='utf-8')
+            paths = re.findall(r'Mac 路径 `([^`]+)`', materials)
+            self.assertEqual(len(paths), 1, 'docs/13 must record exactly one Mac scoring directory')
+            configured = paths[0]
+        private = Path(configured)
         if not private.exists():
-            self.skipTest('Executor scoring directory absent; commitment format and release field boundary checked independently')
+            self.skipTest(f'Executor scoring directory absent: {private}; commitment format and release field boundary checked independently')
         sums = dict(line.split('  ', 1)[::-1] for line in (private / 'SHA256SUMS').read_text(encoding='utf-8').splitlines())
         self.assertEqual(sums, commitments)
         snippets = []
@@ -237,6 +266,10 @@ class V35Regressions(unittest.TestCase):
                 self.assertEqual(raw, (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':')) + '\n').encode('utf-8'))
                 collect(value)
         protocol = (private / 'scoring-protocol.md').read_text(encoding='utf-8')
+        public = (ROOT / 'docs/12-native-vs-single-comparison.md').read_text(encoding='utf-8')
+        def rules(text):
+            return text.split('<!-- RC2_PAIR_RULES:BEGIN -->', 1)[1].split('<!-- RC2_PAIR_RULES:END -->', 1)[0]
+        self.assertEqual(rules(public), rules(protocol))
         decision = protocol.split('## 五、', 1)[1].split('## 六、', 1)[0]
         # Retain the earlier routing regression assertions in the executor package.
         tree = ast.parse((private / 'routing-assertions.txt').read_text(encoding='utf-8').strip().replace('\n        ', '\n'))
@@ -291,6 +324,51 @@ class V35Regressions(unittest.TestCase):
         d11 = (ROOT / "docs/11-workbuddy-host-acceptance.md").read_text(encoding="utf-8")
         self.assertIn("WB07 或 WB09H 未 PASS（包括 FAIL/BLOCKED/NOT_RUN", d11)
         self.assertIn("只出现 D 模式", d11)
+
+    def public_pair_counts(self):
+        text = (ROOT / 'docs/12-native-vs-single-comparison.md').read_text(encoding='utf-8')
+        block = text.split('<!-- RC2_PAIR_RULES:BEGIN -->', 1)[1].split('<!-- RC2_PAIR_RULES:END -->', 1)[0]
+        code = block.split('```python\n', 1)[1].split('```', 1)[0]
+        parsed = ast.parse(code)
+        self.assertEqual(len(parsed.body), 1)
+        self.assertIsInstance(parsed.body[0], ast.FunctionDef)
+        self.assertEqual(parsed.body[0].name, 'pair_counts')
+        namespace = {}
+        exec(compile(parsed, '<public-pair-rules>', 'exec'),
+             {'__builtins__': {k: v for k, v in vars(__import__('builtins')).items()
+                               if k in ('any', 'len', 'type', 'int', 'bool', 'sum', 'abs', 'ValueError')}}, namespace)
+        return namespace['pair_counts']
+
+    def test_rc2_zero_correctness_counterexample_cannot_pass_gate(self):
+        pair_counts = self.public_pair_counts()
+        results = {}
+        for case, s in [('C1', (0, 1, 1)), ('C2', (0, 2, 2)), ('C3', (0, 2, 2))]:
+            results[case] = [pair_counts(case, (0, 2, 2), s, 0, 0, None, None, False, False) for _ in range(3)]
+            self.assertFalse(sum(results[case]) >= 2, case)
+        self.assertFalse(all(sum(pairs) >= 2 for pairs in results.values()))
+        # A faster answer with equal total quality also cannot evade the floor.
+        self.assertFalse(pair_counts('C1', (0, 2, 2), (0, 2, 2), 0, 0, 1, 10, False, False))
+
+    def test_rc2_severe_overclaim_in_either_arm_vetoes_every_pair_branch(self):
+        pair_counts = self.public_pair_counts()
+        for case in ('C1', 'C2', 'C3'):
+            for severe_n, severe_s in ((True, False), (False, True), (True, True)):
+                for latency in ((1, 10), (None, None)):
+                    with self.subTest(case=case, severe=(severe_n, severe_s), latency=latency):
+                        self.assertFalse(pair_counts(case, (2, 2, 2), (1, 1, 1), 0, 1,
+                                                     *latency, severe_n, severe_s))
+
+    def test_rc2_valid_quality_speed_noninferiority_and_routing_paths_preserved(self):
+        pair_counts = self.public_pair_counts()
+        self.assertTrue(pair_counts('C1', (2, 2, 2), (1, 1, 1), 0, 0, None, None, False, False))
+        self.assertTrue(pair_counts('C1', (2, 2, 2), (2, 2, 2), 0, 0, 8, 10, False, False))
+        self.assertFalse(pair_counts('C1', (2, 2, 2), (2, 2, 2), 0, 0, None, None, False, False))
+        for case in ('C2', 'C3'):
+            self.assertTrue(pair_counts(case, (1, 2, 2), (2, 2, 2), 0, 0, None, None, False, False))
+            self.assertFalse(pair_counts(case, (1, 2, 2), (2, 2, 2), 0, 0, 31, 10, False, False))
+        for case in ('C1', 'C2', 'C3'):
+            self.assertFalse(pair_counts(case, (2, 2, 2), (1, 1, 1), 0, 0, 1, 10, False, False, routing_ok=False))
+            self.assertFalse(pair_counts(case, (2, 2, 2), (1, 1, 1), 0, 0, 1, 10, False, False, pair_valid=False))
 
 
 if __name__ == "__main__":

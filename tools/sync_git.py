@@ -16,7 +16,9 @@ import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
+import secrets
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -108,13 +110,18 @@ def ahead_behind(root: Path, local: str, remote: str) -> tuple[int, int]:
 
 
 def dirty_paths(root: Path) -> list[str]:
-    out = git(root, "status", "--porcelain=v1", "-z").stdout
+    out = git(root, "status", "--porcelain=v1", "--untracked-files=all", "-z").stdout
     names = []
-    for entry in out.split("\0"):
-        if len(entry) > 3:
-            rel = entry[3:].replace("\\", "/")
-            if (root / rel).is_file():
-                names.append(rel)
+    entries = iter(out.split("\0"))
+    for entry in entries:
+        if len(entry) <= 3:
+            continue
+        names.append(entry[3:].replace("\\", "/"))
+        if "R" in entry[:2] or "C" in entry[:2]:
+            # Porcelain -z renames report destination, then original path.
+            original = next(entries, "")
+            if original:
+                names.append(original.replace("\\", "/"))
     return sorted(set(names))
 
 
@@ -139,20 +146,8 @@ def is_generated(rel: str) -> bool:
 
 
 def is_link_like(path: Path) -> bool:
-    """True for symlinks and Windows junctions.
-
-    `Path.is_symlink()` returns False for a directory junction, so a junction
-    would pass the walk below and then redirect writes outside the project.
-    """
-    if path.is_symlink():
-        return True
-    if os.name == "nt":
-        try:
-            if hasattr(os.path, "isjunction"):
-                return os.path.isjunction(path)
-        except OSError:
-            return False
-    return False
+    """Shared symlink/junction/reparse guard, including Python 3.11 lstat."""
+    return release_rules.is_link(path)
 
 
 def guard_path(root: Path, rel: str) -> Path:
@@ -196,10 +191,56 @@ def mergeable_json(root: Path, rel: str) -> bool:
 
 # ------------------------------------------------------------------ plan and merge
 
+def tree_entries(root: Path, ref: str) -> dict:
+    entries = {}
+    for record in git_bytes(root, "ls-tree", "-r", "-z", ref).stdout.split(b"\0"):
+        if record:
+            meta, name = record.split(b"\t", 1)
+            mode, kind, blob = meta.decode("ascii").split()
+            entries[name.decode("utf-8", "surrogateescape")] = (mode, kind, blob)
+    return entries
+
+
+def index_entries(root: Path) -> tuple[dict, str]:
+    raw = git_bytes(root, "ls-files", "--stage", "-z").stdout
+    entries = {}
+    for record in raw.split(b"\0"):
+        if record:
+            meta, name = record.split(b"\t", 1)
+            mode, blob, stage = meta.decode("ascii").split()
+            rel = name.decode("utf-8", "surrogateescape")
+            entries.setdefault(rel, []).append((mode, "blob", blob, stage))
+    return entries, digest_bytes(raw)
+
+
+def blob_state(root: Path, entry) -> dict | None:
+    if entry is None:
+        return None
+    mode, kind, blob = entry[:3]
+    if kind != "blob":
+        raise SyncError("Non-blob sync input requires manual review")
+    return {"mode": mode, "sha256": digest_bytes(git_bytes(root, "cat-file", "blob", blob).stdout)}
+
+
+def working_state(target: Path, index_state: dict | None, track_mode: bool) -> dict | None:
+    if not target.exists():
+        return None
+    if not target.is_file():
+        return {"mode": "directory", "sha256": None}
+    mode = "100755" if track_mode and target.stat().st_mode & 0o111 else "100644"
+    if not track_mode and index_state:
+        mode = index_state["mode"]
+    return {"mode": mode, "sha256": digest_file(target)}
+
 def build_plan(root: Path, local: str, remote: str) -> dict:
     """Classify every divergence without touching the working tree."""
     base = merge_base(root, local, remote)
     behind, ahead = (ahead_behind(root, local, remote) if base else (0, 0))
+    dirty = set(dirty_paths(root))
+    heads = tree_entries(root, "HEAD")
+    remotes = tree_entries(root, remote)
+    indices, index_digest = index_entries(root)
+    filemode = git(root, "config", "--bool", "core.filemode", check=False).stdout.strip() == "true"
     plan = {
         "schema_version": 1,
         "scope": "WORKING_TREE_VS_REMOTE_INSIDE_PROJECT_ROOT_NO_PRIVILEGE_CHANGE",
@@ -208,11 +249,13 @@ def build_plan(root: Path, local: str, remote: str) -> dict:
         # Tip SHAs bind the plan to exact reviewed bytes. If either ref moves
         # between the dry run and --apply, the confirmation token must not match.
         "local_tip": rev_parse(root, local),
+        "head_tip": rev_parse(root, "HEAD"),
+        "index_sha256": index_digest,
         "remote_tip": rev_parse(root, remote),
         "base_ref": base,
         "behind": behind,
         "ahead": ahead,
-        "in_sync": behind == 0 and ahead == 0 and not dirty_paths(root),
+        "in_sync": behind == 0 and ahead == 0 and not dirty,
         "remote_ahead": [],
         "local_ahead": [],
         "blocked_generated": [],
@@ -227,7 +270,7 @@ def build_plan(root: Path, local: str, remote: str) -> dict:
     if not plan["in_sync"]:
         for ref, key in ((local, "local_ahead"), (remote, "remote_ahead")):
             raw = git_bytes(root, "diff", "--raw", "-z", f"{base}..{ref}" if base else ref,
-                            check=False).stdout
+                            check=True).stdout
             fields = [f.decode("utf-8", "surrogateescape") for f in raw.split(b"\0") if f]
             index = 0
             while index < len(fields):
@@ -266,24 +309,37 @@ def build_plan(root: Path, local: str, remote: str) -> dict:
     # Untracked local files are part of the divergence too; omitting them here
     # would let a plan look clean while new work sat unsynced.
     for rel in sorted(set(plan["local_ahead"]) | set(plan["remote_ahead"])
-                      | set(dirty_paths(root)) | untracked):
+                      | dirty | untracked):
         if is_generated(rel):
             plan["blocked_generated"].append({"path": rel, "reason": "BUILD_OWNED_OUTPUT_RUN_BUILD_BUNDLE"})
             continue
         target = guard_path(root, rel)
-        if target.is_dir():
-            # git tracks files; an untracked empty directory carries no bytes to sync.
-            continue
+        if target.is_dir() and rel not in heads and rel not in remotes and rel not in indices:
+            continue  # Porcelain may collapse an untracked directory; ls-files lists its files.
+        head_state = blob_state(root, heads.get(rel))
+        remote_state = blob_state(root, remotes.get(rel))
+        stages = indices.get(rel, [])
+        index_state = blob_state(root, stages[0]) if len(stages) == 1 and stages[0][3] == "0" else None
+        worktree_state = working_state(target, index_state, filemode)
         local_sha = digest_file(target)
-        if rel in conflicted:
+        has_uncommitted = (rel in dirty or len(stages) > 1 or index_state != head_state
+                           or worktree_state != index_state)
+        if (rel in plan["remote_ahead"] and rel not in plan["local_ahead"]
+                and rel not in conflicted and len(stages) == 1 and stages[0][3] == "0"
+                and index_state == head_state and worktree_state == remote_state):
+            # A previous restore leaves HEAD/index untouched. Matching remote
+            # bytes AND mode need no further write; staged work still blocks.
+            action = "NOOP_ALREADY_IDENTICAL"
+        elif has_uncommitted and rel in plan["remote_ahead"]:
+            plan["conflicts"].append({"path": rel, "reason": "LOCAL_UNCOMMITTED_CHANGE"})
+            action = "BLOCKED_CONFLICT_REQUIRES_RESOLUTION"
+        elif rel in conflicted:
             # Both sides moved and disagree: never auto-resolve, never overwrite.
             action = "BLOCKED_CONFLICT_REQUIRES_RESOLUTION"
         elif rel in untracked and rel not in plan["remote_ahead"]:
             action = "LOCAL_NEW_UNDECLARED"
         elif rel in plan["remote_ahead"] and rel not in plan["local_ahead"]:
-            # Remote moved and the local side never diverged: safe to take remote bytes.
-            remote_bytes = git_bytes(root, "cat-file", "blob", f"{remote}:{rel}", check=False)
-            same = remote_bytes.returncode == 0 and local_sha == digest_bytes(remote_bytes.stdout)
+            same = remote_state == worktree_state
             action = "NOOP_ALREADY_IDENTICAL" if same else "RESTORE_REMOTE_VERSION"
         elif rel in plan["local_ahead"] and rel not in plan["remote_ahead"]:
             action = "KEEP_LOCAL_PUSH_LATER"
@@ -291,7 +347,9 @@ def build_plan(root: Path, local: str, remote: str) -> dict:
             action = "REVIEW_DIRTY_WORKTREE"
         else:
             action = "RECONCILE"
-        plan["actions"].append({"path": rel, "action": action, "planned_sha256": local_sha})
+        plan["actions"].append({"path": rel, "action": action, "planned_sha256": local_sha,
+                                "head_state": head_state, "index_state": index_state,
+                                "worktree_state": worktree_state, "remote_state": remote_state})
     plan["untracked_local"] = sorted(n for n in untracked if not is_generated(n))
     for rel in plan["untracked_local"]:
         guard_path(root, rel)
@@ -302,6 +360,15 @@ def build_plan(root: Path, local: str, remote: str) -> dict:
 
 def three_way_merge_json(base_text: str, local_text: str, remote_text: str) -> tuple[str | None, list[str]]:
     """Recursive dict merge. Lists and scalars are atomic; disagreement is reported."""
+    def equal(left, right):
+        if type(left) is not type(right):
+            return False
+        if isinstance(left, dict):
+            return left.keys() == right.keys() and all(equal(left[k], right[k]) for k in left)
+        if isinstance(left, list):
+            return len(left) == len(right) and all(equal(l, r) for l, r in zip(left, right))
+        return left == right
+
     conflicts: list[str] = []
     try:
         base = json.loads(base_text) if base_text else {}
@@ -310,32 +377,26 @@ def three_way_merge_json(base_text: str, local_text: str, remote_text: str) -> t
     except ValueError as exc:
         return None, [f"JSON_PARSE_ERROR:{exc}"]
     if not all(isinstance(v, dict) for v in (base, local, remote)):
-        if local == remote:
+        if equal(local, remote):
             return local_text, []
         return None, ["ROOT_NOT_OBJECT"]
 
+    missing = object()  # An absent key is different from an explicit JSON null.
+
     def merge(node_b, node_l, node_r, path):
-        if node_l == node_r:
+        if equal(node_l, node_r):
             return node_l
-        if node_l == node_b:
+        if equal(node_l, node_b):
             return node_r  # only remote moved
-        if node_r == node_b:
+        if equal(node_r, node_b):
             return node_l  # only local moved
         if isinstance(node_l, dict) and isinstance(node_r, dict) and isinstance(node_b, dict):
-            out = dict(node_b)
+            out = {}
             for key in sorted(set(node_l) | set(node_r) | set(node_b)):
-                b, l, r = node_b.get(key), node_l.get(key), node_r.get(key)
-                if l == r:
-                    out[key] = l
-                elif l == b:
-                    out[key] = r
-                elif r == b:
-                    out[key] = l
-                elif isinstance(l, dict) and isinstance(r, dict) and isinstance(b, dict):
-                    out[key] = merge(b, l, r, f"{path}.{key}")
-                else:
-                    conflicts.append(f"{path}.{key}" if path else key)
-                    out[key] = l
+                b, l, r = (node.get(key, missing) for node in (node_b, node_l, node_r))
+                value = merge(b, l, r, f"{path}.{key}" if path else key)
+                if value is not missing:
+                    out[key] = value
             return out
         conflicts.append(path or "<root>")
         return node_l
@@ -348,14 +409,67 @@ def three_way_merge_json(base_text: str, local_text: str, remote_text: str) -> t
 
 # ------------------------------------------------------------------------ ledger
 
+def internal_path(root: Path, path: Path) -> Path:
+    """Guard tool-owned reports and temporary files without the payload blacklist."""
+    if not path.is_relative_to(root):
+        raise SyncError("Internal path escapes project root")
+    for probe in (path, *path.parents):
+        if is_link_like(probe):
+            raise SyncError(f"Symlink or junction rejected: {path}")
+        if probe == root:
+            break
+    if not path.resolve().is_relative_to(root.resolve()):
+        raise SyncError(f"Internal path escapes project root: {path}")
+    return path
+
+
+def atomic_replace(root: Path, rel: str, data: bytes, expected_sha: str | None,
+                   git_mode: str | None = None, restore_mode: int | None = None) -> None:
+    if git_mode not in (None, "100644", "100755"):
+        raise SyncError(f"Unsupported remote file mode: {git_mode}")
+    target = guard_path(root, rel)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target = guard_path(root, rel)
+    permissions = restore_mode
+    if permissions is None and target.exists():
+        permissions = stat.S_IMODE(target.stat().st_mode)
+    # O_EXCL keeps the unique-file guard; 0666 lets the OS apply the umask
+    # for new files without temporarily changing this process's global umask.
+    staging = target.with_name(target.name + ".sync-" + secrets.token_hex(16))
+    flags = (os.O_CREAT | os.O_EXCL | os.O_WRONLY
+             | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
+    fd = os.open(staging, flags, 0o600 if permissions is not None else 0o666)
+    # The exclusive descriptor is the only write handle; never open a fixed name.
+    with os.fdopen(fd, "wb") as handle:
+        internal_path(root, staging)
+        if permissions is None:
+            permissions = stat.S_IMODE(os.fstat(handle.fileno()).st_mode)
+        if git_mode is not None:
+            permissions &= 0o666
+            if git_mode == "100755":
+                permissions |= 0o111
+        handle.write(data)
+        handle.flush()
+        if os.name != "nt":
+            os.fchmod(handle.fileno(), permissions)
+        os.fsync(handle.fileno())
+    target = guard_path(root, rel)
+    internal_path(root, staging)
+    if digest_file(staging) != digest_bytes(data):
+        raise SyncError(f"{rel} staging digest mismatch; temporary file retained: {staging}")
+    if digest_file(target) != expected_sha:
+        raise SyncError(f"{rel} changed on disk before replacement; temporary file retained: {staging}")
+    os.replace(staging, target)
+
 def ledger_path(root: Path) -> Path:
     stamp = time.strftime("%Y%m%dT%H%M%S", time.gmtime())
     return root / LEDGER_DIR / f"sync-ledger-{stamp}.jsonl"
 
 
 def append_ledger(root: Path, record: dict) -> Path:
-    path = ledger_path(root)
+    path = internal_path(root, ledger_path(root))
     path.parent.mkdir(parents=True, exist_ok=True)
+    internal_path(root, path)
     line = json.dumps({"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **record}, ensure_ascii=False)
     with path.open("a", encoding="utf-8", newline="\n") as handle:
         handle.write(line + "\n")
@@ -370,24 +484,32 @@ def apply_plan(root: Path, plan: dict, confirm: str, remote: str, local: str) ->
     blocked = [a["path"] for a in plan["actions"] if a["action"] == "BLOCKED_CONFLICT_REQUIRES_RESOLUTION"]
     if blocked:
         raise SyncError("Blocked paths in plan: " + ",".join(blocked))
-    if confirm != plan["plan_id"]:
+    if confirm != plan["plan_id"] or plan_id_of(plan) != plan["plan_id"]:
         raise SyncError("Confirmation token does not match this plan; nothing was written")
     # The dry run reviewed specific bytes at specific tips. If a ref moved since,
     # those bytes are no longer what the operator approved, so refuse outright.
     for label, ref, planned in (("local", local, plan.get("local_tip")),
+                                ("HEAD", "HEAD", plan.get("head_tip")),
                                 ("remote", remote, plan.get("remote_tip"))):
         current = rev_parse(root, ref)
         if planned and current != planned:
             raise SyncError(
                 f"{label} ref moved after planning ({planned} -> {current}); "
                 "re-run the dry run and confirm again")
+    if index_entries(root)[1] != plan.get("index_sha256"):
+        raise SyncError("Index changed after planning; re-run the dry run")
     writable = [a for a in plan["actions"] if a["action"] == "RESTORE_REMOTE_VERSION"]
     if not writable:
         return {"written": [], "rolled_back": False, "note": "NOTHING_TO_WRITE"}
     # Compare against the digest captured at plan time, not a fresh read: reading
     # here would bless whatever is on disk now and defeat the drift check.
     before = {a["path"]: a.get("planned_sha256") for a in writable}
-    backup = Path(tempfile.mkdtemp(prefix=".sync-backup-", dir=root))
+    remote_modes = {a["path"]: a["remote_state"]["mode"] for a in writable if a["remote_state"]}
+    before_modes: dict[str, int] = {}
+    backup_parent = internal_path(root, root / LEDGER_DIR)
+    backup_parent.mkdir(parents=True, exist_ok=True)
+    internal_path(root, backup_parent)
+    backup = Path(tempfile.mkdtemp(prefix="sync-backup-", dir=backup_parent))
     done: list[str] = []
     written_digest: dict[str, str | None] = {}
     ledger = None
@@ -398,16 +520,14 @@ def apply_plan(root: Path, plan: dict, confirm: str, remote: str, local: str) ->
                 # State changed since planning: this path is no longer the reviewed one.
                 raise SyncError(f"{rel} changed on disk after planning; re-run the dry run")
             if target.exists():
-                dest = backup / rel
+                before_modes[rel] = stat.S_IMODE(target.stat().st_mode)
+                dest = internal_path(root, backup / rel)
                 dest.parent.mkdir(parents=True, exist_ok=True)
+                internal_path(root, dest)
                 shutil.copyfile(target, dest)
             blob = git_bytes(root, "cat-file", "blob", f"{remote}:{rel}")
             target.parent.mkdir(parents=True, exist_ok=True)
-            # Stage next to the target and rename: a partial write can then only
-            # leave a stray temp file, never a half-written file at the real path.
-            staging = target.with_name(target.name + ".sync-part")
-            staging.write_bytes(blob.stdout)
-            os.replace(staging, target)
+            atomic_replace(root, rel, blob.stdout, before[rel], remote_modes.get(rel))
             done.append(rel)
             written_digest[rel] = digest_bytes(blob.stdout)
             ledger = ledger or append_ledger(root, {"run": plan["plan_id"], "event": "RUN_START",
@@ -417,28 +537,35 @@ def apply_plan(root: Path, plan: dict, confirm: str, remote: str, local: str) ->
                                  "sha256_after": digest_file(target)})
         # No git add/commit/push: staging and publishing stay explicit, separate decisions.
         append_ledger(root, {"run": plan["plan_id"], "event": "RUN_OK", "count": len(done)})
-        return {"written": done, "rolled_back": False, "ledger": str(ledger), "staged": False}
+        return {"written": done, "rolled_back": False, "ledger": str(ledger),
+                "backup": str(backup), "staged": False}
     except BaseException as exc:
         # Restore only what this run wrote. A path that was absent at plan time but
         # appeared afterwards is user work, so it is left alone and reported.
         preserved: list[str] = []
+        rollback_errors: list[str] = []
         for rel in reversed(done):
-            target = guard_path(root, rel)
-            saved = backup / rel
-            if saved.exists():
-                restore = target.with_name(target.name + ".sync-restore")
-                restore.write_bytes(saved.read_bytes())
-                os.replace(restore, target)
-            elif before[rel] is None and target.exists():
-                if digest_file(target) == written_digest.get(rel):
-                    target.unlink()
-                else:
+            try:
+                target = guard_path(root, rel)
+                saved = internal_path(root, backup / rel)
+                if digest_file(target) != written_digest.get(rel):
                     preserved.append(rel)
-        append_ledger(root, {"run": plan["plan_id"], "event": "ROLLBACK", "error": str(exc),
-                             "preserved_user_files": preserved})
-        raise SyncError(f"Apply failed and was rolled back: {exc}") from exc
-    finally:
-        shutil.rmtree(backup, ignore_errors=True)
+                elif saved.exists():
+                    atomic_replace(root, rel, saved.read_bytes(), written_digest[rel], None, before_modes[rel])
+                elif before[rel] is None and target.exists():
+                    target.unlink()
+            except (OSError, SyncError) as rollback_exc:
+                rollback_errors.append(f"{rel}: {rollback_exc}")
+        try:
+            append_ledger(root, {"run": plan["plan_id"], "event": "ROLLBACK", "error": str(exc),
+                                 "preserved_user_files": preserved, "errors": rollback_errors,
+                                 "backup": str(backup)})
+        except (OSError, SyncError) as ledger_exc:
+            rollback_errors.append(f"ledger: {ledger_exc}")
+        verdict = "rollback incomplete" if rollback_errors or preserved else "was rolled back"
+        # Backups are retained on success and failure; cleanup is an explicit human task.
+        raise SyncError(f"Apply failed and {verdict}: {exc}; backup retained: {backup}; "
+                        f"errors={rollback_errors}; preserved={preserved}") from exc
 
 
 def done_keys(writable: list[dict]) -> list[str]:
@@ -448,7 +575,7 @@ def done_keys(writable: list[dict]) -> list[str]:
 # --------------------------------------------------------------------------- cli
 
 def plan_id_of(plan: dict) -> str:
-    body = {k: v for k, v in plan.items() if k != "in_sync"}
+    body = {k: v for k, v in plan.items() if k not in {"in_sync", "plan_id"}}
     return digest_bytes(json.dumps(body, sort_keys=True, ensure_ascii=False).encode("utf-8"))[:16]
 
 

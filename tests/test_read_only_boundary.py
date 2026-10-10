@@ -134,6 +134,32 @@ class ReadOnlyBoundaryTests(unittest.TestCase):
         self.assertTrue(any(e.startswith("missing_read_only_boundary:") or e == "missing_mode_blocks"
                             for e in checker.check_prompt("# 空文档\n", True)))
 
+    def test_17_all_tasks_including_non_search_diagnosis_forbid_credentials(self):
+        clause = "任何任务都不读取凭据文件或环境变量，包括排障、诊断和联网检索。"
+        for sid, role in self.roles.items():
+            paths = [f"agents/{role['agent']}.md", f"skills/{sid}/SKILL.md",
+                     f"skills/{sid}/MANUAL-MODE.md", "manual-mode/single-model.md"]
+            for rel in paths:
+                with self.subTest(entry=rel):
+                    text = (ROOT / rel).read_text(encoding="utf-8")
+                    self.assertIn(clause, text)
+                    self.assertNotIn("不为检索去读取", text)
+            full = checker.render_full(ROOT, sid, role)
+            with self.subTest(source=sid):
+                self.assertIn(clause, full.split("## 运行模式选择：", 1)[0])
+
+    def test_18_search_only_prohibition_cannot_cover_non_search_diagnosis(self):
+        clause = "任何任务都不读取凭据文件或环境变量，包括排障、诊断和联网检索。"
+        scenario = "\n合成非检索排障：检查本地凭据文件和环境变量以定位身份问题。\n"
+        for sid, role in self.roles.items():
+            runtime = (ROOT / f"skills/{sid}/SKILL.md").read_text(encoding="utf-8")
+            for text, is_runtime in [(runtime, True), (checker.render_full(ROOT, sid, role), False)]:
+                with self.subTest(role=sid, runtime=is_runtime):
+                    self.assertEqual(checker.check_prompt(text + scenario, sid == "stability-director", runtime=is_runtime), [])
+                    weakened = text.replace(clause, "仅联网检索时不读取凭据文件或环境变量。", 1)
+                    self.assertIn("missing_all_task_credential_boundary",
+                                  checker.check_prompt(weakened + scenario, sid == "stability-director", runtime=is_runtime))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

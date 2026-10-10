@@ -78,10 +78,10 @@ def run_checks(root: Path = ROOT) -> dict:
     def add(name,ok,detail=""):checks.append({"id":"thinking_tools:"+name,"passed":bool(ok),"detail":detail})
     baseline=load(root/"policy-source/thinking-tools/baseline-contract.json")
     # Historical baseline stays byte-identical. Narrow, reviewed exceptions are
-    # independently named and still hash-checked; schemas and old tests cannot opt out.
+    # independently named and still hash-checked; there is no blanket opt-out.
     add("historical_baseline_unchanged", sha(root/"policy-source/thinking-tools/baseline-contract.json") == "79e6b15abdc4f96a42f91fc9e9d8459360adc9a5478a9d4506a2f234a5713eb4")
     allowed=load(root/"policy-source/thinking-tools/workbuddy-allowed-changes.json")
-    permitted={"immutable_files":{"policy-source/roles-source.json","tools/check_determinism.py"},
+    permitted={"immutable_files":{"policy-source/roles-source.json","tools/check_determinism.py","tests/test_contracts.py"},
                "version_only_json":{"policies/runtime-contract.json",".codebuddy-plugin/plugin.json"}}
     add("allowed_change_version", allowed.get("version")==version)
     for scope in ["immutable_files","version_only_json"]:

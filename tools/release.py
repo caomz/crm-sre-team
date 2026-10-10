@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -150,6 +151,50 @@ PIPELINE_STEPS = [
 ]
 
 
+def positive_count(value):
+    return type(value) is int and value > 0
+
+
+def valid_bundle_report(report, version):
+    if not isinstance(report, dict):
+        return False
+    counts = ["additional_static_tests", "offline_contract_tests_run", "reasoning_matrix_test_methods",
+              "judgment_contract_tests_run", "judgment_matrix_test_methods", "thinking_tool_tests_run"]
+    zeros = ["offline_contract_test_failures", "offline_contract_test_errors",
+             "reasoning_matrix_test_failures", "reasoning_matrix_test_errors", "reasoning_matrix_mismatches",
+             "judgment_contract_test_failures", "judgment_contract_test_errors",
+             "judgment_matrix_test_failures", "judgment_matrix_test_errors", "judgment_matrix_mismatches",
+             "thinking_tool_test_failures", "thinking_tool_test_errors"]
+    return (report.get("scope") == "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY"
+            and report.get("version") == version and report.get("result") == "PASS_STATIC_ONLY"
+            and report.get("errors") == [] and positive_count(report.get("checks_total"))
+            and type(report.get("checks_passed")) is int
+            and report["checks_passed"] == report["checks_total"]
+            and positive_count(report.get("offline_unit_tests_total"))
+            and all(positive_count(report.get(k)) for k in counts)
+            and sum(report[k] for k in counts) == report["offline_unit_tests_total"]
+            and all(type(report.get(k)) is int and report[k] == 0 for k in zeros))
+
+
+def valid_determinism_report(report, version):
+    if not isinstance(report, dict):
+        return False
+    flags = ["pass", "generated_artifacts_deterministic", "release_tree_deterministic",
+             "input_release_already_built", "validation_output_deterministic",
+             "validation_tree_deterministic", "source_tree_unchanged_during_comparisons"]
+    guard = report.get("sorting_guard_negative_test")
+    return (report.get("scope") == "TEMPORARY_RELEASE_COPY_SAME_ENVIRONMENT_NO_MODEL_OR_HOST_CALLS"
+            and report.get("version") == version and all(report.get(k) is True for k in flags)
+            and positive_count(report.get("checked_files")) and isinstance(report.get("hashes"), dict)
+            and len(report["hashes"]) == report["checked_files"]
+            and all(isinstance(h, str) and re.fullmatch(r"[0-9a-f]{64}", h) for h in report["hashes"].values())
+            and positive_count(report.get("release_tree_file_count"))
+            and report["release_tree_file_count"] >= report["checked_files"]
+            and report.get("build_exit_codes") == [0, 0] and report.get("validation_exit_codes") == [0, 0, 0]
+            and isinstance(guard, dict) and guard.get("exit_code") == 1
+            and guard.get("detected") is True and bool(guard.get("failed_check_ids")))
+
+
 class Pipeline:
     """10-step serial pipeline. Fail-stop. Staging->promote-last."""
 
@@ -253,9 +298,9 @@ class Pipeline:
         exit_code, result = self.runner.run_validate_bundle(self.root)
         if exit_code != 0:
             return {"ok": False, "error": "validate_bundle exit_code=" + str(exit_code), "exit_code": exit_code}
-        if result and result.get("result") not in ("PASS", "PASS_STATIC_ONLY"):
-            errors = result.get("errors", [])
-            return {"ok": False, "error": "validate_bundle result=" + str(result.get("result")) + ", " + str(len(errors)) + " errors", "exit_code": exit_code}
+        if not valid_bundle_report(result, self.version):
+            label = result.get("result") if isinstance(result, dict) else None
+            return {"ok": False, "error": "validate_bundle invalid report, result=" + str(label), "exit_code": exit_code}
         self.tree_digest = compute_tree_digest(self.root)
         if self.frozen_digest and self.tree_digest != self.frozen_digest:
             return {"ok": False, "error": "tree digest mismatch: current=" + self.tree_digest[:16] + "... frozen=" + self.frozen_digest[:16] + "..."}
@@ -266,14 +311,23 @@ class Pipeline:
         if exit_code != 0:
             tail = stderr[-200:] if stderr else stdout[-200:]
             return {"ok": False, "error": "unittest exit_code=" + str(exit_code) + ": " + tail, "exit_code": exit_code}
-        return {"ok": True, "exit_code": exit_code}
+        output = stdout + "\n" + stderr
+        summaries = re.findall(r"^Ran (\d+) tests?(?: in [^\r\n]+)?\s*$", output, re.MULTILINE)
+        success = re.search(r"^OK(?: \(skipped=(\d+)\))?\s*\Z", output, re.MULTILINE)
+        if len(summaries) != 1 or not positive_count(int(summaries[0])) or success is None:
+            return {"ok": False, "error": "unittest missing valid nonzero success summary", "exit_code": exit_code}
+        tests_run = int(summaries[0])
+        skipped = int(success.group(1) or 0)
+        if skipped >= tests_run or re.search(r"^FAILED\b", output, re.MULTILINE):
+            return {"ok": False, "error": "unittest inconsistent passed/test counts", "exit_code": exit_code}
+        return {"ok": True, "exit_code": exit_code, "tests_run": tests_run, "tests_passed": tests_run - skipped}
 
     def _step_determinism(self):
         exit_code, result = self.runner.run_determinism(self.root)
         if exit_code != 0:
             return {"ok": False, "error": "determinism exit_code=" + str(exit_code), "exit_code": exit_code}
-        if result and not result.get("pass"):
-            return {"ok": False, "error": "determinism check failed", "exit_code": exit_code}
+        if not valid_determinism_report(result, self.version):
+            return {"ok": False, "error": "determinism invalid report", "exit_code": exit_code}
         return {"ok": True, "exit_code": exit_code}
 
     def _step_build_staging(self):
@@ -289,15 +343,29 @@ class Pipeline:
             return {"ok": False, "error": "build_release failed: " + type(exc).__name__ + ": " + str(exc)}
         if not self.release_zip.exists():
             return {"ok": False, "error": "build_release did not produce output ZIP"}
+        with ZipFile(self.release_zip) as archive:
+            files = len(archive.infolist())
+        if (not isinstance(build_result, dict)
+                or build_result.get("scope") != "MANIFEST_CONTENT_INTEGRITY_NOT_HOST_VERIFICATION"
+                or not positive_count(build_result.get("files")) or build_result["files"] != files
+                or build_result.get("archive") != str(self.release_zip)
+                or self.release_sha256 != hashlib.sha256(self.release_zip.read_bytes()).hexdigest()):
+            return {"ok": False, "error": "build_release invalid report"}
         return {"ok": True}
 
     def _step_validate_release(self):
         exit_code, result = self.runner.run_validate_release(self.release_zip)
         if exit_code != 0:
             return {"ok": False, "error": "validate_release exit_code=" + str(exit_code), "exit_code": exit_code}
-        if result and not result.get("pass"):
-            errors = result.get("errors", [])
-            return {"ok": False, "error": "validate_release failed: " + str(errors[:3]), "exit_code": exit_code}
+        with ZipFile(self.release_zip) as archive:
+            entries = len(archive.infolist())
+        if (not isinstance(result, dict) or result.get("scope") != "ZIP_INTEGRITY_NOT_RUNTIME"
+                or result.get("pass") is not True or result.get("errors") != []
+                or not positive_count(result.get("files_total"))
+                or type(result.get("files_checked")) is not int
+                or result["files_checked"] != result["files_total"] or entries != result["files_total"]
+                or result.get("sha256") != hashlib.sha256(self.release_zip.read_bytes()).hexdigest()):
+            return {"ok": False, "error": "validate_release invalid report", "exit_code": exit_code}
         return {"ok": True, "exit_code": exit_code}
 
     def _step_unpack_revalidate(self):
@@ -313,9 +381,8 @@ class Pipeline:
             exit_code, result = self.runner.run_validate_bundle(unpacked_root)
             if exit_code != 0:
                 return {"ok": False, "error": "unpack revalidate exit_code=" + str(exit_code), "exit_code": exit_code}
-            if result and result.get("result") not in ("PASS", "PASS_STATIC_ONLY"):
-                errors = result.get("errors", [])
-                return {"ok": False, "error": "unpack revalidate failed: " + str(len(errors)) + " errors", "exit_code": exit_code}
+            if not valid_bundle_report(result, self.version):
+                return {"ok": False, "error": "unpack revalidate invalid report", "exit_code": exit_code}
         except Exception as exc:
             return {"ok": False, "error": "unpack failed: " + type(exc).__name__ + ": " + str(exc)}
         finally:

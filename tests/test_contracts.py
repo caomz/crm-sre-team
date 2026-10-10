@@ -319,8 +319,6 @@ class ContractTests(unittest.TestCase):
                         v = self._reasoning_fixture(name, effect, direction)
                         self.assertTrue(self.valid(kind, v))  # A real host must reject the stale E001 trigger.
             with self.subTest(kind=kind, risk="invented_expectation"):
-                authorized_baseline = None
-                self.assertIsNone(authorized_baseline)
                 v = self.fixture(name)
                 self.assertTrue(self.valid(kind, v))  # No Schema can prove the COMMON/UNCOMMON labels true.
 

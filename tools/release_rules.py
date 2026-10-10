@@ -29,11 +29,12 @@ def safe_relative(name: str) -> bool:
     path = PurePosixPath(name)
     if path.is_absolute() or any(p in {"", ".", ".."} for p in name.split("/")):
         return False
-    if str(path) != name or any(p in FORBIDDEN_PARTS for p in path.parts):
+    folded_parts = [p.casefold() for p in path.parts]
+    if str(path) != name or any(p in FORBIDDEN_PARTS for p in folded_parts):
         return False
-    if any(p == ".env" or p.startswith(".env.") for p in path.parts):
+    if any(p == ".env" or p.startswith(".env.") for p in folded_parts):
         return False
-    if path.name.startswith(("id_rsa", "id_ed25519")) or path.name.endswith("~") or path.suffix.lower() in FORBIDDEN_SUFFIXES:
+    if path.name.casefold().startswith(("id_rsa", "id_ed25519")) or path.name.endswith("~") or path.suffix.casefold() in FORBIDDEN_SUFFIXES:
         return False
     if path.suffix.lower() == ".zip":
         return bool(re.fullmatch(r"individual-packages/[a-z0-9-]+/skill\.zip", name))

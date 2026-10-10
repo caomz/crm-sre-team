@@ -504,6 +504,52 @@ class PreCommitHookTests(unittest.TestCase):
                 self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
 
     @requires_sh
+    def test_22_hash_and_enumeration_failures_reject_real_commit_without_mutation(self):
+        marker = self.repo / "MARKER.md"
+        marker.write_text("staged\n", encoding="utf-8", newline="\n")
+        lock = self.repo / "prompt-bundles.lock"
+        lock.write_text("synthetic lock\n", encoding="utf-8", newline="\n")
+        self.git(self.repo, "add", "MARKER.md", "prompt-bundles.lock")
+        marker.write_text("unstaged user bytes\n", encoding="utf-8", newline="\n")
+        def snapshot():
+            return {p.relative_to(self.repo).as_posix(): p.read_bytes()
+                    for p in sorted(self.repo.rglob("*")) if p.is_file() and ".git" not in p.parts}
+        before_head = self.git(self.repo, "rev-parse", "HEAD").stdout
+        before_index = self.git(self.repo, "write-tree").stdout
+        before_tree = snapshot()
+        # git calls 1/2 hash the generated file/lock before build; 3/4 after build.
+        for command, failure_call in [("git", n) for n in (1, 2, 3, 4)] + [(c, n) for c in ("find", "sort") for n in (1, 2)]:
+            with self.subTest(command=command, failure_call=failure_call):
+                name = f"fault-{command}-{failure_call}"
+                env = self.hook_environment(name + "-temp")
+                bin_dir = Path(self.tmp.name) / (name + "-bin")
+                bin_dir.mkdir()
+                counter = Path(self.tmp.name) / (name + "-count")
+                real = shlex.quote(Path(shutil.which(command)).as_posix())
+                count_file = shlex.quote(counter.as_posix())
+                body = "#!/bin/sh\n"
+                if command == "git":
+                    body += f'case " $* " in *" hash-object "*) ;; *) exec {real} "$@" ;; esac\n'
+                body += (f"n=0\n[ ! -f {count_file} ] || n=$(cat {count_file})\n"
+                         f"n=$((n + 1))\nprintf '%s\\n' \"$n\" > {count_file}\n"
+                         f"[ \"$n\" -ne {failure_call} ] || exit 71\n"
+                         f'exec {real} "$@"\n')
+                shim = bin_dir / command
+                shim.write_text(body, encoding="utf-8", newline="\n")
+                shim.chmod(0o755)
+                env["PATH"] = str(bin_dir) + os.pathsep + env["PATH"]
+                # git prepends its exec-path to hook PATH; put the fault shim there too.
+                if command == "git":
+                    env["GIT_EXEC_PATH"] = str(bin_dir)
+                blocked = self.git(self.repo, "commit", "-m", name, check=False, env=env)
+                self.assertNotEqual(blocked.returncode, 0, blocked.stdout + blocked.stderr)
+                self.assertIn("FAILED", blocked.stderr)
+                self.assertEqual(before_head, self.git(self.repo, "rev-parse", "HEAD").stdout)
+                self.assertEqual(before_index, self.git(self.repo, "write-tree").stdout)
+                self.assertEqual(before_tree, snapshot())
+                self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
+
+    @requires_sh
     @unittest.skipUnless(os.name == "posix", "SKIPPED_CAPABILITY: POSIX signal delivery required")
     def test_21_interrupts_clean_snapshot_and_exit_nonzero(self):
         build = self.repo / "tools" / "build_bundle.py"
