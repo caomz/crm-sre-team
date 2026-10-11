@@ -169,7 +169,7 @@
     "policy-source/thinking-tools/baseline-contract.json": "79e6b15abdc4f96a42f91fc9e9d8459360adc9a5478a9d4506a2f234a5713eb4",
     "policy-source/thinking-tools/user-excerpt.json": "3bb7350a4da61d8618ddf584d5318edf6f1640ba145abfc528018178146e07e1",
     "policy-source/thinking-tools/workbuddy-allowed-changes.json": "7ee1ad5377ee92a70b18dd1067b6d297fc3fef1df33317f43d62f588eae3f0d5",
-    "release-manifest.json": "09c2b73dc82c51f475679f2e926931fb5a69a4c8937a7dec6a5e495b2ecf388d",
+    "release-manifest.json": "cd0a4acf5b0ade09fba329a96bda27288c1023c285ced63988cc6c825c1156fb",
     "requirements-build.txt": "e443c9296c83477edc659d344a3a38e2ab768f70d1ea42fa0989bc1bed830aca",
     "requirements-dev.txt": "2f2989883e612f4d32a8f7ab6ed7b68c97cd35f249b4f0fef00e8665a644921f",
     "schemas/common.schema.json": "c0bc6a5ff501d20bcd4df5630b5f72d4619e113f7e1a1ddd9a5d5018821fc201",
