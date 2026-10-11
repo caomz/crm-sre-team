@@ -530,5 +530,10 @@
     "tools/validate_bundle.py",
     "tools/validate_individual_zip.py",
     "tools/validate_release.py"
+  ],
+  "repository_only_files": [
+    "tools/oncall/README.md",
+    "tools/oncall/Update-CrmSreTeam.ps1",
+    "tools/oncall/test_oncall_updater.py"
   ]
 }
