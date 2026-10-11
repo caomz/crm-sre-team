@@ -1,23 +1,26 @@
 ## v3.7 / 2.8.0-rc3 · Mac 候选验证（2026-10-11）
 
-基线 11d52eee86d04e094873f8a07e5892f2b23cf441，分支 codex/v3.7，最初起始工作区干净；本次第二次验收返工保留全部 M1–M6、F1–F3 未提交改动，仅修复 F1-r2 的 WB16 测试有效性。WB16 使用 CRM 服务开通工单积压合成故障，故障场景/子领域与关口隔离，同时保持 CRM 运维领域以验证普通入口。关口尚未运行，rc3 首次运行前重新冻结，不沿用 rc2 结果。Mac 使用既有 /private/tmp/crm-v341-venv/bin/python（3.14.7 / pytest 9.1.1），未安装或升级依赖。本次实际检查结果如下，详细命令、退出码和原始输出见交接工作目录 checks.txt、check-records.jsonl 与 r2-*.log；验收后由 Claude 将交付记录保存到 /Volumes/WorkSSD/Downloads/crm-sre-team-v3.7/。
+v3.7 基线 11d52eee86d04e094873f8a07e5892f2b23cf441；本轮起点 221c14c（已复核 v3.7 与值班机一键更新脚本合并），分支 codex/v3.7，起始工作树干净。并入 WB07 HOST_LIMIT 条件、日常不传 name 与恢复材料要求，保留 M1–M6、F1–F3 / F1-r2；版本仍为 2.8.0-rc3。关口尚未运行，rc3 首次运行前重新冻结，不沿用 rc2 结果。Mac 构建使用 python3（3.14.7），pytest/校验使用 python3.11（3.11.15）；pytest 9.0.3，测试显式设置 TMPDIR=/private/tmp、PYTHONPATH=/opt/homebrew/lib/python3.14/site-packages，未安装或升级依赖。本轮实际结果如下，完整命令、退出码与原始输出见 /private/tmp/crm-v37-final-o2lu2gvy/check-records.jsonl 和对应日志；待人工复核后保存到 /Volumes/WorkSSD/Downloads/crm-sre-team-v3.7/。
 
-本轮仅修改仓库与 /private/tmp/crm-v37-handoff/。524 个跟踪文件的起始字节/权限与 HEAD/索引指纹、源备份保存在交接目录；M1 曾仅修改 gate-gold 副本的 scoring-protocol.md 与 SHA256SUMS，两次返工均不改 gate-gold、关口输入或 docs/12，F2 的持久交付路径规则、F3 的迁移目标说明、rc2 基线和 Downloads 原件不改。两轮旧交付分别以 mv 归档到 r0/、r1/，各轮返工前快照与单文件备份也在对应目录。仓库只保留承诺值。生产写只产人工评审需求。
+本轮仅修改仓库与 /private/tmp/crm-v37-final-o2lu2gvy/。527 个跟踪文件的起始字节/权限、HEAD/索引指纹与源备份保存在该目录；gold 只读沿用 /private/tmp/crm-v37-handoff/gate-gold/，关口输入、承诺、docs/12、权限契约与 Schema 保持原字节。tools/oncall 下文件保持原字节，仅运行其 16 项本地测试；这些脚本仅供仓库开发，不进插件 ZIP。未改交付目录、GitHub 克隆、crm-updater-dev 或 WorkBuddy 配置。前两轮返工的原始交付与备份仍在 crm-v37-handoff 的 r0/、r1/ 与对应目录。生产写只产人工评审需求。
 
 | 检查 | Mac 实际结果 |
 |---|---|
-| 全量 pytest tests/ -q -rs -p no:cacheprovider | 420 passed / 0 failed / 1 skipped / 1603 subtests passed，94.93 秒 |
+| 全量 pytest tests/ -q | 423 passed / 0 failed / 1 skipped / 1627 subtests passed，93.85 秒 |
+| pytest tools/oncall/test_oncall_updater.py -q | 16 passed / 0 failed，0.19 秒 |
 | 唯一 skip | tests/test_git_sync.py::test_32_windows_junction_rejected：POSIX: no junction concept；Windows 须实际执行 |
 | warning | 1 条既有重复 ZIP 条目负例 UserWarning：dummy-skill/SKILL.md |
 | check_workbuddy | pass=true / errors=[] |
 | validate_bundle | PASS_STATIC_ONLY / errors=[]，静态校验 1817/1817，137 offline unit tests，root lock 508 |
 | 两次 build_bundle | 两次均核对全部 517 个 manifest 文件，字节/权限 0 差异 |
 | build_release / validate_release --zip | build_release 两次均为 517 项、SHA256 一致；validate_release 两份均 517/517，pass=true / errors=[] |
-| gate-gold / gold 扫描 | SHA256SUMS 6/6，仓库承诺一致；41 个私有特征字符串扫描两份 ZIP 及内嵌 Skill ZIP 共 1572 个载荷，私有特征与 gold 文件条目均 0 命中；公开成员 ID 与 docs/12 同步的公开规则不计私有泄漏 |
+| gate-gold / gold 扫描 | SHA256SUMS 6/6，仓库承诺一致；41 个案例私有特征字符串及 149 个扩展特征扫描两份 ZIP 及内嵌 Skill ZIP 共 1572 个载荷，私有特征与 gold 文件条目均 0 命中；公开成员 ID 与 docs/12 同步的公开规则不计私有泄漏；tools/oncall 条目 0 命中 |
 
-最初首轮定向回归 100 passed / 1 failed / 300 subtests passed；validate 初检 1816/1817。唯一失败为旧验证数字：新增 README 相对链接使总数增加 1。修正后 validate 1817/1817 与全量 pytest 均实际通过；失败原日志保留，未削弱断言。上一轮新增的 3 项 F1–F3 回归和既有 WB16/WB17 测试保留。本次将领域外正例断言改为具体 CRM 业务/组件断言，保留数值/指标/对象隔离，新增 2 项回归覆盖旧 C1 重叠输入、领域外输入（含只加 CRM 标签的变体）、12 个关键措辞与 8 个数值/指标/对象复用负例，共 23/23 拒绝。宿主文档定向检查为 24 passed / 82 subtests passed。
+本轮新增 3 项回归：5.7.7 宿主事实与证据边界、独立团长包派单参数、八个 Skill 及独立包的恢复规则逐字一致；原 WB07 前置断言改锁 HOST_LIMIT 不阻断、WB09H 仍须 PASS、宿主遵守 max_turns 时恢复 WB07 须 PASS。团长两源和生成物 NATIVE_LEAD 块逐字一致，原权限与日常轮数规则保留。文档记录收尾后重建并复核静态数字与发布内容。
 
-rc3 WINDOWS、WORKBUDDY_HOST、MODEL_BEHAVIOR、WB16、WB17、正式 18 次 N/S = NOT_RUN；10-11 rc2 jsonl/daemon 机制观察仅按交接记录补记，不是 rc3 实测。最终外层 ZIP 哈希的持久交付记录为 `/Volumes/WorkSSD/Downloads/crm-sre-team-v3.7/SHA256SUMS`，验收后由 Claude 随交付保存；本轮待交付副本在 /private/tmp/crm-v37-handoff/rc3-release.sha256 与 checks.txt。最终外层包自身哈希不写入载荷，避免自指；持久路径声明不代表复制已完成。
+前两轮验收返工记录：最初首轮定向回归 100 passed / 1 failed / 300 subtests passed；validate 初检 1816/1817。唯一失败为旧验证数字：新增 README 相对链接使总数增加 1。修正后 validate 1817/1817 与全量 pytest 均实际通过；失败原日志保留，未削弱断言。新增的 3 项 F1–F3 回归和既有 WB16/WB17 测试保留。F1-r2 将领域外正例断言改为具体 CRM 业务/组件断言，保留数值/指标/对象隔离，新增 2 项回归覆盖旧 C1 重叠输入、领域外输入（含只加 CRM 标签的变体）、12 个关键措辞与 8 个数值/指标/对象复用负例，共 23/23 拒绝；当轮宿主文档定向检查为 24 passed / 82 subtests passed。
+
+rc3 WINDOWS、WORKBUDDY_HOST、MODEL_BEHAVIOR、WB16、WB17、正式 18 次 N/S = NOT_RUN；10-11 rc2 jsonl/daemon 与 5.7.7 机制事实按交接补记，不是本轮独立宿主实测。最终外层 ZIP 哈希的持久交付记录为 `/Volumes/WorkSSD/Downloads/crm-sre-team-v3.7/SHA256SUMS`，验收后由人工随交付保存；本轮待交付 ZIP、SHA256SUMS 与检查日志在 /private/tmp/crm-v37-final-o2lu2gvy/。最终外层包自身哈希不写入载荷，避免自指；持久路径声明不代表复制已完成。
 
 ## v3.6.4 / 2.8.0-rc2 · Windows 11 值班机离线复核（2026-10-10）
 

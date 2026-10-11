@@ -322,8 +322,50 @@ class V35Regressions(unittest.TestCase):
         self.assertIn('scoring-protocol.md', d12)
         self.assertIn("该 N/S 配对不成立", d12.split("## 六、", 1)[1])
         d11 = (ROOT / "docs/11-workbuddy-host-acceptance.md").read_text(encoding="utf-8")
-        self.assertIn("WB07 或 WB09H 未 PASS（包括 FAIL/BLOCKED/NOT_RUN", d11)
+        for rel in ("docs/11-workbuddy-host-acceptance.md", "docs/13-oncall-gate-materials.md"):
+            with self.subTest(rel=rel):
+                text = (ROOT / rel).read_text(encoding="utf-8")
+                self.assertIn("块 27 核验 WorkBuddy 5.7.7 子代理轮数下限仍为 200 时，WB07 记 HOST_LIMIT，不阻断正式 18 次关口", text)
+                self.assertIn("WB09H 仍须 PASS，未 PASS", text)
+                self.assertIn("值班机按原文跑一次自检 3", text)
+                self.assertIn("只核团长如实记 BLOCKED", text)
+                self.assertIn("块 27 核验不符（宿主开始遵守 max_turns）时恢复 WB07 须 PASS，未 PASS 不开始关口", text)
+                self.assertNotIn("WB07 或 WB09H", text)
+        self.assertIn("WB09H 仍须 PASS，未 PASS（包括 FAIL/BLOCKED/NOT_RUN）", d11)
         self.assertIn("只出现 D 模式", d11)
+        cases = json.loads((ROOT / "tests/workbuddy-host-cases.json").read_text(encoding="utf-8"))["cases"]
+        wb07 = next(case for case in cases if case["id"] == "WB07")
+        for phrase in ("块 27", "200", "HOST_LIMIT", "不阻断正式 18 次关口", "只核团长如实记 BLOCKED",
+                       "宿主开始遵守 max_turns 时恢复 WB07 须 PASS"):
+            self.assertIn(phrase, wb07["scenario"])
+        self.assertEqual(wb07["status"], "NOT_RUN_IN_TARGET_HOST")
+        self.assertIsNone(wb07["observed_output"])
+
+    def test_rc3_individual_lead_zip_preserves_daily_dispatch_rule(self):
+        with zipfile.ZipFile(ROOT / "individual-packages/stability-director/skill.zip") as archive:
+            text = archive.read("stability-director/SKILL.md").decode("utf-8")
+        self.assertEqual(text, (ROOT / "skills/stability-director/SKILL.md").read_text(encoding="utf-8"))
+        for phrase in ("subagent_type 填成员注册 ID", "日常不传 name", "自动建队、经邮箱回报，TaskOutput 不等待队员",
+                       "不使用 mode=bypassPermissions", "日常派单不传 max_turns，用宿主默认轮数"):
+            self.assertIn(phrase, text)
+        self.assertNotIn("只作标签", text)
+        self.assertNotIn("name 标签", text)
+
+    def test_rc3_recovery_requires_technical_baseline_and_business_evidence(self):
+        source = (ROOT / "policy-source/references/incident-workflow.md").read_text(encoding="utf-8")
+        recovery = source.split("## 恢复与关闭", 1)[1]
+        self.assertIn("缺少基线、允许阈值、稳定观察窗等恢复判定材料时，不下“技术恢复”结论", recovery)
+        self.assertIn("写为“指标改善，技术恢复待确认”，并列出缺失材料", recovery)
+        self.assertIn("业务恢复需要业务闭环证据，不自造业务终态公式或套用输入未给的规则", recovery)
+        roles = json.loads((ROOT / "policy-source/roles-source.json").read_text(encoding="utf-8"))
+        for sid in sorted(roles):
+            with self.subTest(skill=sid):
+                text = (ROOT / "skills" / sid / "references/incident-workflow.md").read_text(encoding="utf-8")
+                self.assertEqual(text, source)
+            with self.subTest(individual_zip=sid):
+                with zipfile.ZipFile(ROOT / "individual-packages" / sid / "skill.zip") as archive:
+                    text = archive.read(sid + "/references/incident-workflow.md").decode("utf-8")
+                self.assertEqual(text, source)
 
     def public_pair_counts(self):
         text = (ROOT / 'docs/12-native-vs-single-comparison.md').read_text(encoding='utf-8')

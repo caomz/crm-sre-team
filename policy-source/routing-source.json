@@ -1,6 +1,7 @@
 {
   "_scope": "INTERNAL_ROUTING_METADATA_NOT_HOST_TOOL_SCHEMA",
   "_note": "项目内部路由字段，只用于生成团长名册与静态一致性校验；不写入宿主工具 Schema、不充当工具参数。键为注册 ID；中文正式名从 policy-source/roles-source.json 读取，不在此重复。下划线开头的键为元数据，校验器跳过。",
+  "_dispatch_note": "本表只说明“何时该派给谁”；派单时 subagent_type 填注册 ID，日常不传 name；工具名与参数以当前宿主提供的 Schema 为准，不据本文猜测。注册 ID 不因中文名变化而改变。",
   "telecom-crm-crm-business-flow": {
     "route_when": [
       "订单状态、业务流程分叉或补偿正确性方面的材料",

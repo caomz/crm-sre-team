@@ -5,7 +5,7 @@
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
     "MANUAL-MODE.md": "8f0f8569cba305f2ed88e8815db1c274c6e4f57f54e66050284fb7ab5eaae2f7",
-    "SKILL.md": "63489d830afd5f7c5f59973c7eaf8322fecd5aaf8833c1366f3c0cec7d8eff55",
+    "SKILL.md": "234a3f13392bbabd163fb2f7c262e902f3600e5e5e9758de3b3fefaa06f1fafc",
     "VERSION": "2cf8b31fe9e9a51a3ef4696220f2fa26e8df4cf1744ba5f9a910d93b616a217f",
     "agents/openai.yaml": "025062d860bf91c0ece131ff482ac6a2200add3c2532637d63c11eef173eace7",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",
@@ -22,7 +22,7 @@
     "references/data-handling.md": "4f4df35452e2128c8851e1bd49244bb75b34f26e9401f5bb685ede2ca976d5be",
     "references/evidence-protocol.md": "6e83767f9c076d2f8ea8eb55285415166a0092e93f443930b1b65c5ebb4b9c5b",
     "references/harness-contract.md": "f5ae570143a807fb5f86636fa00259378ad30767483e5cf944c810b363970c24",
-    "references/incident-workflow.md": "36e590dd60d8638027071073ec4a0ca983a9c933bdf63c0d90264b8135dc4fc6",
+    "references/incident-workflow.md": "4dd7dc4abe413df1cb3f711ee148bf182746f453c40a6a13a5685007e6384f93",
     "references/judgment-basis.md": "77cbd643e23fee16bfa9936735909ddfe75acd067c1a44eb597710dc22ab0385",
     "references/k8s-platform-runbook.md": "d9fc3032700ce08f5ae4ae5855276e925310108fcf85019e59435d92391607bd",
     "references/linux-runbook.md": "7ee563cee6be3c2b372424cb20a7322f16b160e413c85eebad5806963e7681f7",

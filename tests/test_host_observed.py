@@ -115,11 +115,16 @@ class DispatchParameterTests(unittest.TestCase):
         for rel in [
             "policy-source/skills/stability-director.md",
             "policy-source/prompts/roles/telecom-crm-sre-team-lead.md",
+            "skills/stability-director/SKILL.md",
+            "agents/telecom-crm-sre-team-lead.md",
         ]:
             with self.subTest(rel=rel):
                 text = _read(ROOT / rel)
                 self.assertIn("subagent_type 填成员注册 ID", text)
-                self.assertIn("name 可填该成员中文名（只作标签", text)
+                self.assertIn("日常不传 name", text)
+                self.assertIn("WorkBuddy 5.7.7 带 name 会走队员通道：自动建队、经邮箱回报，TaskOutput 不等待队员", text)
+                self.assertNotIn("只作标签", text)
+                self.assertNotIn("name 标签", text)
 
     def test_10_native_lead_bans_bypass_permissions(self):
         for rel in [
@@ -149,8 +154,14 @@ class DispatchParameterTests(unittest.TestCase):
                 self.assertIn("以当前宿主实际工具定义为准", text)
 
     def test_13_roster_note_mentions_subagent_type(self):
-        text = _read(ROOT / "tools/build_bundle.py")
+        routing = json.loads(_read(ROOT / "policy-source/routing-source.json"))
+        text = routing["_dispatch_note"]
         self.assertIn("派单时 subagent_type 填注册 ID", text)
+        self.assertIn("日常不传 name", text)
+        self.assertNotIn("name 标签", text)
+        for rel in ["agents/telecom-crm-sre-team-lead.md", "skills/stability-director/SKILL.md"]:
+            with self.subTest(rel=rel):
+                self.assertIn(text, _read(ROOT / rel))
 
 
 class ModeBlockConsistencyTests(unittest.TestCase):
@@ -163,6 +174,10 @@ class ModeBlockConsistencyTests(unittest.TestCase):
             _extract_mode_block(skill_src, "NATIVE_LEAD"),
             _extract_mode_block(role_src, "NATIVE_LEAD"),
         )
+        for rel in ["agents/telecom-crm-sre-team-lead.md", "skills/stability-director/SKILL.md"]:
+            with self.subTest(rel=rel):
+                self.assertEqual(_extract_mode_block(skill_src, "NATIVE_LEAD"),
+                                 _extract_mode_block(_read(ROOT / rel), "NATIVE_LEAD"))
 
     def test_15_member_native_member_blocks_identical(self):
         for sid in MEMBER_SIDS:
@@ -186,6 +201,19 @@ class ModeBlockConsistencyTests(unittest.TestCase):
 
 
 class Rc3HostAcceptanceDocumentationTests(unittest.TestCase):
+    def test_577_host_limits_and_channels_are_documented_as_handoff_facts(self):
+        text = _read(ROOT / "docs/11-workbuddy-host-acceptance.md")
+        for phrase in ("交接事实，不是 rc3 PASS", "resolveSubagentMaxTurns", "Math.max(请求值, 200)",
+                       "CODEBUDDY_CODE_SUBAGENT_MAX_TURNS 同样被钳到 ≥200",
+                       "Mac 实测不带 name、max_turns=1 时成员 2 轮正常完成", "值班机块 27 已证实该下限",
+                       "spawnTeammate", "<name>@_auto_<会话ID>", "TaskList/SendMessage", "TaskOutput 不等待队员",
+                       "Not in a team", "日常不传 name，走同步子代理，结果直接作为 Agent 工具返回",
+                       "主会话 jsonl 的 agent=cli，团长职责来自 stability-director Skill",
+                       "切换日志只证明宿主发出了切换请求"):
+            self.assertIn(phrase, text)
+        self.assertNotIn("切换日志证明会话绑定", text)
+        self.assertNotIn("name 标签", text)
+
     def test_desktop_binding_and_host_managed_settings_are_distinct(self):
         readme = _read(ROOT / "README.md")
         migration = _read(ROOT / "MIGRATION.md")
