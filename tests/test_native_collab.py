@@ -158,7 +158,7 @@ class T6CollabTextTests(unittest.TestCase):
                       "材料（统一证据编号", "要求（返回格式与关键未知）", "剩余额度"]:
             self.assertIn(field, self.lead_artifact)
         self.assertIn("不写“参考上文”", self.lead_artifact)
-        self.assertIn("8000 字符封顶", self.lead_artifact)
+        self.assertIn("单次派单的材料传输上限为 8000 字符", self.lead_artifact)
 
     def test_03_refute_rules_present(self):
         self.assertIn("反证派发（REFUTE）", self.lead_artifact)
@@ -189,6 +189,30 @@ class T6CollabTextTests(unittest.TestCase):
                     a = [p for mode, p in rb if mode == label]
                     b = [p for mode, p in sb if mode == label]
                     self.assertTrue(a and a == b, f"{sid}:{label} blocks differ")
+
+    def test_dispatch_counterevidence_and_omission_scope_in_both_lead_entries(self):
+        for rel in ("agents/telecom-crm-sre-team-lead.md", "skills/stability-director/SKILL.md"):
+            text = (ROOT / rel).read_text(encoding="utf-8")
+            with self.subTest(entry=rel):
+                for phrase in ("已知的相反材料或正常对照", "有就附原文片段，没有就写“未见”",
+                               "未附材料的范围", "不要求机械三标题", "不夹带团长的假设或结论"):
+                    self.assertIn(phrase, text)
+
+    def test_internal_resend_budget_separate_from_new_evidence_in_every_entry(self):
+        for sid, role in sorted(self.roles.items()):
+            for rel in (f"agents/{role['agent']}.md", f"skills/{sid}/SKILL.md"):
+                text = (ROOT / rel).read_text(encoding="utf-8")
+                with self.subTest(entry=rel):
+                    for phrase in ("不占成员的 2 项外部新增取证额度", "不占团长面向用户的每轮 3 项",
+                                   "默认每个成员每轮最多 2 次补发", "只补用户原文，不夹带团长结论",
+                                   "8000 字符，不是诊断预算", "字符数不等于 token", "覆盖不足",
+                                   "重试或续答不重置本轮补发次数"):
+                        self.assertIn(phrase, text)
+                    self.assertNotIn("计入该成员的 2 项额度", text)
+        protocol = (ROOT / "policy-source/references/evidence-protocol.md").read_text(encoding="utf-8")
+        self.assertNotIn("补发必须消耗同一轮剩余额度", protocol)
+        self.assertIn("默认每个成员每轮最多 2 次补发", protocol)
+        self.assertIn("不修改托管模式的 request_proposals 配额", protocol)
 
     def test_07_mutation_negatives_parameterized(self):
         """M16: negatives must be rejected on BOTH runtime artifacts (runtime=True)

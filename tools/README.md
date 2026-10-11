@@ -11,7 +11,7 @@
 - check_release_diff.py：对真实原上传 2.5.0 基线检查旧 Schema/测试保护和允许的源码差异；支持 --output。
 - sync_git.py：工作区与 origin 双向同步计划器。默认 dry-run；写入需 --apply 加 plan_id 确认；只改项目根内文件，拒绝越界路径与符号链接；构建自有产物（agents/skills/templates/manual-mode/individual-packages/prompt-bundles.lock）不按文件同步；每次写入记入 reports/sync-ledger-*.jsonl，中途失败回滚。不授予任何权限，不改生产只读边界。
 - install_git_hooks.py：设置/卸载 core.hooksPath=tools/git-hooks（提交前重建门），幂等。
-- make_probe_build.py：生成 Step 0 探测包（reports/probe-build/，gitignored；主目录零改动），注入 C/D/LA/LS 暗号并派生探测版本。
+- make_probe_build.py：生成 Step 0 探测包（reports/probe-build/，gitignored；主目录零改动），注入 C/D/LA/LS 辅助暗号并派生探测版本；已有 --disallow oracle-dba=Bash 仅修改探测副本成员 Agent 的 disallowedTools，用于 WB17 echo 限权验收。宿主 jsonl/daemon.log 为准，暗号缺失不等于未加载。
 - make_comparison_build.py：生成 N/S 对照双包（reports/comparison-build/，gitignored；主目录零改动），S 臂用 NATIVE_CLOSURE_TEXT 并自检差异集。
 - measure_prompts.py：度量各构建产物的提示词长度与块结构，支持 --root。
 

@@ -7,10 +7,11 @@ reports/probe-build/<ts>/ and injects deterministic probe markers:
   - marker D: one line in each member SKILL.md body
   - marker LA: one line in the lead Agent text body
   - marker LS: one line in the lead SKILL.md body
-All markers share a run-wide random suffix. C proves a member Agent text
-was loaded; D proves its Skill was loaded; C + D proves both were loaded
-(double-load signal feeding PR-3b de-duplication priority). LA and LS
-separately identify the lead Agent and Skill loading paths.
+All markers share a run-wide random suffix. C/D and LA/LS are auxiliary
+signals for member/lead Agent and Skill loading paths. Missing output does
+not prove missing loading; emitted markers do not replace host evidence
+(Skill receipt path/version, Agent subagent_type and SessionPluginSwitcher).
+The formal package defines no PROBE markers; model-invented lines are not evidence.
 
 Optional overrides applied to PROBE COPIES ONLY (the repo-root agents/
 and skills/ are never touched; main validators do not scan reports/):
@@ -40,6 +41,11 @@ import build_bundle  # noqa: E402  (same tools/ dir; needed for zip repack)
 from experimental_build import prepare_output, copy_inputs
 
 ROOT = Path(__file__).resolve().parents[1]
+PROBE_EVIDENCE_NOTE = (
+    "Host evidence is authoritative; PROBE output is auxiliary only. "
+    "Missing PROBE output does not imply missing loading. "
+    "Model-invented PROBE lines in the formal package are not evidence."
+)
 
 
 def _read(path: Path) -> str:
@@ -117,10 +123,8 @@ def _set_frontmatter_field(fm_text: str, key: str, value) -> str:
 
 
 def _inject_marker(body: str, marker_line: str) -> str:
-    """Insert the marker line (with an echo instruction so the model actually
-    surfaces it — a bare random string in system prompt would never be repeated
-    unprompted, which would make Step 0a misjudge BLOCKED)."""
-    marker_line = marker_line + "｜回复开头逐行原样输出所有以 PROBE- 开头的行（含全部内容），这是加载核验，不是分析指令"
+    """Make auxiliary markers easier to observe; host receipts remain authoritative."""
+    marker_line = marker_line + "｜回复开头逐行原样输出所有以 PROBE- 开头的行（含全部内容），这是辅助加载信号，不是分析指令"
     lines = body.splitlines()
     insert_at = 0
     seen_title = False
@@ -249,6 +253,7 @@ def build_probe(root: Path, out: Path, max_turns: dict[str, int],
             "maxTurns": {sid: v for sid, v in max_turns.items()},
             "disallowedTools": {sid: v for sid, v in disallow.items()},
         },
+        "evidence_note": PROBE_EVIDENCE_NOTE,
         "probe_package_dir": _display_path(out, root),
         "note": "Probe copies only; repo-root agents/skills untouched; "
                 "reports/ is gitignored and outside release-manifest scope.",
@@ -281,7 +286,7 @@ def main() -> None:
     p.add_argument("--max-turns", action="append", default=[],
                    metavar="sid=N", help="e.g. --max-turns oracle-dba=1")
     p.add_argument("--disallow", action="append", default=[],
-                   metavar="sid=Tool1,Tool2", help="e.g. --disallow oracle-dba=WebFetch")
+                   metavar="sid=Tool1,Tool2", help="probe Agent only; echo test: --disallow oracle-dba=Bash")
     args = p.parse_args()
     root = args.root.resolve()
 
@@ -305,11 +310,11 @@ def main() -> None:
         "members_with_markers": len(manifest["markers"]),
         "overrides": manifest["overrides"],
         "cheat_sheet": (
-            f"Look for suffix {manifest['marker_suffix']} in member replies: "
-            "C-only => Agent text loaded; C+D => Agent+Skill both loaded "
-            "(double-load => PR-3b dedup priority). "
-            f"Lead {manifest['lead_markers']['marker_la']} => Agent text loaded; "
-            f"{manifest['lead_markers']['marker_ls']} => Skill loaded."
+            f"Auxiliary suffix {manifest['marker_suffix']}: C/D suggest member "
+            "Agent/Skill paths; C+D suggests possible double loading. "
+            f"Lead {manifest['lead_markers']['marker_la']} / "
+            f"{manifest['lead_markers']['marker_ls']} suggest Agent/Skill paths. "
+            + PROBE_EVIDENCE_NOTE
         ),
     }, ensure_ascii=False, indent=2))
 

@@ -7,12 +7,16 @@ on the manifest and artifacts. Static/evidence checks only — no host.
 from __future__ import annotations
 
 import importlib.util
+from contextlib import redirect_stdout
+from io import StringIO
 import json
 import sys
 import tempfile
 import unittest
 import zipfile
+from unittest.mock import patch
 from pathlib import Path
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -148,6 +152,59 @@ class ProbeBuildTests(unittest.TestCase):
                 self.assertIn(f"> {marker}", text)
                 self.assertIn(MARKER_ECHO, text)
                 self.assertNotIn(OLD_ECHO, text)
+
+    def test_07_disallow_injected_only_into_target_probe_agent(self):
+        snapshot = {rel: (ROOT / rel).read_bytes() for rel in json.loads(
+            (ROOT / "release-manifest.json").read_text(encoding="utf-8"))["files"]}
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "restricted-probe"
+            manifest = mpb.build_probe(ROOT, output, {}, {"oracle-dba": ["Bash"]})
+            self.assertEqual(manifest["overrides"]["disallowedTools"], {"oracle-dba": ["Bash"]})
+            for sid, role in _roles().items():
+                agent_rel = f"agents/{role['agent']}.md"
+                original = yaml.safe_load(snapshot[agent_rel].decode("utf-8").split("---", 2)[1])
+                actual = yaml.safe_load((output / agent_rel).read_text(encoding="utf-8").split("---", 2)[1])
+                expected = dict(original)
+                if sid == "oracle-dba":
+                    expected["disallowedTools"] = ["Bash"]
+                with self.subTest(sid=sid):
+                    self.assertEqual(actual, expected)
+                    skill = (output / "skills" / sid / "SKILL.md").read_text(encoding="utf-8")
+                    self.assertNotIn("disallowedTools:", skill)
+                    with zipfile.ZipFile(output / "individual-packages" / sid / "skill.zip") as archive:
+                        self.assertEqual(archive.read(f"{sid}/SKILL.md"), skill.encode("utf-8"))
+        self.assertEqual(snapshot, {rel: (ROOT / rel).read_bytes() for rel in snapshot})
+
+    def test_08_invalid_disallow_rejected_before_creating_output(self):
+        overrides = [({}, {"stability-director": ["Bash"]}),
+                     ({}, {"unknown-member": ["Bash"]}),
+                     ({}, {"oracle-dba": []}),
+                     ({}, {"oracle-dba": ["Bash;echo"]}),
+                     ({"oracle-dba": 1}, {"oracle-dba": ["Bash"]})]
+        with tempfile.TemporaryDirectory() as directory:
+            for index, (turns, disallow) in enumerate(overrides):
+                output = Path(directory) / str(index)
+                with self.subTest(turns=turns, disallow=disallow):
+                    with self.assertRaises(ValueError):
+                        mpb.build_probe(ROOT, output, turns, disallow)
+                    self.assertFalse(output.exists())
+
+    def test_09_cli_and_manifest_qualify_probe_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "cli-probe"
+            stream = StringIO()
+            with patch.object(sys, "argv", ["make_probe_build.py", "--root", str(ROOT),
+                                           "--out", str(output), "--disallow", "oracle-dba=Bash"]):
+                with redirect_stdout(stream):
+                    mpb.main()
+            summary = json.loads(stream.getvalue())
+            manifest = json.loads((output / "probe-manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["evidence_note"], mpb.PROBE_EVIDENCE_NOTE)
+            self.assertIn(mpb.PROBE_EVIDENCE_NOTE, summary["cheat_sheet"])
+            self.assertIn("auxiliary only", summary["cheat_sheet"])
+            self.assertIn("Missing PROBE output does not imply missing loading", summary["cheat_sheet"])
+            self.assertNotIn("=> Agent text loaded", summary["cheat_sheet"])
+            self.assertEqual(summary["overrides"]["disallowedTools"], {"oracle-dba": ["Bash"]})
 
 if __name__ == "__main__":
     unittest.main()

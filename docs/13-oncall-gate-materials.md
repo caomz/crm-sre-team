@@ -1,11 +1,11 @@
 # 值班机关口材料与校准（首次运行前冻结）
 
-状态：DESIGN_LOCKED_BEFORE_FIRST_RUN / NOT_RUN_IN_TARGET_HOST。2026-10-10 在 v3.6 / 2.8.0-rc2 修订后重新冻结；首次运行仍为零。全部是虚构材料；评分锚点不是模型实测结果。
+状态：DESIGN_LOCKED_BEFORE_FIRST_RUN / 2.8.0-rc3 / NOT_RUN_IN_TARGET_HOST。2026-10-11 v3.7 为运行前修订：rc2→rc3 对全部配对分支增加 N 正确性 ≥ S，防止以速度或总分补偿正确性下降；同步私有协议/承诺，并修正只读范围标题、派单相反材料/未附范围和内部补发预算。关口尚未运行，rc3 首次运行前重新冻结输入、评分承诺、提示词与同轮 comparison-manifest.json，再跑正式 18 次 N/S；不沿用 rc2 构建或结果。全部是虚构材料；评分锚点不是模型实测结果。
 唯一材料源：[oncall-cases.json](../policy-source/acceptance/oncall-cases.json)。C1/C3 沿用外部 T04/T08 的结构意图，未取得外部工具包原文，T02 为本仓库替代校准材料。本次重新预注册后使用这套材料，不混入另一版案例。
 
 执行人从插件和 WorkBuddy 会话目录之外的开发 clone 读取 JSON，只粘贴对应 case.input；不得把整份 JSON 或 gold 交给被测会话。被测会话不读、不列、不搜文件，不读环境变量，不写文件，不联网，技能仅通过宿主 Skill 工具加载。N/S 的 input 逐字相同，不附组别或评分提示。执行前保存本文件和 JSON 的 SHA256，以及同一次 N/S 构建的 comparison-manifest.json；开始后不得修改材料/评分规则。
 
-评分原文由执行人单独持有：Mac 路径 `/Volumes/WorkSSD/Downloads/crm-sre-team-v3.6/仅评分人/gate-gold/`，每个案例一个 JSON，另有 scoring-protocol.md 与 SHA256SUMS。仓库保存每个文件的 SHA256 承诺。JSON 规范化为 UTF-8、键排序、非 ASCII 原字、紧凑逗号/冒号分隔、末尾一个 LF、无 BOM；协议按 UTF-8 原始字节哈希。首次运行前核验并冻结输入、承诺与 comparison-manifest.json；之后不得改动。
+评分原文由执行人单独持有：持久交付的 Mac 路径 `/Volumes/WorkSSD/Downloads/crm-sre-team-v3.7/仅评分人/gate-gold/`，每个案例一个 JSON，另有 scoring-protocol.md 与 SHA256SUMS。本轮工作副本在 `/private/tmp/crm-v37-handoff/gate-gold/`；验收后由 Claude 从交接副本复制到上述持久路径，路径声明不代表复制已完成，Downloads 下的 rc2 原件不改。仓库保存每个文件的 SHA256 承诺。JSON 规范化为 UTF-8、键排序、非 ASCII 原字、紧凑逗号/冒号分隔、末尾一个 LF、无 BOM；协议按 UTF-8 原始字节哈希。首次运行前核验并冻结输入、承诺与 comparison-manifest.json；之后不得改动。
 
 评分前必须核对 SHA256。gold 只给执行人，绝不粘贴进被测会话，不放进插件目录、缓存或被测工作区。建议所有被测会话结束后才手动交到值班机，或直接在 Mac 评分。不放进 git，不上传外部服务。T02 先跑两次不计分校准，执行人依独立判据统一评分。
 

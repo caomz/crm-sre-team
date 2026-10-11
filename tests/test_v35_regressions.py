@@ -268,7 +268,7 @@ class V35Regressions(unittest.TestCase):
         protocol = (private / 'scoring-protocol.md').read_text(encoding='utf-8')
         public = (ROOT / 'docs/12-native-vs-single-comparison.md').read_text(encoding='utf-8')
         def rules(text):
-            return text.split('<!-- RC2_PAIR_RULES:BEGIN -->', 1)[1].split('<!-- RC2_PAIR_RULES:END -->', 1)[0]
+            return text.split('<!-- RC3_PAIR_RULES:BEGIN -->', 1)[1].split('<!-- RC3_PAIR_RULES:END -->', 1)[0]
         self.assertEqual(rules(public), rules(protocol))
         decision = protocol.split('## 五、', 1)[1].split('## 六、', 1)[0]
         # Retain the earlier routing regression assertions in the executor package.
@@ -327,7 +327,7 @@ class V35Regressions(unittest.TestCase):
 
     def public_pair_counts(self):
         text = (ROOT / 'docs/12-native-vs-single-comparison.md').read_text(encoding='utf-8')
-        block = text.split('<!-- RC2_PAIR_RULES:BEGIN -->', 1)[1].split('<!-- RC2_PAIR_RULES:END -->', 1)[0]
+        block = text.split('<!-- RC3_PAIR_RULES:BEGIN -->', 1)[1].split('<!-- RC3_PAIR_RULES:END -->', 1)[0]
         code = block.split('```python\n', 1)[1].split('```', 1)[0]
         parsed = ast.parse(code)
         self.assertEqual(len(parsed.body), 1)
@@ -364,11 +364,45 @@ class V35Regressions(unittest.TestCase):
         self.assertTrue(pair_counts('C1', (2, 2, 2), (2, 2, 2), 0, 0, 8, 10, False, False))
         self.assertFalse(pair_counts('C1', (2, 2, 2), (2, 2, 2), 0, 0, None, None, False, False))
         for case in ('C2', 'C3'):
-            self.assertTrue(pair_counts(case, (1, 2, 2), (2, 2, 2), 0, 0, None, None, False, False))
+            self.assertFalse(pair_counts(case, (1, 2, 2), (2, 2, 2), 0, 0, None, None, False, False))
+            self.assertTrue(pair_counts(case, (2, 1, 2), (2, 2, 2), 0, 0, None, None, False, False))
+            self.assertTrue(pair_counts(case, (2, 2, 2), (2, 2, 2), 0, 0, 10, 10, False, False))
             self.assertFalse(pair_counts(case, (1, 2, 2), (2, 2, 2), 0, 0, 31, 10, False, False))
+            self.assertFalse(pair_counts(case, (2, 1, 2), (2, 2, 2), 0, 0, 31, 10, False, False))
         for case in ('C1', 'C2', 'C3'):
             self.assertFalse(pair_counts(case, (2, 2, 2), (1, 1, 1), 0, 0, 1, 10, False, False, routing_ok=False))
             self.assertFalse(pair_counts(case, (2, 2, 2), (1, 1, 1), 0, 0, 1, 10, False, False, pair_valid=False))
+
+    def test_rc3_review_counterexamples_cannot_pass_any_case_or_gate(self):
+        pair_counts = self.public_pair_counts()
+        results = {}
+        for case, latency_n in (('C1', 80), ('C2', 100), ('C3', 100)):
+            with self.subTest(case=case):
+                results[case] = [pair_counts(case, (1, 2, 2), (2, 2, 2), 0, 0,
+                                            latency_n, 100, False, False,
+                                            routing_ok=True, pair_valid=True) for _ in range(3)]
+                self.assertEqual(results[case], [False, False, False])
+                self.assertFalse(sum(results[case]) >= 2)
+        self.assertFalse(all(sum(pairs) >= 2 for pairs in results.values()))
+
+    def test_rc3_correctness_regression_vetoes_quality_and_missing_latency(self):
+        pair_counts = self.public_pair_counts()
+        # N has a higher total, but correctness 2 -> 1 must veto quality too.
+        for case in ('C1', 'C2', 'C3'):
+            for latency in ((80, 100), (None, None)):
+                with self.subTest(case=case, latency=latency):
+                    self.assertFalse(pair_counts(case, (1, 2, 2), (2, 0, 0), 0, 0,
+                                                 *latency, False, False))
+        self.assertTrue(pair_counts('C1', (2, 2, 2), (2, 0, 0), 0, 0,
+                                    None, None, False, False))
+
+    def test_rc3_refreeze_and_first_run_status_are_explicit(self):
+        for rel in ('docs/12-native-vs-single-comparison.md', 'docs/13-oncall-gate-materials.md'):
+            text = (ROOT / rel).read_text(encoding='utf-8')
+            with self.subTest(rel=rel):
+                for phrase in ('2.8.0-rc3', '首次运行前', '重新冻结', '关口尚未运行', '18 次 N/S',
+                               '不沿用 rc2', 'NOT_RUN_IN_TARGET_HOST'):
+                    self.assertIn(phrase, text)
 
 
 if __name__ == "__main__":

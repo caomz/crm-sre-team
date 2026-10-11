@@ -102,6 +102,21 @@ class ReadOnlyBoundaryTests(unittest.TestCase):
         self.assertEqual(self.policy["production_tools"], [])
         self.assertFalse(self.policy["production_executor"])
 
+    def test_rc3_blanket_query_titles_and_collection_bans_rejected(self):
+        for phrase in ("不提供 kubectl 命令", "不提供 SQL", "不给采集命令", "不提供采集步骤"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, checker.BLANKET_READONLY_BANS)
+                poisoned = self.member + "\n## 既有证据（" + phrase + "）\n"
+                self.assertIn("blanket_readonly_ban:" + phrase,
+                              checker.check_prompt(poisoned, False))
+        self.assertEqual(checker.reference_errors(ROOT), [])
+        for name in ("k8s-platform-runbook.md", "oracle-runbook.md"):
+            text = (ROOT / "policy-source/references" / name).read_text(encoding="utf-8")
+            self.assertIn("本节列出优先使用的既有证据", text)
+            self.assertIn("生产执行仍由现场授权人员完成", text)
+        jvm = (ROOT / "policy-source/references/app-jvm-runbook.md").read_text(encoding="utf-8")
+        self.assertIn("不提供 attach 执行步骤", jvm)
+
     def test_14_exfiltration_primitives_absent_from_every_entry(self):
         """Negative assertion: exfiltration primitives may only appear inside a prohibition clause."""
         recipes = ["169.254.169.254/latest/meta-data", "curl -X POST -d @", "--data-binary @",

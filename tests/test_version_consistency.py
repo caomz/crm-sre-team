@@ -27,6 +27,20 @@ class VersionConsistencyTests(unittest.TestCase):
             skill_version = (ROOT / "skills" / sid / "VERSION").read_text(encoding="utf-8").strip()
             self.assertEqual(skill_version, version, f"skill {sid} VERSION mismatch")
 
+    def test_current_source_config_and_candidate_documents_match_version(self):
+        version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        configs = [ROOT / "manual-team-config.json", ROOT / "policy-source/acceptance/oncall-cases.json",
+                   ROOT / "policy-source/thinking-tools/workbuddy-allowed-changes.json"]
+        configs += sorted((ROOT / "policies").glob("*.json"))
+        for path in configs:
+            with self.subTest(path=path.relative_to(ROOT).as_posix()):
+                self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["version"], version)
+        for rel in ("README.md", "MIGRATION.md", "CHANGELOG.md", "VALIDATION.md",
+                    "docs/11-workbuddy-host-acceptance.md", "docs/12-native-vs-single-comparison.md",
+                    "docs/13-oncall-gate-materials.md"):
+            with self.subTest(document=rel):
+                self.assertIn(version, "\n".join((ROOT / rel).read_text(encoding="utf-8").splitlines()[:3]))
+
     def test_05_source_provenance_full_bytes_not_mutated(self):
         """Historical provenance file must stay byte-identical across a real build."""
         import shutil

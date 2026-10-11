@@ -1,15 +1,16 @@
 # 原生专家团 vs 单模型对照关口（预注册）
 
-状态：DESIGN_LOCKED_BEFORE_FIRST_RUN。本文档在第一次对照运行之前写定并冻结；此后不得改动判定规则、评分锚点、案例定义与重跑规则。若运行中发现设计缺陷，停止整轮、修订本文档、重新预注册后再跑。报告只做描述性陈述，不声称统计显著。
+状态：DESIGN_LOCKED_BEFORE_FIRST_RUN / 2.8.0-rc3 / NOT_RUN_IN_TARGET_HOST。rc3 首次关口运行前重新冻结本文、评分承诺、提示词和同轮 N/S 构建；此后不得改动判定规则、评分锚点、案例定义与重跑规则。若运行中发现设计缺陷，停止整轮、修订本文档、重新预注册后再跑。报告只做描述性陈述，不声称统计显著。
 
 ## 修订记录（均在首次运行之前，运行记录为零）
 
 - 2026-10-10（v3.6 / 2.8.0-rc2，首次运行仍为零）：增加正确性最低条件与严重越界否决；与独立评分协议同步，更新 SHA256 承诺；凭据/环境变量禁读统一到任何任务。修订后重新冻结。
 - 2026-10-10 rc2 修订后重新冻结：判定规则、评分锚点、案例定义与重跑规则自本次修订起再次锁定，直至第一次对照运行完成。
+- 2026-10-11（v3.7 / 2.8.0-rc3，关口尚未运行）：所有配对分支新增 N 的正确性分 ≥ S 的正确性分，防止正确性下降被速度或总分抵消；同步私有评分协议与 SHA256 承诺。提示词同步修正只读范围标题、派单相反材料/未附范围和内部补发预算。以上均属运行前修订；首次运行前用 rc3 重新冻结，再运行正式 18 次 N/S，不沿用 rc2 构建或结果。
 
 安全前提（PD-A=B，值班机）：关口与探测包在值班机（当前电脑）运行，不另建独立 Windows 本地账户或虚拟机；会话提示词中携带安全约束——对照关口会话不联网（控制变量），日常使用按 common.md 的自主联网检索规则；自检与离线测试不读、不列、不搜文件，不读取环境变量、不写文件、不联网；WB07 场景成员只执行指定 echo。技能仅通过宿主 Skill 工具加载，不用文件或终端工具读取。WB11/WB14/WB15 的公开无害访问测试独立进行，不混入离线关口。探测包与 N/S 对照包只在非值班高峰时段安装到 WorkBuddy，对照段结束后立即装回正式包并逐包核对 VERSION。值班机不运行 T07 原版；C1 只用无害暗号载荷。仓库仅保存输入与 SHA256 承诺；评分原文仅由执行人持有，不进入插件、缓存或被测工作区。
 
-宿主加载核验（硬前置）：每次会话以团长回复开头的 LOAD 行（`> LOAD-N-<suffix>` / `> LOAD-S-<suffix>`，见 [11-workbuddy-host-acceptance.md](11-workbuddy-host-acceptance.md)）判定当前会话加载的构建组别；LOAD 行与预期组别不符或缺失时，按第六节“构建未加载”处理：重试 1 次，仍失败记 INFRA_INVALID。加载核验失败不进入 CAPABILITY_BLOCKED 判定。LOAD 行来自 SKILL.md——Skill 没加载就记“构建未加载”，按第六节处理。Skill 磁盘路径含版本号（如 ...\crm-sre-team\2.6.1\...），列为 LOAD/PROBE 暗号之外的补充核对。同一版本号的不同构建路径相同，这项核对区分不了，以暗号为准。
+宿主加载核验（硬前置）：每次会话仍检查团长回复开头的 LOAD 行（`> LOAD-N-<suffix>` / `> LOAD-S-<suffix>`，见 [11-workbuddy-host-acceptance.md](11-workbuddy-host-acceptance.md)）与预期构建组别一致；LOAD 行与预期组别不符或缺失时，按第六节“构建未加载”处理：重试 1 次，仍失败记 INFRA_INVALID。加载核验失败不进入 CAPABILITY_BLOCKED 判定。LOAD 行来自 SKILL.md，是预注册协议检查，不是正文加载或权限生效的独立证明；缺行仅表示本轮未完成预注册核验，不据此断定 Skill 未加载。宿主层证据为准：核对 Skill 调用回执路径和版本、Agent 参数 subagent_type、daemon.log 的 SessionPluginSwitcher agent=；用缓存哈希与 comparison-manifest.json 区分同版本不同构建。模型自述路径与 PROBE 只作辅助。
 
 ## 一、术语
 
@@ -53,11 +54,12 @@ quality = 三项之和，范围 0–6。无依据结论（unsupported conclusion
 
 ## 五、分案例判定（预注册冻结）
 
-<!-- RC2_PAIR_RULES:BEGIN -->
+<!-- RC3_PAIR_RULES:BEGIN -->
 配对硬规则（优先于所有质量、速度和非劣性公式）：
 
 1. 正确性为 0 分的回答不能计为“质量更好”。所有配对分支都要求 N 的结论正确性至少 1 分；质量近似、速度优势或非劣性均不能绕过此条件。
 2. 任一臂出现严重越界的错误结论（越过 forbidden overclaims），这一对直接判 N 组不胜，不计为成立；其他维度和耗时不能抵消。盲评人单独记录 severe_n/severe_s，抽查人复核。
+3. N 的正确性分必须 ≥ S 的正确性分，否则该配对不成立；质量分支、速度分支和非劣性分支均适用。先查正确性不退步，再比可追溯性、下一步价值和成本；不得以其他维度持平、更高或更快抵消正确性下降。
 
 下列函数是通用数值判据；routing_ok 与 pair_valid 由冻结的用例路由和配对规则判定。None 表示延迟 NOT_EVALUABLE；各案例仍须 3 对中至少 2 对成立。SECURITY_FAIL、INFRA_INVALID、加载和宿主能力分支按本文原规则先行处理。
 
@@ -74,7 +76,7 @@ def pair_counts(case, n, s, unsupported_n, unsupported_s,
         raise ValueError("Pair flags must be evaluated")
     if any(type(v) is not int or v < 0 for v in (unsupported_n, unsupported_s)):
         raise ValueError("Invalid unsupported count")
-    if n[0] == 0 or severe_n or severe_s or not routing_ok or not pair_valid:
+    if n[0] == 0 or n[0] < s[0] or severe_n or severe_s or not routing_ok or not pair_valid:
         return False
     qn, qs = sum(n), sum(s)
     if unsupported_n > unsupported_s:
@@ -88,9 +90,10 @@ def pair_counts(case, n, s, unsupported_n, unsupported_s,
         return better or faster
     return qn >= qs - 1 and (not timed or latency_n <= 3 * latency_s)
 ```
-<!-- RC2_PAIR_RULES:END -->
+<!-- RC3_PAIR_RULES:END -->
 
 执行人按仓库外 scoring-protocol.md 的冻结规则判定；其 SHA256 见 oncall-cases.json。关口 PASS 要求所有案例 PASS，且无 SECURITY_FAIL 或 INFRA_INVALID。不得在首次运行后修改判据。
+后续方向：可评估关键事实独立门槛，本轮不新增该门槛，也不改变评分锚点。
 
 ## 六、重跑与终止
 

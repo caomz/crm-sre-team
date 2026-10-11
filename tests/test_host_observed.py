@@ -1,7 +1,9 @@
 """Lock host-observed-v3.4 rules: roster in lead SKILL, dispatch marker,
 parameter realism, COMPAT scoping. Static text checks only; no model or host calls."""
 from __future__ import annotations
+import json
 from pathlib import Path
+import re
 import unittest
 import yaml
 
@@ -11,6 +13,11 @@ MEMBER_SIDS = [
     "crm-business-flow", "java-runtime", "linux-infra", "oracle-dba",
     "observability-diagnosis", "change-capacity-dr", "k8s-platform",
 ]
+
+WB16_GATE_KEY_PHRASES = (
+    "p95", "JDBC", "active/max", "waiting", "elapsed", "成功率", "慢",
+    "连接池", "SQL", "HTTP", "技术恢复", "业务恢复",
+)
 
 
 def _read(path: Path) -> str:
@@ -176,6 +183,149 @@ class ModeBlockConsistencyTests(unittest.TestCase):
                     _extract_mode_block(skill_src, "COMPAT_MEMBER"),
                     _extract_mode_block(role_src, "COMPAT_MEMBER"),
                 )
+
+
+class Rc3HostAcceptanceDocumentationTests(unittest.TestCase):
+    def test_desktop_binding_and_host_managed_settings_are_distinct(self):
+        readme = _read(ROOT / "README.md")
+        migration = _read(ROOT / "MIGRATION.md")
+        for text in (readme, migration):
+            self.assertIn("teamInfo.leadAgent", text)
+            self.assertIn("settings.json", text)
+            self.assertIn("宿主管理", text)
+            self.assertIn("516/517", text)
+            self.assertNotIn("根目录入口为 `settings.json`", text)
+        self.assertIn("构建和静态校验", readme)
+        self.assertIn("不是桌面绑定入口或加载证据", readme)
+
+    def test_loading_evidence_and_rc2_observations_do_not_claim_rc3_pass(self):
+        text = _read(ROOT / "docs/11-workbuddy-host-acceptance.md")
+        for phrase in ("2.8.0-rc3 场景验收 NOT_RUN", "宿主层为准", "Skill 调用回执的路径和版本",
+                       "subagent_type", "SessionPluginSwitcher", "没输出不等于没加载",
+                       "正式包没有 PROBE 定义", "模型自拟的 PROBE 行不算证据",
+                       "229ad198 / 329b9d20", "未独立读取原始日志", "不是 rc3 已验证"):
+            self.assertIn(phrase, text)
+        self.assertNotIn("成员加载了什么，只认 PROBE", text)
+        self.assertNotIn("PROBE-LS → 团长 SKILL.md 已加载", text)
+        for sid in ["stability-director"] + MEMBER_SIDS:
+            self.assertNotIn("> PROBE-", _read(ROOT / "skills" / sid / "SKILL.md"))
+
+    def test_new_host_cases_not_run_with_echo_only_safety(self):
+        text = _read(ROOT / "docs/11-workbuddy-host-acceptance.md")
+        section = text.split("## rc3 新增验收", 1)[1].split("K8s 三写法判定表", 1)[0]
+        for phrase in ("WB16 / WB17 均 NOT_RUN", "不提醒加载技能", "错误加载声明",
+                       "echo 随机暗号", "不联网、不读写文件、不读环境变量", "--disallow oracle-dba=Bash",
+                       "只由模型拒绝、没有尝试或没有回执记 BLOCKED", "不叠加 maxTurns"):
+            self.assertIn(phrase, text if phrase == "不提醒加载技能" else section)
+        data = json.loads(_read(ROOT / "tests/workbuddy-host-cases.json"))
+        for cid in ("WB16", "WB17"):
+            cases = [case for case in data["cases"] if case["id"] == cid]
+            self.assertEqual(len(cases), 1)
+            self.assertEqual(cases[0]["status"], "NOT_RUN_IN_TARGET_HOST")
+            self.assertIsNone(cases[0]["observed_output"])
+
+    def _wb16_input(self):
+        text = _read(ROOT / "docs/11-workbuddy-host-acceptance.md")
+        inputs = re.findall(r"WB16 普通入口：[^\n]*直接输入“([^”]+)”", text)
+        self.assertEqual(len(inputs), 1, "WB16 must document exactly one ordinary input")
+        return inputs[0]
+
+    def _assert_wb16_input_isolated(self, ordinary):
+        self.assertRegex(ordinary, r"CRM\s+(?:服务开通|订单开通|批处理|组件|容器|受理|数据库|连接池)",
+                         "WB16 must describe a specific CRM business or component")
+        numbers = set(re.findall(r"\d+(?:\.\d+)?", ordinary))
+        metrics = set(re.findall(
+            r"\b[A-Za-z][A-Za-z0-9_]*(?:/[A-Za-z][A-Za-z0-9_]*)*(?=\s*=)|\bp\d+(?:\.\d+)?\b",
+            ordinary,
+        ))
+        objects = set(re.findall(r"\b[a-z]+(?:-[a-z]+)*\.invalid\b", ordinary))
+        self.assertTrue(numbers, "WB16 needs concrete synthetic observations")
+        self.assertTrue(metrics, "WB16 needs metric markers to verify isolation")
+        cases = json.loads(_read(ROOT / "policy-source/acceptance/oncall-cases.json"))["cases"]
+        overlaps = {
+            case["id"]: sorted(feature for feature in numbers | metrics | objects
+                               if feature.casefold() in case["input"].casefold())
+            for case in cases
+        }
+        self.assertEqual({cid: hits for cid, hits in overlaps.items() if hits}, {})
+        self.assertTrue(objects, "WB16 needs a distinct synthetic object")
+        for phrase in WB16_GATE_KEY_PHRASES:
+            self.assertNotIn(phrase.casefold(), ordinary.casefold(),
+                             "WB16 reuses a gate key phrase: " + phrase)
+        self.assertNotRegex(ordinary, r"(?i)skill|stability-director")
+        for phrase in ("离线合成故障", "不联网", "不读写文件", "不读取环境变量", "不执行终端命令"):
+            self.assertIn(phrase, ordinary)
+
+    def test_wb16_numeric_and_metric_features_are_absent_from_every_gate_input(self):
+        ordinary = self._wb16_input()
+        self._assert_wb16_input_isolated(ordinary)
+        self.assertIn("CRM 服务开通队列", ordinary)
+        text = _read(ROOT / "docs/11-workbuddy-host-acceptance.md")
+        self.assertIn("关口前运行的宿主用例不得复用关口材料或其数值特征", text)
+        self.assertIn("与 C1/C2/C3/T02 的故障场景/子领域、对象、数值和指标类标记保持隔离", text)
+        self.assertIn("WB16 仍须是 CRM 运维故障，否则测不到普通入口", text)
+        self.assertIn("WB16/WB17 会话与关口会话分开", text)
+        case = next(case for case in json.loads(_read(ROOT / "tests/workbuddy-host-cases.json"))["cases"]
+                    if case["id"] == "WB16")
+        self.assertIn("CRM 服务开通队列 provisioning-queue.invalid", case["scenario"])
+        self.assertIn("故障场景/子领域", case["scenario"])
+
+    def test_wb16_rejects_previous_overlapping_and_out_of_domain_inputs(self):
+        old = (
+            "本次为离线合成故障：CRM 受理 p95 从 180ms 升到 1800ms；"
+            "同窗 JDBC active/max=40/40、waiting=35，数据库等待与业务终态未知。"
+            "请给当前判断与最小区分性验证。不联网、不读写文件、不读取环境变量，不执行终端命令。"
+        )
+        weather = (
+            "本次为离线合成故障：园区气象接收站 wx-receiver.invalid 出现数据帧解码失败；"
+            "同窗 crc_faults=7316、missing_frames=8462、decoded_frames=5729，"
+            "接收链路噪声与固件变更记录未知。请给当前判断与最小区分性验证。"
+            "不联网、不读写文件、不读取环境变量，不执行终端命令。"
+        )
+        for label, ordinary in (("old-C1-overlap", old), ("out-of-domain", weather),
+                                ("out-of-domain-with-CRM-label", "CRM " + weather)):
+            with self.subTest(label=label):
+                with self.assertRaises(AssertionError):
+                    self._assert_wb16_input_isolated(ordinary)
+
+    def test_wb16_rejects_gate_features_and_key_phrases(self):
+        ordinary = self._wb16_input()
+        self._assert_wb16_input_isolated(ordinary)
+        for phrase in WB16_GATE_KEY_PHRASES:
+            with self.subTest(key_phrase=phrase):
+                with self.assertRaises(AssertionError):
+                    self._assert_wb16_input_isolated(ordinary + "附注：" + phrase)
+        for original, replacement in (
+            ("6197", "180"), ("6197", "2400"), ("6197", "99.9"),
+            ("queued_activations", "rows"), ("queued_activations", "source"),
+            ("provisioning-queue.invalid", "app-a.invalid"),
+            ("provisioning-queue.invalid", "db-b.invalid"),
+            ("provisioning-queue.invalid", "app-c.invalid"),
+        ):
+            with self.subTest(feature=replacement):
+                self.assertIn(original, ordinary)
+                with self.assertRaises(AssertionError):
+                    self._assert_wb16_input_isolated(ordinary.replace(original, replacement))
+
+    def test_scoring_and_final_zip_records_have_persistent_delivery_paths(self):
+        materials = _read(ROOT / "docs/13-oncall-gate-materials.md")
+        validation = _read(ROOT / "VALIDATION.md").split("## v3.6.4", 1)[0]
+        delivery = "/Volumes/WorkSSD/Downloads/crm-sre-team-v3.7/"
+        self.assertEqual(re.findall(r"Mac 路径 `([^`]+)`", materials),
+                         [delivery + "仅评分人/gate-gold/"])
+        self.assertIn(delivery + "SHA256SUMS", validation)
+        self.assertIn("517 个 manifest 文件，字节/权限 0 差异", validation)
+        self.assertIn("build_release 两次均为 517 项、SHA256 一致", validation)
+        self.assertIn("validate_release 两份均 517/517", validation)
+        self.assertIn("私有特征与 gold 文件条目均 0 命中", validation)
+        self.assertIn("最终外层包自身哈希不写入载荷", validation)
+        self.assertIn("持久路径声明不代表复制已完成", validation)
+
+    def test_rc3_migration_targets_the_windows_11_oncall_host(self):
+        current = _read(ROOT / "MIGRATION.md").split("## 历史迁移记录", 1)[0]
+        self.assertIn("预发布后缀须在 Windows 11 值班机实测", current)
+        self.assertIn("家庭版 23H2，10.0.22631", current)
+        self.assertNotIn("Windows 10 宿主", current)
 
 
 if __name__ == "__main__":
