@@ -1,7 +1,8 @@
 ﻿#requires -Version 5.1
-# Approved design: pinned tag -> new clone -> offline checks -> hashed PLAN;
+# Approved design: pinned tag -> verified local clone -> offline checks -> hashed PLAN;
 # UPDATE carries PLAN/hash in-process; optional synthetic DRILL; one YES -> APPLY.
 # Git bootstrap checks HEAD, clean tree and raw script blob before any mode.
+# PLAN uses that verified worktree as clone source; standalone uses GitHub.
 # NEW ORCHESTRATION: NOT RUN ON WINDOWS. UTF-8 BOM preserves verbatim r2 text.
 [CmdletBinding()]
 param(
@@ -262,7 +263,7 @@ function Write-NewJson([string]$Path, $Value) {
     if (Test-Path -LiteralPath $Path) { throw "Report already exists: $Path" }
     Write-Utf8Lf $Path (($Value | ConvertTo-Json -Depth 100) + "`n")
 }
-function Invoke-Native([string]$Program, [string[]]$Arguments, [string]$Log) {
+function Invoke-Native([string]$Program, [string[]]$Arguments, [string]$Log, [string]$LogHeader = '') {
     if ($Log -and (Test-Path -LiteralPath $Log)) { throw 'Command log already exists' }
     $SavedPreference = $ErrorActionPreference
     try {
@@ -272,7 +273,11 @@ function Invoke-Native([string]$Program, [string[]]$Arguments, [string]$Log) {
         $Code = $LASTEXITCODE
     } finally { $ErrorActionPreference = $SavedPreference }
     $Result = Protect-Output (($Captured | ForEach-Object { $_.ToString() }) -join "`n")
-    if ($Log) { Write-Utf8Lf $Log ($Result + "`n") }
+    if ($Log) {
+        $LogText = $Result + "`n"
+        if ($LogHeader) { $LogText = (Protect-Output $LogHeader) + "`n" + $LogText }
+        Write-Utf8Lf $Log $LogText
+    }
     if ($Code -ne 0) { throw "Native command failed (exit=$Code). See command log; no further steps executed." }
     return $Result.Trim()
 }
@@ -307,6 +312,7 @@ function Assert-UpdaterIdentity {
     $DiskBlob = Invoke-Native $Git ($GitArgs + @('hash-object','--no-filters','--',$PSCommandPath)) $null
     if ($CommitBlob -cne $DiskBlob) { throw 'Raw updater bytes differ from the committed script blob' }
     Write-Host "Bootstrap verified: HEAD=$Head; clean worktree; script blob=$DiskBlob"
+    return $WorkTree
 }
 function Assert-ClientStopped {
     if (Get-Process -Name 'WorkBuddy*','CodeBuddy*' -ErrorAction SilentlyContinue) { throw 'Exit WorkBuddy/CodeBuddy yourself; no process is killed.' }
@@ -665,8 +671,12 @@ function Invoke-OncallMode([string]$Mode, [switch]$FromUpdate) {
         $env:TMPDIR = $TaskTemp
         $env:PYTHONUTF8 = '1'
         $env:PYTHONDONTWRITEBYTECODE = '1'
-        # Only this clone contacts the network; prompting/helpers are disabled.
-        $null = Invoke-Native $Git @('-c','credential.helper=','-c','credential.interactive=never','-c','core.askPass=','-c','http.extraHeader=','-c','core.hooksPath=NUL','clone','--config','core.autocrlf=false','--config','core.hooksPath=NUL','--branch',$Tag,'--single-branch',$RepoUrl,$Repo) (Join-Path $Artifacts 'clone.txt')
+        # The verified bootstrap supplies local objects; standalone uses GitHub.
+        if ($VerifiedWorkTree) { $CloneSource = $VerifiedWorkTree }
+        else { $CloneSource = $RepoUrl }
+        $CloneSourceMessage = 'Clone source: ' + $CloneSource
+        Write-Host (Protect-Output $CloneSourceMessage)
+        $null = Invoke-Native $Git @('-c','credential.helper=','-c','credential.interactive=never','-c','core.askPass=','-c','http.extraHeader=','-c','core.hooksPath=NUL','clone','--no-local','--config','core.autocrlf=false','--config','core.hooksPath=NUL','--branch',$Tag,'--single-branch',$CloneSource,$Repo) (Join-Path $Artifacts 'clone.txt') $CloneSourceMessage
         Assert-CloneIdentity
         $null = Get-DeclaredNames $Repo
         $Version = [IO.File]::ReadAllText((Join-Path $Repo 'VERSION'), $Utf8NoBom).Trim()
@@ -1048,7 +1058,7 @@ try {
     $env:GIT_CONFIG_COUNT = '1'
     $env:GIT_CONFIG_KEY_0 = 'url.https://github.com/caomz/crm-sre-team.git.insteadOf'
     $env:GIT_CONFIG_VALUE_0 = $RepoUrl
-    Assert-UpdaterIdentity
+    $VerifiedWorkTree = Assert-UpdaterIdentity
     if ($Mode -ceq 'UPDATE') {
         if ($PlanPath -or $PlanSha256 -or $SessionId -or $AgentId) { throw 'UPDATE creates its own PLAN; do not pass a plan/session ID.' }
         Assert-ClientStopped
