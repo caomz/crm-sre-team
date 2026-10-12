@@ -20,6 +20,7 @@
 - 新 clone 工作区：`D:\Dev\crm-oncall-<GUID>\repo`。父工作区也全新，容纳仓库构建器在 `root.parent` 下的隔离暂存；任何同名已有路径均拒绝复用。
 - 新计划/ZIP/暂存/日志/测试临时目录：`D:\crm-v36-handoff\update-<GUID>`。PLAN 的写入只发生在这两个新工作区，WorkBuddy 只读。脚本所在 PowerShell 子进程的 `TEMP/TMP/TMPDIR/PYTHONUTF8/PYTHONDONTWRITEBYTECODE/GIT_CONFIG_*` 设置随子进程退出而失效；它继续隔离全局/系统 Git 配置并禁用 credential helper、交互和 hooks。主获取段在 `finally` 中恢复 `$ErrorActionPreference`。GitHub 备选仅在 clone 期间临时设置七个 Git 环境变量，并在 `finally` 中恢复进程原值；原值不存在时移除变量。禁止 Python 在已有依赖目录写入 bytecode cache。
 - REAL 路径沿用已验证的值班机账户：`C:\Users\AI\.workbuddy\plugins\marketplaces\my-experts`；来源是其 `plugins\crm-sre-team`，清单是其 `.codebuddy-plugin\marketplace.json`。cache 根为 `C:\Users\AI\.workbuddy\plugins\cache\my-experts\crm-sre-team`。账户/布局不同就停止并人工评审，不传参扩大边界。
+- REAL marketplace 条目必须唯一，`name` 精确为 `crm-sre-team`，`source` 必须是字符串且解析到上述固定安装来源。`version` 字段可省略：PLAN 会提示，APPLY 不修改 `marketplace.json`，客户端读取包内 `.codebuddy-plugin/plugin.json` 的版本，与 10-11 rc2 实装一致；字段存在时必须为非空、非纯空白字符串，否则停止并人工评审。
 - 备份：marketplace 根下的 `backups\crm-v36-<GUID>-oncall`，包括 `install-source`、`marketplace.json`、`install-state.json`；计划列出全部准确路径。
 - 路径拒绝 junction/symlink/越界；递归复制前检查树内链接。工具没有删除操作，也不强杀进程，不修改系统执行策略。唯一执行策略选项在启动命令中：进程级 `-ExecutionPolicy Bypass`。
 
@@ -175,10 +176,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File $Script -Mode VERIFY @Releas
 |---|---|---|
 | UPDATE | 进程内 PLAN → `-Drill` 或本机无成功报告时 DRILL → 打印真实安装计划 → 一次 YES → APPLY；任一步失败停止 | 自动传递 PlanPath/PlanSha256；结束打印参数已填好的 VERIFY 命令；成功 DRILL 只证明合成 APPLY/ROLLBACK，不证明宿主验收 |
 | PLAN（默认） | 从已校验工作树本地标签 clone（独立脚本才从 GitHub clone）；终端和 `clone.txt` 显示来源；HEAD 与标签均等于 ExpectedCommit；检查前工作树干净；检查后只允许 manifest 精确声明的生成报告变化，其他文件仍须干净；检查前后全部发布文件哈希相同；离线检查；现有确定性打包；Mac SHA256 对比；5A 解压后严格集合和逐文件哈希 | `install-plan.json` 包含全部路径、版本、备份、marketplace 条目与原哈希、旧来源 VERSION/申报哈希、cache 版本目录名、全部包哈希、manifest/脚本哈希；`install-plan.sha256` 和终端打印同一计划哈希；各命令单独日志 |
-| APPLY | 校验计划/脚本哈希，来源快照和包仍一致；进程退出；YES 后再次核验；原块 20 备份、移动、复制、严格 VERIFY、更新 marketplace | 备份内 `install-state.json` 按阶段持久化；`apply-report.json` 记录 `completed_utc`。复制后不得应用 settings.json 例外 |
+| APPLY | 校验计划/脚本哈希，来源快照和包仍一致；进程退出；YES 后再次核验；原块 20 备份、移动、复制、严格 VERIFY、仅在条目含有效 version 字段时更新 marketplace | 备份内 `install-state.json` 按阶段持久化；`apply-report.json` 记录 `completed_utc`。复制后不得应用 settings.json 例外 |
 | VERIFY | 无 ID 时只列 APPLY 后写过的主会话元数据并停止；指定会话后按 manifest 核对来源和目标 cache，并取证 | 唯一缺根 settings.json 输出 `N-1/N, root settings.json missing (host-managed)`，实际打印数值；存在必须哈希一致；其他缺失/差异失败；额外文件只列路径。指定会话完成后报告 `verify-<GUID>.json`，仍需人工宿主验收 |
 | ROLLBACK | 从该 PLAN 的 StatePath 恢复阶段/哈希；校验原来源备份与 marketplace 没有后续变动；YES；原块 22 隔离失败来源并恢复旧来源/marketplace | `rollback-<GUID>.json`；保留失败来源及当前 marketplace 原字节；不删 cache，不单独补写/恢复 settings.json。客户端重新选旧活动版本，再人工核对旧 cache |
 | DRILL | 在 `D:\crm-v36-handoff\drill-<GUID>` 建合成来源/marketplace，用同轮已验证暂存包为候选，执行原块 20 → 状态重新读取 → 原块 22 | `drill-plan.json`、`drill-report.json`、备份/状态/failed-source；独立模式需 YES，UPDATE 内自动运行；UPDATE 仅在报告为成功且关联状态为 DRILL/NONE/ROLLED_BACK 时允许复用；不新增故障注入 |
+
+`APPLY` 显示 `INSTALLED` 后，须在客户端刷新市场并更新到计划的 `$Version`，再开新会话、粘贴自检 1 并运行打印出的 VERIFY 命令；客户端不会自动更新到新版本。marketplace 条目缺少 `version` 时也要完成这些操作。
 
 取证仅在固定 `projects → project → session` 两层枚举：主会话取 `project\<SessionId>.jsonl`；成员取 `project\<SessionId>\subagents\<AgentId>.jsonl`。零匹配/多匹配/ID 不一致/链接会停止，不递归搜宿主目录。按块 26 的 ReadShared 读取原字节、写副本、校验 SHA256SUMS；从解析后的 JSON 节点以 `callId` 关联 `Skill` 调用与 `function_call_result`，要求回执路径包含完整目标 cache/version/skills。回执结构无法识别、截断或没有匹配路径均停止，保留证据供人工判断。记录副本可能包含会话内容，只存本机交接目录，不外发。
 

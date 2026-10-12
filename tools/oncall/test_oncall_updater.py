@@ -389,6 +389,49 @@ class OncallUpdaterStaticTests(unittest.TestCase):
         self.assertLess(apply.index("$null = Load-Plan"), apply.index("# R2-BEGIN block-20"))
         self.assertIn("Assert-OldSource $InstallSource $Document.old_source", apply)
 
+    def test_market_entry_version_is_optional_but_invalid_present_value_stops(self):
+        entry = function_body(self.text, "Assert-MarketEntry")
+        for token in ["$Entries.Count -ne 1", "$Entries[0].name -cne 'crm-sre-team'",
+                      "$Entries[0].source -isnot [string]",
+                      "(Get-InstallFullPath $EntryPath) -ine (Get-InstallFullPath $InstallSource)"]:
+            self.assertIn(token, entry)
+        guard = ("if ($Entries[0].PSObject.Properties.Name -contains 'version' -and "
+                 "($Entries[0].version -isnot [string] -or "
+                 "[string]::IsNullOrWhiteSpace($Entries[0].version)))")
+        self.assertRegex(entry, re.escape(guard) + r"\s*\{\s*throw 'Marketplace entry has an invalid version field; human review required'\s*\}")
+        self.assertNotIn("-notcontains 'version'", entry)
+        self.assertNotIn("needs an explicit version field", entry)
+        self.assertEqual(entry.count("throw "), 3)
+
+    def test_optional_market_version_plan_notice_and_installed_client_steps(self):
+        plan = self.text.split("        $InstallMode = 'REAL'\n", 1)[1].split("        $OldSnapshot", 1)[0]
+        self.assertIn(". Prepare-InstallContext", plan)
+        notice = ("if ($Entries[0].PSObject.Properties.Name -notcontains 'version') {\n"
+                  "            Write-Host 'PLAN: Marketplace entry has no version field; marketplace.json will not be modified (same as the 10-11 rc2 installation).'\n"
+                  "        }")
+        self.assertIn(notice, plan)
+        self.assertLess(plan.index(". Prepare-InstallContext"), plan.index(notice))
+        apply = self.text.split("        if ($Mode -ceq 'APPLY') {", 1)[1].split("        } elseif ($Mode -ceq 'VERIFY')", 1)[0]
+        installed = ("INSTALLED. StatePath=$StatePath. Open client, refresh the marketplace and update to $Version, "
+                     "then start a NEW session, paste Self-check 1, and run VERIFY.")
+        self.assertIn('Write-Host "' + installed + '"', apply)
+        self.assertLess(apply.index("# R2-END block-20"), apply.index(installed))
+        self.assertIn("`version` 字段可省略", self.readme)
+        self.assertIn("非空、非纯空白字符串", self.readme)
+        self.assertIn("刷新市场并更新到计划的 `$Version`", self.readme)
+
+    def test_optional_market_version_preserves_original_install_and_rollback(self):
+        for name in ["block-20", "block-22"]:
+            blocks = [body for key, body in fragments(self.text) if key == name]
+            self.assertEqual(len(blocks), 2)
+            for block in blocks:
+                self.assertEqual(hashlib.sha256(block.encode("utf-8")).hexdigest(), FRAGMENT_SHA[name])
+                guard = ("if ($Entries[0].PSObject.Properties.Name -contains 'version')"
+                         if name == "block-20" else "if ($MarketWriteStarted)")
+                self.assertIn(guard, block)
+        drill = self.text.split("} elseif ($Mode -ceq 'DRILL')", 1)[1]
+        self.assertIn("source=$SyntheticSource; version='0.0.0-drill'", drill)
+
     def test_drill_uses_synthetic_context_and_state_reload(self):
         main = self.text.split("# Main orchestration.")[1]
         hydration = main.split("$Document = Load-Plan")[1].split("$Mode -ceq 'APPLY'")[0]

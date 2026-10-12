@@ -342,7 +342,9 @@ function Assert-MarketEntry {
     $EntryPath = [string]$Entries[0].source
     if ($EntryPath -notmatch '^[A-Za-z]:\\') { $EntryPath = Join-Path $MarketRoot $EntryPath }
     if ((Get-InstallFullPath $EntryPath) -ine (Get-InstallFullPath $InstallSource)) { throw 'Marketplace source does not resolve to the fixed install source' }
-    if ($Entries[0].PSObject.Properties.Name -notcontains 'version') { throw 'Marketplace entry needs an explicit version field; human review required' }
+    if ($Entries[0].PSObject.Properties.Name -contains 'version' -and ($Entries[0].version -isnot [string] -or [string]::IsNullOrWhiteSpace($Entries[0].version))) {
+        throw 'Marketplace entry has an invalid version field; human review required'
+    }
 }
 function Test-InstalledDeclaredFiles([string]$Root, [string]$Label) {
     # r2 block 21 semantics, manifest-derived count. NOT RUN ON WINDOWS.
@@ -727,6 +729,9 @@ if (-not (Test-Path -LiteralPath (Join-Path $PackageRoot 'settings.json') -PathT
         $InstallMode = 'REAL'
         $DrillRoot = $null
         . Prepare-InstallContext
+        if ($Entries[0].PSObject.Properties.Name -notcontains 'version') {
+            Write-Host 'PLAN: Marketplace entry has no version field; marketplace.json will not be modified (same as the 10-11 rc2 installation).'
+        }
         $OldSnapshot = Get-SourceSnapshot $InstallSource
         $CacheVersions = @()
         if (Test-Path -LiteralPath $CacheRoot -PathType Container) { $CacheVersions = @(Get-ChildItem -LiteralPath $CacheRoot -Directory -Force | Select-Object -ExpandProperty Name) }
@@ -849,7 +854,7 @@ try {
 
             $AppliedUtc = [DateTime]::UtcNow
             Write-NewJson (Join-Path $Artifacts 'apply-report.json') ([ordered]@{ status=$InstallStage; completed_utc=$AppliedUtc.ToString('o'); version=$Version; state=$StatePath; plan_sha256=$PlanSha256; backup=$BackupRoot; host_acceptance='NOT_RUN' })
-            Write-Host "INSTALLED. StatePath=$StatePath. Open client, select $Version, start a NEW session, paste Self-check 1, then run VERIFY."
+            Write-Host "INSTALLED. StatePath=$StatePath. Open client, refresh the marketplace and update to $Version, then start a NEW session, paste Self-check 1, and run VERIFY."
             Write-Host (Get-VerifyCommand)
         } elseif ($Mode -ceq 'VERIFY') {
             . Import-InstallState
