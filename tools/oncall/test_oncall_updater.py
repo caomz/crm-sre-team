@@ -1,10 +1,14 @@
-"""Static updater contracts. Not a PowerShell parser or Windows runtime test.
+"""Static PS contracts and real Mac builder/verifier tests. No PS parse/run.
 
 Run explicitly: python3 -m pytest tools/oncall/test_oncall_updater.py -q
 The tests live here to keep this change inside the approved tools/oncall scope.
 """
 from pathlib import Path
 import hashlib
+import os
+import shutil
+import subprocess
+import uuid
 import json
 import re
 import sys
@@ -66,6 +70,14 @@ def mask_literals(text):
     result = []
     i = 0
     while i < len(text):
+        if text.startswith("@'\n", i) or text.startswith('@"\n', i):
+            quote = text[i + 1]
+            end = re.search(r"(?m)^" + re.escape(quote + "@") + r"[ \t]*(?:\n|$)", text[i + 3:])
+            if not end:
+                raise ValueError("Unterminated here-string")
+            i += 3 + end.end()
+            result.append("''")
+            continue
         char = text[i]
         if char == "#":
             end = text.find("\n", i)
@@ -180,15 +192,15 @@ class OncallUpdaterStaticTests(unittest.TestCase):
         self.assertIn("$SkillIds[[string]$ToolNode.callId] = $true", evidence)
         self.assertIn("$SkillIds.ContainsKey([string]$ToolNode.callId)", evidence)
 
-    def test_six_modes_required_release_inputs_and_pinned_lengths(self):
-        self.assertIn("[ValidateSet('PLAN','APPLY','VERIFY','ROLLBACK','DRILL','UPDATE')]", self.text)
+    def test_eight_modes_required_release_inputs_and_pinned_lengths(self):
+        self.assertIn("[ValidateSet('PLAN','APPLY','VERIFY','ROLLBACK','DRILL','UPDATE','EXPBUILD','SWITCH')]", self.text)
         self.assertIn("[string]$Mode = 'PLAN'", self.text)
         for name, length in [("ExpectedCommit", 40), ("ExpectedZipSha256", 64)]:
             self.assertRegex(self.text, rf"\[Parameter\(Mandatory=\$true\)\]\[ValidatePattern\('[^']*\{{{length}\}}[^']*'\)\]\[string\]\${name}")
         self.assertIn("[Parameter(Mandatory=$true)]", self.text.split("[string]$Tag")[0])
-        for mode in ["PLAN", "APPLY", "VERIFY", "ROLLBACK", "DRILL", "UPDATE"]:
+        for mode in ["PLAN", "APPLY", "VERIFY", "ROLLBACK", "DRILL", "UPDATE", "EXPBUILD", "SWITCH"]:
             self.assertIn(f"$Mode -ceq '{mode}'", self.text)
-        for name in ["PlanPath", "PlanSha256", "RunPytest", "SessionId", "AgentId", "Drill", "ExpectedScriptSha256"]:
+        for name in ["PlanPath", "PlanSha256", "RunPytest", "SessionId", "AgentId", "Drill", "ExpectedScriptSha256", "ExperimentSet", "ExperimentSetSha256", "Package"]:
             self.assertIn("$" + name, self.text)
         optional_hash = re.search(r"(?m)^\s*([^\n]*\$ExpectedScriptSha256[^\n]*)$", self.text).group(1)
         self.assertIn("{64}", optional_hash)
@@ -454,7 +466,7 @@ class OncallUpdaterStaticTests(unittest.TestCase):
         self.assertIn("root settings.json missing (host-managed)", verify)
         self.assertIn("if ($Actual -cne $PackageHashes[$Rel]) { throw", verify)
         self.assertNotRegex(self.text, r"\b(?:516|517)\b")
-        evidence = self.text.split("function Collect-SessionEvidence")[1].split("# Main orchestration.")[0]
+        evidence = function_body(self.text, "Collect-SessionEvidence")
         self.assertNotIn("-Recurse", evidence)
         self.assertIn("$Located.Count -ne 1", evidence)
         self.assertIn("$SessionId -cne $Located[0].SessionId", evidence)
@@ -491,7 +503,7 @@ class OncallUpdaterStaticTests(unittest.TestCase):
         readme = self.readme
         self.assertIn("未在 Windows 实跑", readme)
         self.assertIn("powershell -NoProfile -ExecutionPolicy Bypass -File", readme)
-        for mode in ["PLAN", "APPLY", "VERIFY", "ROLLBACK", "DRILL", "UPDATE"]:
+        for mode in ["PLAN", "APPLY", "VERIFY", "ROLLBACK", "DRILL", "UPDATE", "EXPBUILD", "SWITCH"]:
             self.assertIn("-Mode " + mode, readme)
         for token in ["git -c credential.helper=", "clone --config core.autocrlf=false", "core.hooksPath=NUL",
                       "bootstrap-", "tools\\oncall\\Update-CrmSreTeam.ps1", "-ExpectedScriptSha256", "-Drill",
@@ -630,6 +642,478 @@ class OncallUpdaterStaticTests(unittest.TestCase):
         self.assertNotRegex(block, r"SetEnvironmentVariable\([^\n]*'(?:User|Machine)'\)")
         self.assertIn("$SavedErrorActionPreference = $ErrorActionPreference", block.split("try {", 1)[0])
         self.assertIn("$ErrorActionPreference = $SavedErrorActionPreference", block.rsplit("} finally {", 1)[1])
+
+
+def extracted_verifier(text):
+    matches = re.findall(r"\$ExperimentVerifierCode = @'\n(.*?)\n'@", text, re.S)
+    if len(matches) != 1:
+        raise AssertionError('Expected ONE embedded verifier')
+    return matches[0] + '\n'
+
+
+class ExperimentStaticTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.text = decode_script(SCRIPT.read_bytes())
+        cls.code = mask_literals(cls.text)
+        cls.readme = (ROOT / 'tools/oncall/README.md').read_text(encoding='utf-8')
+
+    def test_expbuild_shares_formal_checks_and_exits_before_host_context(self):
+        main = function_body(self.text, 'Invoke-OncallMode')
+        prepare = main.split('# R2-END stage-17', 1)[0]
+        self.assertIn("if ($Mode -ceq 'PLAN' -or $Mode -ceq 'EXPBUILD')", prepare)
+        for token in ['Assert-CloneIdentity', "'tools/build_bundle.py'", "'tools/check_workbuddy.py'",
+                      "'tools/validate_bundle.py'", 'if ($RunPytest)', "'tools/build_release.py'",
+                      "-ine $ExpectedZipSha256", "'tools/validate_release.py'", '# R2-BEGIN stage-17']:
+            self.assertIn(token, prepare)
+        tail = main.split('# R2-END stage-17', 1)[1]
+        self.assertLess(tail.index('. Invoke-ExperimentBuild; return'), tail.index('. Prepare-InstallContext'))
+        builders = function_body(self.text, 'Invoke-ExperimentBuild')
+        self.assertLess(builders.index('Assert-CloneIdentity -AfterChecks'), builders.index("'tools/make_probe_build.py'"))
+        self.assertIn('Assert-HashesEqual $Before (Get-ManifestHashes $Repo)', builders)
+        self.assertIn("'tools/make_comparison_build.py'", builders)
+        for tool in ['WebFetch', 'Bash', 'PowerShell']:
+            self.assertIn("'" + tool + "'", builders)
+        self.assertNotIn('--max-turns', builders)
+        dispatch = self.text.rsplit('\ntry {', 1)[1]
+        local_gate = "if ($Mode -cin @('EXPBUILD','SWITCH') -and -not $VerifiedWorkTree)"
+        self.assertIn(local_gate, dispatch)
+        self.assertLess(dispatch.index('Assert-UpdaterIdentity'), dispatch.index(local_gate))
+        self.assertLess(dispatch.index(local_gate), dispatch.index('. Invoke-SwitchPlan'))
+
+    def test_switch_guards_and_plan_hash_before_one_yes_and_original_writes(self):
+        switch = function_body(self.text, 'Invoke-SwitchPlan')
+        order = ['Assert-ClientStopped', '$Set = Load-ExperimentSet', 'New-SafeDirectory $Artifacts',
+                 "'select','--set'", 'Copy-Item -LiteralPath $Selected.root', '. Prepare-InstallContext',
+                 'Assert-HashesEqual (ConvertTo-HashTable $Selected.hashes)', 'Write-NewJson $PlanPath',
+                 '$PlanSha256 =', 'SWITCH PLAN ready.']
+        indices = [switch.index(token) for token in order]
+        self.assertEqual(indices, sorted(indices))
+        loader = function_body(self.text, 'Load-ExperimentSet')
+        self.assertLess(loader.index('$Read.Sha -ine $ExperimentSetSha256'), loader.index('ConvertFrom-Json'))
+        for name in ['tag', 'commit', 'zip_sha256', 'script_sha256']:
+            self.assertIn('$Set.' + name, loader)
+        dispatch = self.text.rsplit("} elseif ($Mode -ceq 'SWITCH')", 1)[1]
+        self.assertLess(dispatch.index('. Invoke-SwitchPlan'), dispatch.index('Test-SuccessfulDrill'))
+        self.assertLess(dispatch.index("'DRILL' -FromUpdate"), dispatch.index("'APPLY' -FromUpdate"))
+        self.assertNotIn('Confirm-Yes', switch + dispatch)
+        self.assertIn('Copy-Item -LiteralPath $Set.zip -Destination $ReleaseZip', switch)
+        self.assertLess(switch.index('Copied formal ZIP differs'), switch.index('Write-NewJson $PlanPath'))
+        apply = function_body(self.text, 'Invoke-OncallMode').split("if ($Mode -ceq 'APPLY')", 1)[1].split("} elseif ($Mode -ceq 'VERIFY')", 1)[0]
+        self.assertEqual(apply.count('Confirm-Yes'), 1)
+        self.assertLess(apply.index('Confirm-Yes'), apply.index('# R2-BEGIN block-20'))
+        self.assertLess(apply.index('$null = Load-Plan'), apply.index('# R2-BEGIN block-20'))
+        self.assertIn('Package kind=$PackageKind', apply)
+
+    def test_metadata_plan_binding_and_per_plan_rollback_guard(self):
+        header = self.text.split("$ErrorActionPreference = 'Stop'", 1)[0]
+        self.assertIn("[ValidateSet('formal','probe','cmp-n','cmp-s','probe-webfetch-denied','probe-bash-denied','probe-powershell-denied')][string]$Package", header)
+        self.assertIn("[ValidatePattern('^[0-9a-fA-F]{64}$')][string]$ExperimentSetSha256", header)
+        for token in ['operation=\'SWITCH\'', 'experiment_set_sha256=', 'source_tree_sha256=',
+                      'builder_manifest=', 'metadata_names=', 'expected_markers=']:
+            self.assertIn(token, function_body(self.text, 'Invoke-SwitchPlan'))
+        self.assertIn('@($InstallMetadataNames)', function_body(self.text, 'Assert-Package'))
+        for name in ['Import-PlanContext', 'Invoke-OncallMode']:
+            self.assertIn('$InstallMetadataNames = @($Document.metadata_names)', function_body(self.text, name))
+        self.assertIn('-ContextMetadataNames $InstallMetadataNames', function_body(self.text, 'Invoke-OncallMode'))
+        self.assertIn("$Names += 'probe-manifest.json'", function_body(self.text, 'Get-SourceSnapshot'))
+        rollback = function_body(self.text, 'Invoke-OncallMode').split("} elseif ($Mode -ceq 'ROLLBACK')", 1)[1].split("} elseif ($Mode -ceq 'DRILL')", 1)[0]
+        self.assertEqual(rollback.count('Assert-RollbackCurrentPackage'), 2)
+        self.assertLess(rollback.index('Assert-RollbackCurrentPackage'), rollback.index('Confirm-Yes'))
+        self.assertTrue(rollback.index('$null = Load-Plan') < rollback.rindex('Assert-RollbackCurrentPackage') < rollback.index('# R2-BEGIN block-22'))
+        self.assertIn('Test-InstalledDeclaredFiles $InstallSource', function_body(self.text, 'Assert-RollbackCurrentPackage'))
+        self.assertIn('roll back the newest plan first, or SWITCH to the wanted package', self.text)
+
+    def test_rollback_current_package_guard_only_for_imported_installed_stage(self):
+        rollback = function_body(self.text, 'Invoke-OncallMode').split("} elseif ($Mode -ceq 'ROLLBACK')", 1)[1].split("} elseif ($Mode -ceq 'DRILL')", 1)[0]
+        guard = "if ($InstallStage -ceq 'INSTALLED') { Assert-RollbackCurrentPackage }"
+        self.assertEqual(rollback.count(guard), 2)
+        self.assertNotIn('Assert-RollbackCurrentPackage', rollback.replace(guard, ''))
+        self.assertLess(rollback.index('. Import-InstallState'), rollback.index(guard))
+        self.assertLess(rollback.index(guard), rollback.index('Confirm-Yes'))
+        self.assertTrue(rollback.index('$null = Load-Plan') < rollback.rindex(guard) < rollback.index('# R2-BEGIN block-22'))
+        stages = re.findall(r"if \(\$InstallStage -ceq '([^']+)'\) \{ Assert-RollbackCurrentPackage \}", rollback)
+        self.assertEqual(stages, ['INSTALLED', 'INSTALLED'])
+        self.assertTrue(set(stages).isdisjoint({'PLANNED', 'MARKET_BACKUP', 'SOURCE_MOVE', 'COPY', 'VERIFY', 'MARKET_WRITE'}))
+
+    def test_verifier_files_bypass_native_stdout_and_powershell_reserialization(self):
+        build = function_body(self.text, 'Invoke-ExperimentBuild')
+        switch = function_body(self.text, 'Invoke-SwitchPlan')
+        for token in ('ConvertFrom-Json', 'ConvertTo-Json', 'Write-NewJson'):
+            self.assertNotIn(token, build)
+        self.assertIn('$ExperimentSetSha256 = (Get-FileHash -LiteralPath $ExperimentSet -Algorithm SHA256)', build)
+        self.assertIn("Write-Utf8Lf (Join-Path $Artifacts 'experiment-set.sha256')", build)
+        self.assertIn("$SelectionPath = Join-Path $Artifacts 'selection.json'", switch)
+        self.assertIn("'--output',$SelectionPath", switch)
+        read = '$Selection = (ReadShared $SelectionPath).Text | ConvertFrom-Json'
+        self.assertEqual(switch.count('ConvertFrom-Json'), 1)
+        self.assertIn(read, switch)
+        self.assertLess(switch.index("'select','--set'"), switch.index(read))
+        self.assertLess(switch.index(read), switch.index('Copy-Item -LiteralPath $Selected.root'))
+        self.assertNotIn('ConvertTo-Json', switch)
+        self.assertEqual(re.findall(r'(?m)^[ \t]*Write-NewJson[^\n]*', switch), ['    Write-NewJson $PlanPath $Document'])
+        for pattern in (r'\$(?:Set|Selection|Selected|Json)\s*\|\s*ConvertTo-Json',
+                        r'Write-NewJson[ \t]+\$(?:ExperimentSet|SelectionPath)\b',
+                        r'Write-NewJson[ \t]+[^\n]+[ \t]+\$(?:Set|Selection|Selected)\b'):
+            self.assertNotRegex(self.text, pattern)
+        calls = [line.strip() for line in self.text.splitlines() if 'Invoke-Native $Python @($VerifierPath,' in line]
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(all(line.startswith('$null = Invoke-Native') for line in calls))
+        verifier = extracted_verifier(self.text)
+        self.assertIn('ensure_ascii=True, sort_keys=True', verifier)
+        self.assertIn("with path.open('xb') as output:", verifier)
+        self.assertIn("print('PASS_' + args.action.upper())", verifier)
+        self.assertNotIn('print(json.dumps(result', verifier)
+
+    def test_source_snapshot_probe_version_read_is_leaf_guarded_and_formal_body_unchanged(self):
+        snapshot = function_body(self.text, 'Get-SourceSnapshot')
+        probe = re.search(r"    if \(Test-Path -LiteralPath \(Join-Path \$Root 'VERSION'\) -PathType Leaf\) \{\n"
+                          r"        \$SnapshotVersion = [^\n]+\n"
+                          r"        if \([^\n]+\) \{ \$Names \+= 'probe-manifest.json' \}\n"
+                          r"    \}\n", snapshot)
+        self.assertIsNotNone(probe)
+        self.assertIn("[IO.File]::ReadAllText((Join-Path $Root 'VERSION'), $Utf8NoBom)", probe.group())
+        self.assertLessEqual(probe.end(), snapshot.index('    foreach ($Rel in $Names)'))
+        formal = snapshot[:probe.start()] + snapshot[probe.end():]
+        self.assertEqual(hashlib.sha256(formal.encode('utf-8')).hexdigest(),
+                         '16d9a76bbe7c1476be76cdd69384452524cb6ed66c56c7b5188e2a22037920a1')
+
+    def test_readme_failed_apply_recovery_and_t02_user_confirmed_recommendation(self):
+        failure = self.readme.split('## 失败恢复', 1)[1].split('## PowerShell', 1)[0]
+        for token in ('部分或失败 APPLY', '非 INSTALLED', '-Mode ROLLBACK', 'runbook 5C',
+                      '失败 APPLY 后，必须先恢复它（ROLLBACK 或 5C），再进行任何新的 SWITCH/UPDATE'):
+            self.assertIn(token, failure)
+        row = next(line for line in self.readme.splitlines() if line.startswith('| ROLLBACK |'))
+        self.assertIn('仅 INSTALLED', row)
+        self.assertIn('失败 APPLY 的其他阶段沿原块 22 恢复', row)
+        t02 = next(line for line in self.readme.splitlines() if line.startswith('| T02 校准 x2 |'))
+        self.assertIn('两次不计分', t02)
+        self.assertIn('建议 cmp-n、cmp-s 各一次（先 N 后 S），开跑前由用户确认并记录；不改变评分口径', t02)
+        self.assertNotIn('本流程预先采用', t02)
+
+    def test_marker_counts_are_raw_aid_before_receipt_verdict(self):
+        evidence = function_body(self.text, 'Collect-SessionEvidence')
+        self.assertLess(evidence.index("'SHA256SUMS'"), evidence.index('Get-RawMarkerCounts'))
+        self.assertLess(evidence.index("'marker-counts.json'"), evidence.index('$SkillIds ='))
+        self.assertIn('RAW_OCCURRENCES_LOCATION_UNKNOWN_NOT_A_VERDICT', evidence)
+        self.assertIn('$Snapshot.Data.Text $ExpectedMarkers', evidence)
+        counts = function_body(self.text, 'Get-RawMarkerCounts')
+        self.assertIn('[regex]::Matches($Text, [regex]::Escape($Marker)).Count', counts)
+        self.assertNotIn('OrdinalIgnoreCase', counts)
+        self.assertIn('$ExpectedMarkers = @($Document.expected_markers)', function_body(self.text, 'Import-PlanContext'))
+
+    def test_ps51_framework_native_argument_and_output_lesson_scan(self):
+        for pattern in [r'(?i)\b(?:Remove-Item|Stop-Process|Set-ExecutionPolicy|Clear-Content|rm|rmdir|del)\b',
+                        r'(?i)\[.*?(?:File|Directory)\]::Delete\b',
+                        r'(?i)\b(?:GetRelativePath|EnumerateFileSystemEntries|ToHexString|HashData|ReadAllBytesAsync)\b',
+                        r'(?i)ConvertFrom-Json[ \t]+[^\n]*(?:-AsHashtable|-Depth)',
+                        r'(?i)ConvertTo-Json[ \t]+[^\n]*-EscapeHandling',
+                        r'(?i)\b(?:ForEach-Object\s+-Parallel|Start-ThreadJob)\b',
+                        r'\b(?:&&|\|\||\?\?|\?\.)']:
+            self.assertNotRegex(self.code, pattern)
+        self.assertNotRegex(self.code, r'\b(?:ArrayList|List\[.*?\])[^\n]*\.Add\(')
+        writer = function_body(self.text, 'Write-ExperimentVerifier')
+        self.assertIn('if (Test-Path -LiteralPath $Path)', writer)
+        compile(extracted_verifier(self.text), '<embedded verifier>', 'exec')
+        # Native Python code is written to a .py; the sole Python -c is unchanged
+        # and contains no embedded double quote. New args are array elements.
+        calls = [line for line in self.text.splitlines() if 'Invoke-Native $Python' in line]
+        inline = [line for line in calls if "@('-c'," in line]
+        self.assertEqual(len(inline), 1)
+        self.assertIn("'import sys; assert sys.version_info >= (3,10)'", inline[0])
+        self.assertNotIn('"', inline[0])
+
+    def test_readme_local_expbuild_and_whole_gate_round(self):
+        section = self.readme.split('## 实验集合与切包（NOT RUN ON WINDOWS）', 1)[1]
+        bootstrap = re.search(r'```powershell\n(.*?)\n```', section, re.S).group(1)
+        self.assertIn('-Mode EXPBUILD', bootstrap)
+        self.assertNotIn('-Mode UPDATE', bootstrap)
+        self.assertNotRegex(bootstrap, r'https?://|fetch\s+origin\b')
+        self.assertIn("fetch -q --no-tags $SourceRepo '+refs/remotes/*:refs/crm-source-remotes/*'", bootstrap)
+        for index, line in enumerate(bootstrap.splitlines()):
+            if line.strip().startswith(('git ', 'powershell ')):
+                self.assertTrue(bootstrap.splitlines()[index + 1].strip().startswith('if ($global:LASTEXITCODE -ne 0)'))
+        for token in ['WB09H', 'PROBE-LA/LS/C/D', '7A', '7B', 'WB14', 'WB17', 'PowerShell',
+                      'T02', 'C1', 'C2', 'C3', '一套', '-Package formal', '-SessionId', '-AgentId',
+                      'update-effac22650784f529d6274dd570d511c', '05225a8e', '预发布', '本机']:
+            self.assertIn(token, section)
+        for name in ['formal', 'probe', 'cmp-n', 'cmp-s', 'probe-webfetch-denied',
+                     'probe-bash-denied', 'probe-powershell-denied']:
+            self.assertIn('`' + name + '`', section)
+
+
+@unittest.skipIf(os.name == 'nt', 'Mac functional fixtures use temporary synthetic paths; PS 5.1/host execution is a separate NOT_RUN check')
+class ExperimentFunctionalTests(unittest.TestCase):
+    """Real HEAD clone/builders, retained temp directories; never PS execution."""
+    @classmethod
+    def setUpClass(cls):
+        cls.work = Path(tempfile.mkdtemp(prefix='crm-oncall-functional-')).resolve()
+        cls.set_id = uuid.uuid4().hex
+        cls.repo = cls.work / ('crm-oncall-' + cls.set_id) / 'repo'
+        cls.artifacts = cls.work / ('experiment-' + cls.set_id)
+        cls.artifacts.mkdir()
+        cls.repo.parent.mkdir()
+        cls.env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', PYTHONUTF8='1',
+                       GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull,
+                       GIT_TERMINAL_PROMPT='0', TMPDIR=str(cls.work))
+        cls.head = cls.run_command(['git', '-C', str(ROOT), 'rev-parse', 'HEAD']).stdout.strip()
+        cls.tag = 'test-oncall-offline'
+        cls.script_sha = hashlib.sha256(SCRIPT.read_bytes()).hexdigest()
+        cls.run_command(['git', '-c', 'core.hooksPath=' + os.devnull, 'clone', '-q', '--no-local',
+                 '--no-checkout', '--config', 'core.autocrlf=false', '--config',
+                 'core.hooksPath=' + os.devnull, str(ROOT), str(cls.repo)])
+        cls.run_command(['git', '-C', str(cls.repo), 'checkout', '-q', '--detach', cls.head])
+        cls.names = json.loads((cls.repo / 'release-manifest.json').read_text())['files']
+        cls.before = {name: hashlib.sha256((cls.repo / name).read_bytes()).hexdigest() for name in cls.names}
+        cls.verifier = cls.work / 'experiment-verifier.py'
+        source = extracted_verifier(decode_script(SCRIPT.read_bytes()))
+        cls.verifier.write_text(source, encoding='utf-8', newline='\n')
+        cls.ns = {'__name__': 'extracted_experiment_verifier'}
+        exec(compile(source, str(cls.verifier), 'exec'), cls.ns)
+        cls.run_command([sys.executable, str(cls.repo / 'tools/build_release.py'), '--root', str(cls.repo),
+                 '--output', str(cls.artifacts / 'release.zip')])
+        cls.zip_sha = hashlib.sha256((cls.artifacts / 'release.zip').read_bytes()).hexdigest()
+        with ZipFile(cls.artifacts / 'release.zip') as archive:
+            archive.extractall(cls.artifacts / 'install-clean')
+        for name, tool in [('probe', None), ('probe-webfetch-denied', 'WebFetch'),
+                           ('probe-bash-denied', 'Bash'), ('probe-powershell-denied', 'PowerShell')]:
+            args = [sys.executable, str(cls.repo / 'tools/make_probe_build.py'), '--root', str(cls.repo),
+                    '--out', str(cls.artifacts / name)]
+            if tool:
+                args += ['--disallow', 'oracle-dba=' + tool]
+            cls.run_command(args)
+        cls.run_command([sys.executable, str(cls.repo / 'tools/make_comparison_build.py'), '--root', str(cls.repo),
+                 '--out', str(cls.artifacts / 'comparison')])
+        result = cls.call_build(cls.artifacts)
+        if result.returncode:
+            raise AssertionError(result.stdout + result.stderr)
+        cls.set_path = cls.artifacts / 'experiment-set.json'
+        if result.stdout != 'PASS_BUILD\n':
+            raise AssertionError('Unexpected verifier stdout: ' + result.stdout)
+        cls.document = json.loads(cls.set_path.read_bytes())
+        cls.set_sha = hashlib.sha256(cls.set_path.read_bytes()).hexdigest()
+
+    @classmethod
+    def run_command(cls, args, check=True):
+        result = subprocess.run(args, capture_output=True, text=True, encoding='utf-8', env=cls.env)
+        if check and result.returncode:
+            raise AssertionError('Command failed: ' + repr(args) + '\n' + result.stdout + result.stderr)
+        return result
+
+    @classmethod
+    def call_build(cls, artifacts):
+        return cls.run_command([sys.executable, str(cls.verifier), 'build', '--repo', str(cls.repo),
+                        '--artifacts', str(artifacts), '--head', cls.head, '--tag', cls.tag,
+                        '--zip-sha', cls.zip_sha, '--script-sha', cls.script_sha, '--set-id', cls.set_id], check=False)
+
+    @classmethod
+    def call_select(cls, set_path, set_sha, package, head=None, tag=None, zip_sha=None, script_sha=None, output=None):
+        if output is None:
+            directory = cls.work / ('update-' + uuid.uuid4().hex)
+            directory.mkdir()
+            output = directory / 'selection.json'
+        result = cls.run_command([sys.executable, str(cls.verifier), 'select', '--set', str(set_path),
+                        '--set-sha', set_sha, '--package', package, '--head', head or cls.head,
+                        '--tag', tag or cls.tag, '--zip-sha', zip_sha or cls.zip_sha,
+                        '--script-sha', script_sha or cls.script_sha, '--output', str(output)], check=False)
+        return result, output
+
+    @classmethod
+    def copy_artifacts(cls):
+        base = Path(tempfile.mkdtemp(prefix='negative-', dir=cls.work))
+        target = base / cls.artifacts.name
+        # Leave the verifier's result absent so negatives test the intended fault,
+        # rather than the independent refuse-existing-output guard. No deletion.
+        shutil.copytree(cls.artifacts, target,
+                        ignore=lambda directory, names: ['experiment-set.json'] if Path(directory) == cls.artifacts else [])
+        return target
+
+    def test_real_seven_packages_source_digest_versions_zips_and_records(self):
+        self.assertEqual([p['name'] for p in self.document['packages']], list(self.ns['PACKAGE_NAMES']))
+        self.assertEqual(len(self.document['builder_manifests']), 5)
+        roles = json.loads((self.repo / 'policy-source/roles-source.json').read_text())
+        digest = hashlib.sha256()
+        for name in self.names:
+            digest.update(name.encode('utf-8') + b'\0')
+            digest.update(hashlib.sha256((self.repo / name).read_bytes()).digest())
+        self.assertEqual(self.document['source_tree_sha256'], digest.hexdigest())
+        self.assertEqual(self.document['source_version'], (self.repo / 'VERSION').read_text().strip())
+        self.assertEqual(self.before, {name: hashlib.sha256((self.repo / name).read_bytes()).hexdigest() for name in self.names})
+        for package in self.document['packages']:
+            root = Path(package['root'])
+            extra = ['probe-manifest.json'] if package['name'].startswith('probe') else []
+            self.assertEqual(set(package['expected_names']), set(self.names + extra))
+            self.assertEqual(package['extra_metadata_names'], extra)
+            self.assertEqual(package['hashes'], self.ns['file_map'](root))
+            self.ns['check_zips'](root, roles)
+        self.assertEqual(len(roles) * 2, 16)
+        self.assertEqual(len(roles) + 2, 10)
+        self.assertEqual(len(roles), 8)
+        n, s = [next(p for p in self.document['packages'] if p['name'] == name) for name in ('cmp-n', 'cmp-s')]
+        self.assertEqual(n['markers']['suffix'], s['markers']['suffix'])
+        self.assertNotEqual(n['version'], s['version'])
+        self.assertNotIn(b'\xef\xbb\xbf', self.set_path.read_bytes()[:3])
+        self.assertNotIn(b'\r', self.set_path.read_bytes())
+        canonical = (json.dumps(self.document, sort_keys=True, ensure_ascii=True, separators=(',', ':')) + '\n').encode('utf-8')
+        self.assertEqual(self.set_path.read_bytes(), canonical)
+        self.assertTrue(self.set_path.read_bytes().isascii())
+
+    def test_select_each_package_rechecks_set_identity_and_bytes(self):
+        for name in self.ns['PACKAGE_NAMES']:
+            with self.subTest(package=name):
+                result, path = self.call_select(self.set_path, self.set_sha, name)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, 'PASS_SELECT\n')
+                selection = json.loads(path.read_bytes())
+                self.assertEqual(set(selection), {'experiment', 'selected'})
+                self.assertEqual(set(selection['experiment']),
+                                 {'set_id', 'artifacts', 'repo', 'zip', 'source_tree_sha256', 'source_version'})
+                fields = {'root', 'version', 'expected_names', 'hashes', 'markers', 'disallow', 'builder_manifest'}
+                self.assertEqual(set(selection['selected']), fields)
+                package = next(p for p in self.document['packages'] if p['name'] == name)
+                self.assertEqual(selection['selected'], {key: package[key] for key in fields})
+                self.assertEqual(selection['experiment'], {key: self.document[key] for key in selection['experiment']})
+                self.assertEqual(path.read_bytes(),
+                                 (json.dumps(selection, sort_keys=True, ensure_ascii=True, separators=(',', ':')) + '\n').encode('utf-8'))
+                self.assertTrue(path.read_bytes().isascii())
+                self.assertNotIn(b'\r', path.read_bytes())
+
+    def test_verifier_refuses_existing_set_and_selection_outputs_without_overwrite(self):
+        before = self.set_path.read_bytes()
+        result = self.call_build(self.artifacts)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Verifier output already exists', result.stderr)
+        self.assertEqual(self.set_path.read_bytes(), before)
+        result, path = self.call_select(self.set_path, self.set_sha, 'cmp-n')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        before = path.read_bytes()
+        result, _ = self.call_select(self.set_path, self.set_sha, 'cmp-s', output=path)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Verifier output already exists', result.stderr)
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_structure_negative_tamper_version_marker_extra_disallow_and_comparison(self):
+        cases = [
+            ('tampered-file', 'probe/README.md', lambda p: p.write_bytes(p.read_bytes() + b'altered\n')),
+            ('wrong-version', 'probe/skills/oracle-dba/VERSION', lambda p: p.write_text('0.0.0-wrong\n')),
+            ('missing-marker', 'probe/skills/oracle-dba/SKILL.md', lambda p: p.write_text(re.sub(r'^> PROBE-D-[^\n]*\n', '', p.read_text(), flags=re.M))),
+            ('extra-file', 'probe/extra.txt', lambda p: p.write_text('unexpected\n')),
+            ('wrong-disallow', 'probe-webfetch-denied/agents/telecom-crm-oracle-dba.md', lambda p: p.write_text(p.read_text().replace('  - WebFetch', '  - Bash'))),
+            ('plain-disallow', 'probe/agents/telecom-crm-oracle-dba.md', lambda p: p.write_text(p.read_text().replace('---\n', '---\ndisallowedTools: [Bash]\n', 1))),
+            ('missing-load', 'comparison/N/skills/stability-director/SKILL.md', lambda p: p.write_text(re.sub(r'^> LOAD-N-[^\n]*\n', '', p.read_text(), flags=re.M))),
+            ('unexpected-ns-diff', 'comparison/S/README.md', lambda p: p.write_bytes(p.read_bytes() + b'altered\n')),
+            ('stale-skill-zip', 'probe/individual-packages/oracle-dba/skill.zip', lambda p: p.write_bytes((self.repo / 'individual-packages/oracle-dba/skill.zip').read_bytes())),
+        ]
+        for label, rel, mutate in cases:
+            with self.subTest(case=label):
+                artifacts = self.copy_artifacts()
+                mutate(artifacts / rel)
+                result = self.call_build(artifacts)
+                self.assertNotEqual(result.returncode, 0, label)
+                self.assertIn('error', result.stderr)
+
+    def test_provenance_and_comparison_manifest_negative_cases(self):
+        for key, value in [('source_commit', 'unknown'), ('source_commit', 'ffffffff'),
+                           ('source_tree_sha256', '0' * 64), ('source_version', '2.8.0-rc2')]:
+            with self.subTest(field=key, value=value):
+                artifacts = self.copy_artifacts()
+                path = artifacts / 'probe/probe-manifest.json'
+                data = json.loads(path.read_text())
+                data[key] = value
+                path.write_text(json.dumps(data))
+                self.assertNotEqual(self.call_build(artifacts).returncode, 0)
+        for key, value in [('pass', False), ('lead_normalized_equal', False), ('different_files', []),
+                           ('s_replaced_files', []), ('unexpected_diffs', ['README.md'])]:
+            with self.subTest(field=key):
+                artifacts = self.copy_artifacts()
+                path = artifacts / 'comparison/comparison-manifest.json'
+                data = json.loads(path.read_text())
+                data[key] = value
+                path.write_text(json.dumps(data))
+                self.assertNotEqual(self.call_build(artifacts).returncode, 0)
+
+    def test_selection_rejects_identity_drift_tamper_and_bad_hash(self):
+        args = [self.set_path, self.set_sha, 'probe', self.head, self.tag, self.zip_sha, self.script_sha]
+        for index, value in [(1, '0' * 64), (2, 'PROBE'), (3, '0' * 40), (4, 'wrong-tag'),
+                             (5, '0' * 64), (6, '0' * 64)]:
+            with self.subTest(arg=index):
+                changed_args = list(args)
+                changed_args[index] = value
+                result, output = self.call_select(*changed_args)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('error', result.stderr)
+                self.assertFalse(output.exists())
+        artifacts = self.copy_artifacts()
+        # Generate a new valid record for the independent copy, then tamper.
+        result = self.call_build(artifacts)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        path = artifacts / 'selected-set.json'
+        # Even with the correct bytes/hash, an alias filename must be refused.
+        shutil.copyfile(artifacts / 'experiment-set.json', path)
+        result, output = self.call_select(path, hashlib.sha256(path.read_bytes()).hexdigest(), *args[2:])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Set path mismatch', result.stderr)
+        self.assertFalse(output.exists())
+        path = artifacts / 'experiment-set.json'
+        checksum = hashlib.sha256(path.read_bytes()).hexdigest()
+        (artifacts / 'probe/README.md').write_text('tampered after set\n')
+        result, output = self.call_select(path, checksum, *args[2:])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Selected package bytes changed', result.stderr)
+        self.assertFalse(output.exists())
+
+    def test_rollback_equivalent_host_settings_exception_runtime_extras_newer_plan(self):
+        package = next(p for p in self.document['packages'] if p['name'] == 'probe')
+        root = Path(tempfile.mkdtemp(prefix='installed-', dir=self.work)) / 'source'
+        origin = Path(package['root'])
+        # Omit only the host-managed ROOT file during copy, without deletion.
+        shutil.copytree(origin, root, ignore=lambda directory, names: ['settings.json'] if Path(directory) == origin else [])
+        (root / '.in_use').mkdir()
+        (root / '.in_use/12345').write_text('runtime\n')
+        extras = self.ns['installed_matches'](root, package['expected_names'], package['hashes'])
+        self.assertEqual(extras, ['.in_use/12345'])
+        (root / 'VERSION').write_text('newer-switch\n')
+        with self.assertRaisesRegex(ValueError, 'newest plan first'):
+            self.ns['installed_matches'](root, package['expected_names'], package['hashes'])
+        for rel in ['skills/oracle-dba/VERSION', 'probe-manifest.json', 'settings.json']:
+            with self.subTest(mismatch=rel):
+                target = Path(tempfile.mkdtemp(prefix='rollback-mismatch-', dir=self.work)) / 'source'
+                shutil.copytree(origin, target)
+                (target / rel).write_text('tampered\n')
+                with self.assertRaises(ValueError):
+                    self.ns['installed_matches'](target, package['expected_names'], package['hashes'])
+
+    def test_unexpected_paths_and_runtime_markers_are_not_read(self):
+        package = next(p for p in self.document['packages'] if p['name'] == 'probe')
+        target = Path(tempfile.mkdtemp(prefix='inventory-', dir=self.work)) / 'source'
+        shutil.copytree(package['root'], target)
+        (target / '.in_use').mkdir()
+        marker = target / '.in_use/9876'
+        marker.write_text('runtime content must not be read\n')
+        original = self.ns['sha']
+
+        def spy(path):
+            if Path(path) == marker:
+                raise AssertionError('Unexpected/runtime content was read')
+            return original(path)
+
+        self.ns['sha'] = spy
+        try:
+            with self.assertRaisesRegex(ValueError, 'inventory before byte reads'):
+                self.ns['file_map'](target, package['expected_names'])
+            self.assertEqual(self.ns['installed_matches'](target, package['expected_names'], package['hashes']), ['.in_use/9876'])
+        finally:
+            self.ns['sha'] = original
+
+    def test_raw_marker_count_equivalent_counts_locations_without_verdict(self):
+        for package in self.document['packages']:
+            markers = package['markers']['expected']
+            text = json.dumps({'prompt': markers, 'result': markers}, ensure_ascii=False)
+            actual = self.ns['raw_marker_counts'](text, markers)
+            for marker in markers:
+                self.assertEqual(actual[marker], 2)
+            self.assertEqual(self.ns['raw_marker_counts']('unrelated', markers), {marker: 0 for marker in markers})
+
 
 
 if __name__ == "__main__":

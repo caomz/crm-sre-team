@@ -3,14 +3,18 @@
 # UPDATE carries PLAN/hash in-process; optional synthetic DRILL; one YES -> APPLY.
 # Git bootstrap checks HEAD, clean tree and raw script blob before any mode.
 # PLAN uses that verified worktree as clone source; standalone uses GitHub.
+# EXPBUILD shares formal preparation; SWITCH uses a frozen set and one YES.
 # NEW ORCHESTRATION: NOT RUN ON WINDOWS. UTF-8 BOM preserves verbatim r2 text.
 [CmdletBinding()]
 param(
-    [ValidateSet('PLAN','APPLY','VERIFY','ROLLBACK','DRILL','UPDATE')][string]$Mode = 'PLAN',
+    [ValidateSet('PLAN','APPLY','VERIFY','ROLLBACK','DRILL','UPDATE','EXPBUILD','SWITCH')][string]$Mode = 'PLAN',
     [Parameter(Mandatory=$true)][ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')][string]$Tag,
     [Parameter(Mandatory=$true)][ValidatePattern('^[0-9a-fA-F]{40}$')][string]$ExpectedCommit,
     [Parameter(Mandatory=$true)][ValidatePattern('^[0-9a-fA-F]{64}$')][string]$ExpectedZipSha256,
     [ValidatePattern('^[0-9a-fA-F]{64}$')][string]$ExpectedScriptSha256,
+    [string]$ExperimentSet,
+    [ValidatePattern('^[0-9a-fA-F]{64}$')][string]$ExperimentSetSha256,
+    [ValidateSet('formal','probe','cmp-n','cmp-s','probe-webfetch-denied','probe-bash-denied','probe-powershell-denied')][string]$Package,
     [string]$PlanPath,
     [ValidatePattern('^[0-9a-fA-F]{64}$')][string]$PlanSha256,
     [string]$PythonExe = 'C:\Users\AI\AppData\Local\Programs\Python\Python312\python.exe',
@@ -322,6 +326,10 @@ function Get-SourceSnapshot([string]$Root) {
     $Names = @(Get-DeclaredNames $Root)
     $Hashes = @{}
     $Missing = @()
+    if (Test-Path -LiteralPath (Join-Path $Root 'VERSION') -PathType Leaf) {
+        $SnapshotVersion = [IO.File]::ReadAllText((Join-Path $Root 'VERSION'), $Utf8NoBom).Trim()
+        if ($SnapshotVersion -cmatch '-probe\.r[0-9a-f]{8}$') { $Names += 'probe-manifest.json' }
+    }
     foreach ($Rel in $Names) {
         $FilePath = Join-Path $Root ($Rel -replace '/', '\')
         if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
@@ -373,7 +381,7 @@ function Test-InstalledDeclaredFiles([string]$Root, [string]$Label) {
 }
 function Assert-Package {
     Assert-TreeNoReparse $PackageRoot
-    Assert-PathSetEqual $InstallExpectedNames @(Get-DeclaredNames $PackageRoot)
+    Assert-PathSetEqual $InstallExpectedNames @(@(Get-DeclaredNames $PackageRoot) + @($InstallMetadataNames))
     Assert-PathSetEqual $InstallExpectedNames @(Get-PackageFiles $PackageRoot)
     Assert-HashesEqual $PackageHashes (Get-SelectedPackageHashes $PackageRoot)
     if ([IO.File]::ReadAllText((Join-Path $PackageRoot 'VERSION'), $Utf8NoBom).Trim() -cne $Version) { throw 'Package version changed' }
@@ -388,14 +396,27 @@ function Assert-PlanLayout($Document) {
     $WantArtifacts = Join-Path $Handoff ('update-' + $Document.run_id)
     if ((Get-InstallFullPath $Document.artifacts) -ine $WantArtifacts -or (Get-InstallFullPath $PlanPath) -ine (Join-Path $WantArtifacts 'install-plan.json')) { throw 'PLAN must be in its unique handoff directory' }
     $null = Assert-Under $Document.artifacts $Handoff
-    $WantRepo = Join-Path $DevRoot ('crm-oncall-' + $Document.run_id + '\repo')
+    $IsSwitch = $Document.operation -ceq 'SWITCH'
+    $CloneId = $Document.run_id
+    $Label = 'oncall'
+    if ($IsSwitch) {
+        if ($Document.experiment_set_id -notmatch '^[0-9a-f]{32}$' -or $Document.experiment_set_sha256 -notmatch '^[0-9a-f]{64}$') { throw 'Invalid switch set identifier/hash' }
+        $CloneId = $Document.experiment_set_id
+        $Label = $Document.package_kind
+        $Metadata = @(Get-PackageMetadataNames $Label)
+        Assert-PathSetEqual $Metadata @($Document.metadata_names)
+        $SetRoot = Join-Path $Handoff ('experiment-' + $CloneId)
+        if ((Get-InstallFullPath $Document.experiment_set) -ine (Join-Path $SetRoot 'experiment-set.json') -or (Get-InstallFullPath $Document.zip) -ine (Join-Path $WantArtifacts 'release.zip')) { throw 'Unexpected switch set/ZIP path' }
+        $null = Assert-Under $Document.zip $Handoff
+    }
+    $WantRepo = Join-Path $DevRoot ('crm-oncall-' + $CloneId + '\repo')
     if ((Get-InstallFullPath $Document.repo) -ine $WantRepo) { throw 'Unexpected clone path' }
     $null = Assert-Under $Document.repo $DevRoot
     $WantPackage = Join-Path $WantArtifacts 'install-clean\crm-sre-team'
     $IP = $Document.install_plan
     if ($IP.mode -cne 'REAL' -or $IP.fault -cne 'NONE' -or $IP.bound_root -cne 'C:\Users\AI\.workbuddy' -or (Get-InstallFullPath $IP.package) -ine $WantPackage) { throw 'Unexpected install mode or package path' }
     $MR = 'C:\Users\AI\.workbuddy\plugins\marketplaces\my-experts'
-    $BR = Join-Path $MR ('backups\crm-v36-' + $Document.run_id + '-oncall')
+    $BR = Join-Path $MR ('backups\crm-v36-' + $Document.run_id + '-' + $Label)
     $Want = [ordered]@{ MarketRoot=$MR; InstallSource=(Join-Path $MR 'plugins\crm-sre-team'); Marketplace=(Join-Path $MR '.codebuddy-plugin\marketplace.json'); BackupRoot=$BR; OldSource=(Join-Path $BR 'install-source'); MarketplaceBackup=(Join-Path $BR 'marketplace.json'); StatePath=(Join-Path $BR 'install-state.json'); CacheRoot='C:\Users\AI\.workbuddy\plugins\cache\my-experts\crm-sre-team' }
     foreach ($Key in $Want.Keys) {
         if ((Get-InstallFullPath $IP.paths.$Key) -ine $Want[$Key]) { throw "Unexpected planned path: $Key" }
@@ -424,11 +445,20 @@ function Import-PlanContext($Document) {
     $Repo = $Document.repo
     $ReleaseZip = Join-Path $Artifacts 'release.zip'
     $InstallLabel = 'oncall'
+    $PackageKind = 'formal'
+    $ExpectedMarkers = @()
+    if ($Document.operation -ceq 'SWITCH') {
+        $InstallLabel = $Document.package_kind
+        $PackageKind = $Document.package_kind
+        $ExpectedMarkers = @($Document.expected_markers)
+        $ReleaseZip = $Document.zip
+    }
     $InstallPlan = $Document.install_plan
     $PackageRoot = $InstallPlan.package
     foreach ($Key in @('MarketRoot','InstallSource','Marketplace','BackupRoot','OldSource','MarketplaceBackup','StatePath','CacheRoot')) { Set-Variable -Name $Key -Value $InstallPlan.paths.$Key }
     $MarketBeforeHash = $Document.market_before_hash
     $InstallMetadataNames = @()
+    if ($Document.operation -ceq 'SWITCH') { $InstallMetadataNames = @($Document.metadata_names) }
     $InstallExpectedNames = @($Document.expected_names)
     $PackageHashes = ConvertTo-HashTable $Document.package_hashes
     Assert-InstallPaths -RequirePlan
@@ -458,9 +488,9 @@ function Initialize-Stages {
     $MarketAfterHash = $null
     $MarketFailureHash = $null
 }
-function Prepare-InstallContext {
+function Prepare-InstallContext([string]$ContextLabel = 'oncall', [string[]]$ContextMetadataNames = @()) {
     # Path construction and PLAN finalization from r2 block 19.
-    $InstallLabel = 'oncall'
+    $InstallLabel = $ContextLabel
     $InstallFault = 'NONE'
     $InstallPlan = $null
     . Initialize-Stages
@@ -480,8 +510,8 @@ function Prepare-InstallContext {
     $StatePath = Join-Path $BackupRoot 'install-state.json'
     Assert-InstallPaths
     if (Test-Path -LiteralPath $BackupRoot) { throw 'Backup already exists; choose a new PLAN' }
-    $InstallMetadataNames = @()
-    $InstallExpectedNames = @(Get-DeclaredNames $PackageRoot)
+    $InstallMetadataNames = @($ContextMetadataNames)
+    $InstallExpectedNames = @(@(Get-DeclaredNames $PackageRoot) + $InstallMetadataNames)
     Assert-TreeNoReparse $PackageRoot
     $PackageHashes = Get-SelectedPackageHashes $PackageRoot
     Assert-Package
@@ -635,6 +665,15 @@ function Collect-SessionEvidence {
         $Sums += $Snapshot.Data.Sha + '  ' + $Snapshot.File.Name + "`n"
     }
     Write-Utf8Lf (Join-Path $EvidenceRoot 'SHA256SUMS') $Sums
+    if (@($ExpectedMarkers).Count -gt 0) {
+        $MarkerRecords = @()
+        foreach ($Snapshot in $Snapshots) {
+            $Counts = Get-RawMarkerCounts $Snapshot.Data.Text $ExpectedMarkers
+            $MarkerRecords += [pscustomobject]@{ record=$Snapshot.File.Name; counts=$Counts }
+            foreach ($Marker in $Counts.Keys) { Write-Host "Raw marker aid: Record=$($Snapshot.File.Name); Marker=$Marker; Count=$($Counts[$Marker]); location unknown, NOT A VERDICT" }
+        }
+        Write-NewJson (Join-Path $EvidenceRoot 'marker-counts.json') ([ordered]@{ scope='RAW_OCCURRENCES_LOCATION_UNKNOWN_NOT_A_VERDICT'; records=$MarkerRecords })
+    }
     foreach ($Snapshot in $Snapshots) {
         $SkillIds = [System.Collections.Hashtable]::new([StringComparer]::Ordinal)
         foreach ($Line in ($Snapshot.Data.Text -split "`n")) {
@@ -660,15 +699,550 @@ function Collect-SessionEvidence {
     return $EvidenceRoot
 }
 
+# Experiment helpers: NOT RUN ON WINDOWS. R2 blocks remain byte-identical.
+function Get-ExperimentPython {
+    if ($PythonExe -ceq 'C:\Users\AI\AppData\Local\Programs\Python\Python312\python.exe' -and -not (Test-Path -LiteralPath $PythonExe -PathType Leaf)) { throw 'Default Python312 python.exe is missing; pass -PythonExe with the verified real interpreter path.' }
+    return (Get-NativeProgram $PythonExe)
+}
+function Get-PackageMetadataNames([string]$Kind) {
+    if ($Kind -cin @('probe','probe-webfetch-denied','probe-bash-denied','probe-powershell-denied')) { return @('probe-manifest.json') }
+    if ($Kind -cnotin @('formal','cmp-n','cmp-s')) { throw 'Unknown package kind' }
+    return @()
+}
+function Load-ExperimentSet {
+    if (-not $ExperimentSet -or -not $ExperimentSetSha256 -or -not $Package) { throw 'SWITCH requires -ExperimentSet, -ExperimentSetSha256 and -Package' }
+    $null = Assert-Under $ExperimentSet $Handoff
+    $Read = ReadShared $ExperimentSet
+    if ($Read.Sha -ine $ExperimentSetSha256) { throw 'Experiment set SHA256 mismatch; no install plan or host writes' }
+    $Set = $Read.Text | ConvertFrom-Json
+    if ($Set.schema -cne 'crm-oncall-experiment/v1' -or $Set.tag -cne $Tag -or $Set.commit -cne $ExpectedCommit -or $Set.zip_sha256 -cne $ExpectedZipSha256 -or $Set.script_sha256 -ine (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash) { throw 'Experiment set identity mismatch; use its original bootstrap and release inputs' }
+    if ($Set.set_id -notmatch '^[0-9a-f]{32}$') { throw 'Invalid experiment set identifier' }
+    $SetRoot = Join-Path $Handoff ('experiment-' + $Set.set_id)
+    if ((Get-InstallFullPath $ExperimentSet) -ine (Join-Path $SetRoot 'experiment-set.json') -or (Get-InstallFullPath $Set.artifacts) -ine $SetRoot) { throw 'Unexpected experiment set path' }
+    return $Set
+}
+function Invoke-ExperimentBuild {
+    # Dot-source: shared PLAN preparation has already verified formal ZIP/unpack.
+    Assert-HashesEqual $Before (Get-ManifestHashes $Repo)
+    Assert-CloneIdentity -AfterChecks
+    Push-Location -LiteralPath $Repo
+    try {
+        $null = Invoke-Native $Python @('tools/make_probe_build.py','--root',$Repo,'--out',(Join-Path $Artifacts 'probe')) (Join-Path $Artifacts 'probe-build.txt')
+        $null = Invoke-Native $Python @('tools/make_comparison_build.py','--root',$Repo,'--out',(Join-Path $Artifacts 'comparison')) (Join-Path $Artifacts 'comparison-build.txt')
+        foreach ($Spec in @(@('probe-webfetch-denied','WebFetch'),@('probe-bash-denied','Bash'),@('probe-powershell-denied','PowerShell'))) {
+            $null = Invoke-Native $Python @('tools/make_probe_build.py','--root',$Repo,'--out',(Join-Path $Artifacts $Spec[0]),'--disallow',('oracle-dba=' + $Spec[1])) (Join-Path $Artifacts ($Spec[0] + '-build.txt'))
+        }
+        Assert-HashesEqual $Before (Get-ManifestHashes $Repo)
+        Assert-CloneIdentity -AfterChecks
+    } finally { Pop-Location }
+    $VerifierPath = Join-Path $Artifacts 'experiment-verifier.py'
+    Write-ExperimentVerifier $VerifierPath
+    $ScriptHash = (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $null = Invoke-Native $Python @($VerifierPath,'build','--repo',$Repo,'--artifacts',$Artifacts,'--head',$ExpectedCommit,'--tag',$Tag,'--zip-sha',$ExpectedZipSha256,'--script-sha',$ScriptHash,'--set-id',$RunId) (Join-Path $Artifacts 'experiment-verify.txt')
+    $ExperimentSet = Join-Path $Artifacts 'experiment-set.json'
+    $ExperimentSetSha256 = (Get-FileHash -LiteralPath $ExperimentSet -Algorithm SHA256).Hash.ToLowerInvariant()
+    Write-Utf8Lf (Join-Path $Artifacts 'experiment-set.sha256') ($ExperimentSetSha256 + "  experiment-set.json`n")
+    Write-Host "ExperimentSet=$ExperimentSet; ExperimentSetSha256=$ExperimentSetSha256"
+    Write-Host 'EXPBUILD ONLY. Formal/probe/N/S/limited packages verified locally; no WorkBuddy reads/writes or host acceptance. Preserve this ONE set for the whole gate round.'
+}
+function Invoke-SwitchPlan {
+    # Dot-source: publish PlanPath/PlanSha256 for the existing DRILL/APPLY path.
+    if ($PlanPath -or $PlanSha256 -or $SessionId -or $AgentId -or $RunPytest) { throw 'SWITCH creates its own plan from an existing set; no plan/session IDs or -RunPytest' }
+    Assert-ClientStopped
+    $Set = Load-ExperimentSet
+    $Python = Get-ExperimentPython
+    $RunId = [guid]::NewGuid().ToString('N')
+    $Artifacts = Join-Path $Handoff ('update-' + $RunId)
+    New-SafeDirectory $Artifacts $Handoff
+    $TaskTemp = Join-Path $Artifacts 'temp'
+    New-SafeDirectory $TaskTemp $Handoff
+    $env:TEMP = $TaskTemp
+    $env:TMP = $TaskTemp
+    $env:TMPDIR = $TaskTemp
+    $env:PYTHONUTF8 = '1'
+    $env:PYTHONDONTWRITEBYTECODE = '1'
+    $VerifierPath = Join-Path $Artifacts 'experiment-verifier.py'
+    Write-ExperimentVerifier $VerifierPath
+    $ScriptHash = (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $SelectionPath = Join-Path $Artifacts 'selection.json'
+    $null = Invoke-Native $Python @($VerifierPath,'select','--set',$ExperimentSet,'--set-sha',$ExperimentSetSha256.ToLowerInvariant(),'--package',$Package,'--head',$ExpectedCommit,'--tag',$Tag,'--zip-sha',$ExpectedZipSha256,'--script-sha',$ScriptHash,'--output',$SelectionPath) (Join-Path $Artifacts 'selected-package-verify.txt')
+    $Selection = (ReadShared $SelectionPath).Text | ConvertFrom-Json
+    $Set = $Selection.experiment
+    $Selected = $Selection.selected
+    $null = Assert-Under $Set.repo $DevRoot
+    $null = Assert-Under $Set.zip $Handoff
+    $null = Assert-Under $Selected.root $Set.artifacts
+    Assert-TreeNoReparse $Selected.root
+    # Exact set/bytes have been re-hashed BEFORE creating the install plan.
+    $InstallUnpack = Join-Path $Artifacts 'install-clean'
+    New-SafeDirectory $InstallUnpack $Handoff
+    $PackageRoot = Join-Path $InstallUnpack 'crm-sre-team'
+    Copy-Item -LiteralPath $Selected.root -Destination $PackageRoot -Recurse
+    $Version = $Selected.version
+    $Repo = $Set.repo
+    $ReleaseZip = Join-Path $Artifacts 'release.zip'
+    Copy-Item -LiteralPath $Set.zip -Destination $ReleaseZip
+    if ((Get-FileHash -LiteralPath $ReleaseZip -Algorithm SHA256).Hash -ine $ExpectedZipSha256) { throw 'Copied formal ZIP differs from the experiment set' }
+    $InstallMode = 'REAL'
+    $DrillRoot = $null
+    $Metadata = @(Get-PackageMetadataNames $Package)
+    . Prepare-InstallContext -ContextLabel $Package -ContextMetadataNames $Metadata
+    Assert-PathSetEqual @($Selected.expected_names) $InstallExpectedNames
+    Assert-HashesEqual (ConvertTo-HashTable $Selected.hashes) $PackageHashes
+    if ($Entries[0].PSObject.Properties.Name -notcontains 'version') { Write-Host 'SWITCH PLAN: Marketplace entry has no version field; marketplace.json will not be written. Refresh/update the client to the package version.' }
+    $OldSnapshot = Get-SourceSnapshot $InstallSource
+    $CacheVersions = @()
+    if (Test-Path -LiteralPath $CacheRoot -PathType Container) { $CacheVersions = @(Get-ChildItem -LiteralPath $CacheRoot -Directory -Force | Select-Object -ExpandProperty Name) }
+    $Document = [ordered]@{ schema='crm-oncall-plan/v1'; operation='SWITCH'; run_id=$RunId; created_utc=([DateTime]::UtcNow.ToString('o')); tag=$Tag; commit=$ExpectedCommit; zip_sha256=$ExpectedZipSha256; zip=$ReleaseZip; repo=$Repo; artifacts=$Artifacts; version=$Version; install_plan=$InstallPlan; expected_names=$InstallExpectedNames; package_hashes=$PackageHashes; manifest_sha256=$PackageHashes['release-manifest.json']; script_sha256=$ScriptHash; market_before_hash=$MarketBeforeHash; marketplace_entry=$Entries[0]; old_source=$OldSnapshot; cache_versions=$CacheVersions; pytest_requested=$false; host_acceptance='NOT_RUN'; package_kind=$Package; metadata_names=$Metadata; expected_markers=@($Selected.markers.expected); markers=$Selected.markers; disallow=$Selected.disallow; experiment_set=$ExperimentSet; experiment_set_sha256=$ExperimentSetSha256.ToLowerInvariant(); experiment_set_id=$Set.set_id; source_tree_sha256=$Set.source_tree_sha256; source_version=$Set.source_version; builder_manifest=$Selected.builder_manifest }
+    $PlanPath = Join-Path $Artifacts 'install-plan.json'
+    Write-NewJson $PlanPath $Document
+    $PlanSha256 = (Get-FileHash -LiteralPath $PlanPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    Write-Utf8Lf (Join-Path $Artifacts 'install-plan.sha256') ($PlanSha256 + "  install-plan.json`n")
+    Write-Host ([IO.File]::ReadAllText($PlanPath, $Utf8NoBom))
+    Write-Host "SWITCH PLAN ready. Package=$Package; PlanPath=$PlanPath; PlanSha256=$PlanSha256"
+}
+function Assert-RollbackCurrentPackage {
+    # R6 for INSTALLED only: declared bytes with the host-managed root settings exception.
+    try { $null = Test-InstalledDeclaredFiles $InstallSource 'ROLLBACK current source' }
+    catch { throw 'ROLLBACK refused: roll back the newest plan first, or SWITCH to the wanted package. Current source does not match this plan; retain evidence for human recovery.' }
+}
+function Get-RawMarkerCounts([string]$Text, [string[]]$Markers) {
+    $Counts = [ordered]@{}
+    foreach ($Marker in @($Markers)) {
+        if ([string]::IsNullOrEmpty($Marker)) { throw 'Invalid empty expected marker' }
+        $Counts[$Marker] = [regex]::Matches($Text, [regex]::Escape($Marker)).Count
+    }
+    return $Counts
+}
+function Write-ExperimentVerifier([string]$Path) {
+    Assert-NoInstallReparse $Path
+    if (Test-Path -LiteralPath $Path) { throw 'Verifier output already exists' }
+    $ExperimentVerifierCode = @'
+"""Offline structural verifier; writes new JSON files and prints status only."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path, PureWindowsPath
+import re
+import subprocess
+import sys
+from datetime import datetime, timezone
+from zipfile import ZipFile
+
+PACKAGE_NAMES = (
+    'formal', 'probe', 'cmp-n', 'cmp-s', 'probe-webfetch-denied',
+    'probe-bash-denied', 'probe-powershell-denied',
+)
+DISALLOW = {
+    'probe': {}, 'probe-webfetch-denied': {'oracle-dba': ['WebFetch']},
+    'probe-bash-denied': {'oracle-dba': ['Bash']},
+    'probe-powershell-denied': {'oracle-dba': ['PowerShell']},
+}
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def sha(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def read_json(path):
+    return json.loads(Path(path).read_text(encoding='utf-8'))
+
+
+def write_new_json(path, value):
+    path = no_links(path)
+    data = (json.dumps(value, ensure_ascii=True, sort_keys=True,
+                       separators=(',', ':')) + '\n').encode('utf-8')
+    with path.open('xb') as output:
+        output.write(data)
+
+
+def no_links(path):
+    path = Path(path).absolute()
+    for part in (path, *path.parents):
+        require(not part.is_symlink(), 'Link path: ' + str(part))
+        if part.exists():
+            require(not (getattr(part.lstat(), 'st_file_attributes', 0) & 0x400),
+                    'Reparse path: ' + str(part))
+    return path
+
+
+def file_paths(root):
+    root = no_links(root)
+    require(root.is_dir(), 'Missing package root: ' + str(root))
+    result = {}
+    for directory, dirs, files in os.walk(root, followlinks=False):
+        for name in dirs + files:
+            no_links(Path(directory) / name)
+        for name in files:
+            path = Path(directory) / name
+            require(path.is_file(), 'Non-file package entry')
+            result[path.relative_to(root).as_posix()] = path
+    return dict(sorted(result.items()))
+
+
+def file_map(root, expected_names=None):
+    paths = file_paths(root)
+    if expected_names is not None:
+        exact_names(paths, expected_names, 'Package inventory before byte reads')
+    return {name: sha(path) for name, path in paths.items()}
+
+
+def exact_names(actual, expected, label):
+    require(len(actual) == len(expected) and set(actual) == set(expected),
+            label + ': file set mismatch')
+
+
+def assert_versions(root, version, version_names):
+    require(read_json(root / '.codebuddy-plugin/plugin.json')['version'] == version,
+            'Plugin version mismatch')
+    for name in version_names:
+        if name != '.codebuddy-plugin/plugin.json':
+            require((root / name).read_text(encoding='utf-8').strip() == version,
+                    'VERSION mismatch: ' + name)
+
+
+def changed(before, after):
+    exact_names(after, before, 'Diff inputs')
+    return sorted(name for name in before if before[name] != after[name])
+
+
+def check_zips(root, roles):
+    for sid in sorted(roles):
+        tree = file_map(root / 'skills' / sid)
+        with ZipFile(root / 'individual-packages' / sid / 'skill.zip') as archive:
+            expected = [sid + '/' + name for name in tree]
+            exact_names(archive.namelist(), expected, 'Skill ZIP ' + sid)
+            for name, digest in tree.items():
+                require(hashlib.sha256(archive.read(sid + '/' + name)).hexdigest() == digest,
+                        'Skill ZIP bytes mismatch: ' + sid + '/' + name)
+
+
+def check_provenance(manifest, head, digest, version):
+    commit = manifest.get('source_commit', '')
+    require(isinstance(commit, str) and re.fullmatch(r'[0-9a-f]{7,40}', commit)
+            and head.startswith(commit), 'source_commit mismatch/unknown')
+    require(manifest.get('source_tree_sha256') == digest, 'source_tree_sha256 mismatch')
+    require(manifest.get('source_version') == version, 'source_version mismatch')
+
+
+def frontmatter(path):
+    import yaml
+    text = path.read_text(encoding='utf-8')
+    match = re.match(r'\A---\n(.*?)\n---\n', text, re.S)
+    require(match is not None, 'Missing Agent frontmatter')
+    data = yaml.safe_load(match.group(1))
+    require(isinstance(data, dict), 'Invalid Agent frontmatter')
+    return data, text[match.end():]
+
+
+def check_disallow(root, roles, spec):
+    for sid, role in roles.items():
+        data, _ = frontmatter(root / 'agents' / (role['agent'] + '.md'))
+        if sid in spec:
+            require(data.get('disallowedTools') == spec[sid], 'Wrong disallowedTools: ' + sid)
+        else:
+            require('disallowedTools' not in data, 'Unexpected disallowedTools: ' + sid)
+
+
+def check_marker(root, rel, marker):
+    _, body = frontmatter(root / rel)
+    hits = [line for line in body.splitlines() if line.startswith('> ' + marker + '｜')]
+    require(len(hits) == 1, 'Missing/duplicate marker: ' + rel)
+
+
+def native_block(text):
+    matches = list(re.finditer(r'(<!-- MODE:NATIVE_LEAD:BEGIN -->\n)(.*?)'
+                              r'(<!-- MODE:NATIVE_LEAD:END -->)', text, re.S))
+    require(len(matches) == 1, 'NATIVE_LEAD block mismatch')
+    return matches[0]
+
+
+def normalize_lead(text):
+    match = native_block(text)
+    text = text[:match.start(2)] + text[match.end(2):]
+    return re.sub(r'^> LOAD-[NS]-[0-9a-f]+｜[^\n]*\n\n?', '', text, flags=re.M)
+
+
+def record(name, root, version, hashes, metadata, markers, disallow, builder=None):
+    return dict(name=name, root=str(root), version=version, expected_names=sorted(hashes),
+                hashes=hashes, extra_metadata_names=metadata, markers=markers,
+                disallow=disallow, builder_manifest=builder)
+
+
+def assert_head_bytes(repo, names, hashes, head):
+    # One batch process: compare raw HEAD blob SHA256, without filters/textconv.
+    command = ['git', '-C', str(repo), 'cat-file', '--batch']
+    queries = ''.join(head + ':' + name + '\n' for name in names).encode('utf-8')
+    data = subprocess.run(command, input=queries, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE, check=True).stdout
+    offset = 0
+    for name in names:
+        end = data.index(b'\n', offset)
+        header = data[offset:end].split()
+        require(len(header) == 3 and header[1] == b'blob', 'Missing HEAD blob: ' + name)
+        size = int(header[2])
+        start = end + 1
+        require(hashlib.sha256(data[start:start + size]).hexdigest() == hashes[name],
+                'Release bytes differ from HEAD: ' + name)
+        require(data[start + size:start + size + 1] == b'\n', 'Invalid git batch output')
+        offset = start + size + 1
+    require(offset == len(data), 'Unexpected git batch output')
+
+
+def build_set(repo, artifacts, head, tag, zip_sha, script_sha, set_id):
+    repo, artifacts = no_links(repo), no_links(artifacts)
+    actual_head = subprocess.run(['git', '-C', str(repo), 'rev-parse', 'HEAD'],
+                                 capture_output=True, text=True, check=True).stdout.strip()
+    require(actual_head == head, 'Clone HEAD mismatch')
+    sys.path.insert(0, str(repo / 'tools'))
+    from release_rules import release_files
+    from build_bundle import NATIVE_CLOSURE_TEXT
+    roles = read_json(repo / 'policy-source/roles-source.json')
+    inputs = release_files(repo)
+    names = [path.relative_to(repo).as_posix() for path in inputs]
+    source = {name: sha(repo / name) for name in names}
+    assert_head_bytes(repo, names, source, head)
+    digest = hashlib.sha256()
+    for path, name in zip(inputs, names):
+        digest.update(name.encode('utf-8') + b'\0')
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    digest = digest.hexdigest()
+    version = (repo / 'VERSION').read_text(encoding='utf-8').strip()
+    versions = sorted(['VERSION', '.codebuddy-plugin/plugin.json'] +
+                      ['skills/' + sid + '/VERSION' for sid in roles])
+    zips = sorted('individual-packages/' + sid + '/skill.zip' for sid in roles)
+    prompts = sorted(['agents/' + role['agent'] + '.md' for role in roles.values()] +
+                     ['skills/' + sid + '/SKILL.md' for sid in roles])
+    lead = ['agents/' + roles['stability-director']['agent'] + '.md',
+            'skills/stability-director/SKILL.md']
+    assert_versions(repo, version, versions)
+    zip_path = artifacts / 'release.zip'
+    require(sha(zip_path) == zip_sha, 'Formal release ZIP SHA256 mismatch')
+    formal = artifacts / 'install-clean/crm-sre-team'
+    formal_hashes = file_map(formal, names)
+    require(formal_hashes == source, 'Formal unpack differs from release source')
+    with ZipFile(zip_path) as archive:
+        exact_names(archive.namelist(), ['crm-sre-team/' + name for name in names], 'Release ZIP')
+        for name in names:
+            require(hashlib.sha256(archive.read('crm-sre-team/' + name)).hexdigest() == source[name],
+                    'Formal ZIP bytes mismatch: ' + name)
+    packages = [record('formal', formal, version, formal_hashes, [], {'expected': []}, {})]
+    builders = []
+    for name, spec in DISALLOW.items():
+        root = artifacts / name
+        hashes = file_map(root, names + ['probe-manifest.json'])
+        exact_names(hashes, names + ['probe-manifest.json'], name)
+        manifest_path = root / 'probe-manifest.json'
+        manifest = read_json(manifest_path)
+        check_provenance(manifest, head, digest, version)
+        suffix = manifest.get('marker_suffix')
+        require(isinstance(suffix, str) and re.fullmatch(r'[0-9a-f]{8}', suffix), 'Invalid probe suffix')
+        probe_version = version + '-probe.r' + suffix
+        require(manifest.get('probe_version') == probe_version, 'probe_version mismatch')
+        assert_versions(root, probe_version, versions)
+        exact_names(manifest.get('repacked_zips', []), zips, 'Probe repacked_zips')
+        require(changed(source, {rel: hashes[rel] for rel in names}) == sorted(prompts + versions + zips),
+                'Probe changed files mismatch')
+        require(manifest.get('overrides') == {'maxTurns': {}, 'disallowedTools': spec}, 'Probe overrides mismatch')
+        check_disallow(root, roles, spec)
+        expected_lead = {'marker_la': 'PROBE-LA-' + suffix, 'marker_ls': 'PROBE-LS-' + suffix}
+        require(manifest.get('lead_markers') == expected_lead, 'Lead markers mismatch')
+        files = []
+        for rel, marker in zip(lead, expected_lead.values()):
+            check_marker(root, rel, marker)
+            files.append(dict(path=rel, marker=marker))
+        expected_members = {}
+        for sid, role in sorted(roles.items()):
+            if sid == 'stability-director':
+                continue
+            entry = dict(marker_c='PROBE-C-' + suffix, marker_d='PROBE-D-' + suffix)
+            expected_members[role['agent']] = entry
+            for rel, marker in [('agents/' + role['agent'] + '.md', entry['marker_c']),
+                                ('skills/' + sid + '/SKILL.md', entry['marker_d'])]:
+                check_marker(root, rel, marker)
+                files.append(dict(path=rel, marker=marker))
+        require(manifest.get('markers') == expected_members, 'Member markers mismatch')
+        check_zips(root, roles)
+        builder = dict(path=str(manifest_path), sha256=sha(manifest_path))
+        builders.append(builder)
+        markers = dict(suffix=suffix, lead=expected_lead, members=expected_members, files=files,
+                       expected=['PROBE-' + kind + '-' + suffix for kind in ('LA', 'LS', 'C', 'D')])
+        packages.append(record(name, root, probe_version, hashes, ['probe-manifest.json'], markers, spec, builder))
+    comparison = artifacts / 'comparison'
+    manifest_path = comparison / 'comparison-manifest.json'
+    manifest = read_json(manifest_path)
+    check_provenance(manifest, head, digest, version)
+    require(manifest.get('pass') is True and manifest.get('lead_normalized_equal') is True
+            and manifest.get('unexpected_diffs') == [] and manifest.get('missing_replaced') == [],
+            'Comparison flags mismatch')
+    require(manifest.get('n_build_dir') == 'N' and manifest.get('s_build_dir') == 'S', 'Comparison directories mismatch')
+    suffix_match = re.fullmatch(re.escape(version) + r'-cmp-n\.r([0-9a-f]{8})', manifest.get('n_version', ''))
+    require(suffix_match is not None, 'Invalid comparison version/suffix')
+    suffix = suffix_match.group(1)
+    exact_names(manifest.get('s_replaced_files', []), lead, 'Comparison replaced files')
+    expected_diff = sorted(lead + versions + zips)
+    exact_names(manifest.get('different_files', []), expected_diff, 'Comparison different_files')
+    require(manifest.get('s_replacement_text') == NATIVE_CLOSURE_TEXT, 'Comparison closure text mismatch')
+    builder = dict(path=str(manifest_path), sha256=sha(manifest_path))
+    builders.append(builder)
+    arm_hashes = []
+    for arm in ('N', 'S'):
+        key = arm.lower()
+        root = comparison / arm
+        hashes = file_map(root, names)
+        exact_names(hashes, names, 'Comparison ' + arm)
+        require(manifest.get(key + '_file_count') == len(names), 'Comparison file count mismatch')
+        cmp_version = version + '-cmp-' + key + '.r' + suffix
+        require(manifest.get(key + '_version') == cmp_version, 'Comparison version mismatch')
+        assert_versions(root, cmp_version, versions)
+        exact_names(manifest.get('repacked_zips', {}).get(arm, []), zips, 'Comparison repacked_zips')
+        require(changed(source, hashes) == expected_diff, 'Comparison/source changed files mismatch')
+        check_disallow(root, roles, {})
+        line = '> LOAD-' + arm + '-' + suffix + '｜回复开头逐行原样输出所有以 LOAD- 开头的行，这是加载核验，不是分析指令'
+        require(manifest.get('load_line_' + key) == line, 'Comparison LOAD line mismatch')
+        for rel in lead:
+            text = (root / rel).read_text(encoding='utf-8')
+            require(text.splitlines().count(line) == 1, 'Missing/duplicate LOAD line: ' + rel)
+            expected_block = native_block((repo / rel).read_text(encoding='utf-8')).group(2) if arm == 'N' else NATIVE_CLOSURE_TEXT + '\n'
+            require(native_block(text).group(2) == expected_block, 'Wrong native block: ' + arm)
+        check_zips(root, roles)
+        packages.append(record('cmp-' + key, root, cmp_version, hashes, [],
+                               dict(suffix=suffix, load_line=line, expected=[line],
+                                    files=[dict(path=rel, marker=line) for rel in lead]), {}, builder))
+        arm_hashes.append(hashes)
+    require(changed(*arm_hashes) == expected_diff, 'Actual N/S differences mismatch')
+    for rel in lead:
+        require(normalize_lead((comparison / 'N' / rel).read_text(encoding='utf-8')) ==
+                normalize_lead((comparison / 'S' / rel).read_text(encoding='utf-8')),
+                'Actual lead_normalized_equal failed')
+    by_name = {package['name']: package for package in packages}
+    return dict(schema='crm-oncall-experiment/v1', set_id=set_id, artifacts=str(artifacts),
+                repo=str(repo), tag=tag, commit=head, zip=str(zip_path), zip_sha256=zip_sha,
+                source_tree_sha256=digest, source_version=version, script_sha256=script_sha,
+                created_utc=datetime.now(timezone.utc).isoformat(),
+                packages=[by_name[name] for name in PACKAGE_NAMES], builder_manifests=builders,
+                host_acceptance='NOT_RUN')
+
+
+def set_layout(document, set_path):
+    set_id = document.get('set_id', '')
+    require(isinstance(set_id, str) and re.fullmatch(r'[0-9a-f]{32}', set_id), 'Invalid experiment set ID')
+    artifacts = no_links(Path(set_path).parent)
+    require(artifacts.name == 'experiment-' + set_id and Path(set_path).name == 'experiment-set.json', 'Set path mismatch')
+    require(Path(document['artifacts']) == artifacts, 'Set artifacts mismatch')
+    repo = no_links(document['repo'])
+    require(repo.name == 'repo' and repo.parent.name == 'crm-oncall-' + set_id, 'Set repo mismatch')
+    if os.name == 'nt':
+        require(PureWindowsPath(artifacts.parent) == PureWindowsPath('D:/crm-v36-handoff'), 'Set outside fixed handoff')
+        require(PureWindowsPath(repo.parent.parent) == PureWindowsPath('D:/Dev'), 'Set outside fixed Dev')
+    require(Path(document['zip']) == artifacts / 'release.zip', 'Set ZIP path mismatch')
+    roots = dict(formal=artifacts / 'install-clean/crm-sre-team', probe=artifacts / 'probe',
+                 **{'cmp-n': artifacts / 'comparison/N', 'cmp-s': artifacts / 'comparison/S'})
+    for name in DISALLOW:
+        roots[name] = artifacts / name
+    return artifacts, repo, roots
+
+
+def select_package(set_path, set_sha, package, head, tag, zip_sha, script_sha):
+    no_links(set_path)
+    require(sha(set_path) == set_sha, 'Experiment set SHA256 mismatch')
+    document = read_json(set_path)
+    require(document.get('schema') == 'crm-oncall-experiment/v1', 'Unknown experiment set schema')
+    for key, value in [('tag', tag), ('commit', head), ('zip_sha256', zip_sha), ('script_sha256', script_sha)]:
+        require(document.get(key) == value, 'Experiment set identity mismatch: ' + key)
+    artifacts, repo, roots = set_layout(document, set_path)
+    require(re.fullmatch(r'[0-9a-f]{64}', document.get('source_tree_sha256', '')) is not None, 'Invalid source digest')
+    require(sha(no_links(document['zip'])) == zip_sha, 'Experiment formal ZIP changed')
+    packages = document.get('packages', [])
+    exact_names([entry['name'] for entry in packages], PACKAGE_NAMES, 'Experiment packages')
+    require(package in PACKAGE_NAMES, 'Unsupported experiment package')
+    selected = next(entry for entry in packages if entry['name'] == package)
+    require(Path(selected['root']) == roots[package], 'Selected package path mismatch')
+    hashes = file_map(selected['root'], selected['expected_names'])
+    exact_names(hashes, selected['expected_names'], 'Selected package')
+    require(hashes == selected['hashes'], 'Selected package bytes changed')
+    names = read_json(Path(selected['root']) / 'release-manifest.json')['files']
+    metadata = ['probe-manifest.json'] if package in DISALLOW else []
+    require(selected['extra_metadata_names'] == metadata, 'Selected metadata mismatch')
+    exact_names(hashes, names + metadata, 'Selected declared files')
+    roles = read_json(Path(selected['root']) / 'policy-source/roles-source.json')
+    versions = ['VERSION', '.codebuddy-plugin/plugin.json'] + ['skills/' + sid + '/VERSION' for sid in roles]
+    assert_versions(Path(selected['root']), selected['version'], versions)
+    require(selected['disallow'] == DISALLOW.get(package, {}), 'Selected disallow mismatch')
+    check_disallow(Path(selected['root']), roles, selected['disallow'])
+    builder = selected['builder_manifest']
+    if builder is not None:
+        expected_path = artifacts / 'comparison/comparison-manifest.json' if package.startswith('cmp-') else roots[package] / 'probe-manifest.json'
+        require(Path(builder['path']) == expected_path and builder in document['builder_manifests'], 'Selected builder path mismatch')
+        require(sha(no_links(builder['path'])) == builder['sha256'], 'Selected builder manifest changed')
+    return dict(experiment={key: document[key] for key in (
+                    'set_id', 'artifacts', 'repo', 'zip', 'source_tree_sha256', 'source_version')},
+                selected={key: selected[key] for key in (
+                    'root', 'version', 'expected_names', 'hashes', 'markers', 'disallow', 'builder_manifest')})
+
+
+def installed_matches(root, expected_names, hashes):
+    # Equivalent of PS R6/Test-InstalledDeclaredFiles; runtime extras are listed only.
+    actual = file_paths(root)
+    exact_names(hashes, expected_names, 'Installed declarations')
+    for name, digest in hashes.items():
+        if name == 'settings.json' and name not in actual and not (Path(root) / name).exists():
+            continue
+        require(name in actual and sha(actual[name]) == digest,
+                'Roll back the newest plan first, or SWITCH to the wanted package.')
+    return sorted(set(actual) - set(hashes))
+
+
+def raw_marker_counts(text, markers):
+    # Raw UTF-8 record text, including prompts/tool outputs; no provenance verdict.
+    return {marker: text.count(marker) for marker in markers}
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('action', choices=['build', 'select'])
+    for name in ('repo', 'artifacts', 'head', 'tag', 'zip-sha', 'script-sha', 'set-id', 'set', 'set-sha', 'package', 'output'):
+        parser.add_argument('--' + name)
+    args = parser.parse_args()
+    try:
+        if args.action == 'build':
+            output = no_links(Path(args.artifacts) / 'experiment-set.json')
+            require(not output.exists(), 'Verifier output already exists: ' + str(output))
+            result = build_set(args.repo, args.artifacts, args.head, args.tag, args.zip_sha, args.script_sha, args.set_id)
+        else:
+            require(args.output is not None, 'select requires --output for a new selection.json')
+            output = no_links(args.output)
+            require(not output.exists(), 'Verifier output already exists: ' + str(output))
+            result = select_package(args.set, args.set_sha, args.package, args.head, args.tag, args.zip_sha, args.script_sha)
+        write_new_json(output, result)
+        print('PASS_' + args.action.upper())
+    except (OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError) as error:
+        print(json.dumps({'error': str(error)}, ensure_ascii=True), file=sys.stderr)
+        raise SystemExit(1)
+
+
+if __name__ == '__main__':
+    main()
+'@
+    Write-Utf8Lf $Path $ExperimentVerifierCode
+}
+
 # Main orchestration. No system ExecutionPolicy change, install, push, or deletion.
 function Invoke-OncallMode([string]$Mode, [switch]$FromUpdate) {
-    if ($Mode -ceq 'PLAN') {
+    if ($Mode -ceq 'PLAN' -or $Mode -ceq 'EXPBUILD') {
         if ($PlanPath -or $PlanSha256 -or $SessionId -or $AgentId) { throw 'PLAN creates a new plan; do not pass an existing plan or session ID' }
         $RunId = [guid]::NewGuid().ToString('N')
         # build_bundle stages in root.parent: reserve that whole new workspace.
         $CloneRoot = Join-Path $DevRoot ('crm-oncall-' + $RunId)
         $Repo = Join-Path $CloneRoot 'repo'
         $Artifacts = Join-Path $Handoff ('update-' + $RunId)
+        if ($Mode -ceq 'EXPBUILD') { $Artifacts = Join-Path $Handoff ('experiment-' + $RunId) }
         if ($PythonExe -ceq 'C:\Users\AI\AppData\Local\Programs\Python\Python312\python.exe' -and -not (Test-Path -LiteralPath $PythonExe -PathType Leaf)) { throw 'Default Python312 python.exe is missing; pass -PythonExe with the verified real interpreter path.' }
         $Python = Get-NativeProgram $PythonExe
         $null = Assert-Under $Repo $DevRoot
@@ -726,6 +1300,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $PackageRoot 'settings.json') -PathT
 # R2-END stage-17
 
         Assert-TreeNoReparse $PackageRoot
+        if ($Mode -ceq 'EXPBUILD') { . Invoke-ExperimentBuild; return }
         $InstallMode = 'REAL'
         $DrillRoot = $null
         . Prepare-InstallContext
@@ -754,6 +1329,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $PackageRoot 'settings.json') -PathT
             $Version = $Document.version
             $PackageRoot = $Document.install_plan.package
             $InstallMetadataNames = @()
+            if ($Document.operation -ceq 'SWITCH') { $InstallMetadataNames = @($Document.metadata_names) }
             $InstallExpectedNames = @($Document.expected_names)
             $PackageHashes = ConvertTo-HashTable $Document.package_hashes
         } else { . Import-PlanContext $Document }
@@ -855,6 +1431,7 @@ try {
             $AppliedUtc = [DateTime]::UtcNow
             Write-NewJson (Join-Path $Artifacts 'apply-report.json') ([ordered]@{ status=$InstallStage; completed_utc=$AppliedUtc.ToString('o'); version=$Version; state=$StatePath; plan_sha256=$PlanSha256; backup=$BackupRoot; host_acceptance='NOT_RUN' })
             Write-Host "INSTALLED. StatePath=$StatePath. Open client, refresh the marketplace and update to $Version, then start a NEW session, paste Self-check 1, and run VERIFY."
+            if ($Document.operation -ceq 'SWITCH') { Write-Host "Package kind=$PackageKind; client target=$Version; host acceptance NOT_RUN" }
             Write-Host (Get-VerifyCommand)
         } elseif ($Mode -ceq 'VERIFY') {
             . Import-InstallState
@@ -878,11 +1455,13 @@ try {
             if ($InstallStage -ceq 'ROLLED_BACK') { throw 'Already rolled back; no writes' }
             Assert-TreeNoReparse $BackupRoot
             if ($MoveStarted) { Assert-OldSource $OldSource $Document.old_source }
+            if ($InstallStage -ceq 'INSTALLED') { Assert-RollbackCurrentPackage }
             Confirm-Yes "ROLLBACK to old source $($Document.old_source.version); cache/settings.json are not separately written. Backup=$BackupRoot"
             $null = Load-Plan
             Assert-ClientStopped
             Assert-TreeNoReparse $BackupRoot
             if ($MoveStarted) { Assert-OldSource $OldSource $Document.old_source }
+            if ($InstallStage -ceq 'INSTALLED') { Assert-RollbackCurrentPackage }
 # R2-BEGIN block-22
 . {
 $ErrorActionPreference = 'Stop'
@@ -940,7 +1519,7 @@ Save-InstallState
             Write-Utf8Lf (Join-Path $SyntheticSource 'old.txt') "SYNTHETIC OLD SOURCE`n"
             Write-NewJson $SyntheticMarket ([ordered]@{ name='synthetic'; plugins=@([ordered]@{ name='crm-sre-team'; source=$SyntheticSource; version='0.0.0-drill' }) })
             $DrillOldHash = (Get-FileHash -LiteralPath (Join-Path $SyntheticSource 'old.txt') -Algorithm SHA256).Hash
-            . Prepare-InstallContext
+            . Prepare-InstallContext -ContextMetadataNames $InstallMetadataNames
             Write-NewJson (Join-Path $DrillRoot 'drill-plan.json') $InstallPlan
 # R2-BEGIN block-20
 . {
@@ -1061,7 +1640,9 @@ Save-InstallState
     }
 }
 try {
-    if ($Drill -and $Mode -cne 'UPDATE') { throw '-Drill is an UPDATE switch; use -Mode DRILL for a standalone drill.' }
+    if ($Drill -and $Mode -cnotin @('UPDATE','SWITCH')) { throw '-Drill is an UPDATE/SWITCH switch; use -Mode DRILL for a standalone drill.' }
+    if ($Mode -cne 'SWITCH' -and ($ExperimentSet -or $ExperimentSetSha256 -or $Package)) { throw 'Experiment selection parameters are only for SWITCH' }
+    if ($Mode -ceq 'SWITCH' -and $Package -cnotin @('formal','probe','cmp-n','cmp-s','probe-webfetch-denied','probe-bash-denied','probe-powershell-denied')) { throw 'Use the exact lowercase package name' }
     $Git = Get-NativeProgram $GitExe
     # Process-only settings; never read existing credential/environment values.
     $env:GIT_CONFIG_NOSYSTEM = '1'
@@ -1075,6 +1656,7 @@ try {
     $env:GIT_CONFIG_KEY_0 = 'url.https://github.com/caomz/crm-sre-team.git.insteadOf'
     $env:GIT_CONFIG_VALUE_0 = $RepoUrl
     $VerifiedWorkTree = Assert-UpdaterIdentity
+    if ($Mode -cin @('EXPBUILD','SWITCH') -and -not $VerifiedWorkTree) { throw 'Experiments require a verified local bootstrap worktree; no network fallback' }
     if ($Mode -ceq 'UPDATE') {
         if ($PlanPath -or $PlanSha256 -or $SessionId -or $AgentId) { throw 'UPDATE creates its own PLAN; do not pass a plan/session ID.' }
         Assert-ClientStopped
@@ -1084,6 +1666,10 @@ try {
             . Invoke-OncallMode 'DRILL' -FromUpdate
         }
         # Reload REAL context after synthetic DRILL; APPLY prints it and asks YES.
+        . Invoke-OncallMode 'APPLY' -FromUpdate
+    } elseif ($Mode -ceq 'SWITCH') {
+        . Invoke-SwitchPlan
+        if ($Drill -or -not (Test-SuccessfulDrill)) { . Invoke-OncallMode 'DRILL' -FromUpdate }
         . Invoke-OncallMode 'APPLY' -FromUpdate
     } else { . Invoke-OncallMode $Mode }
 } catch {
