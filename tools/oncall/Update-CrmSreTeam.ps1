@@ -268,9 +268,9 @@ function Invoke-Native([string]$Program, [string[]]$Arguments, [string]$Log, [st
     $SavedPreference = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
-        $LASTEXITCODE = $null
+        $global:LASTEXITCODE = $null
         $Captured = @(& $Program @Arguments 2>&1)
-        $Code = $LASTEXITCODE
+        $Code = $global:LASTEXITCODE
     } finally { $ErrorActionPreference = $SavedPreference }
     $Result = Protect-Output (($Captured | ForEach-Object { $_.ToString() }) -join "`n")
     if ($Log) {
@@ -495,10 +495,20 @@ function Prepare-InstallContext {
     if ($InstallMode -ceq 'DRILL') { $BoundRoot = Get-InstallFullPath $DrillRoot }
     $InstallPlan = [pscustomobject]@{ mode=$InstallMode; fault=$InstallFault; bound_root=$BoundRoot; package=(Get-InstallFullPath $PackageRoot); paths=[pscustomobject]$PlannedPaths }
 }
-function Assert-CloneIdentity {
+function Assert-CloneIdentity([switch]$AfterChecks) {
     $Head = Invoke-Native $Git @('-C',$Repo,'rev-parse','HEAD') $null
     $TagCommit = Invoke-Native $Git @('-C',$Repo,'rev-parse',('refs/tags/' + $Tag + '^{commit}')) $null
-    $Dirty = Invoke-Native $Git @('-C',$Repo,'status','--porcelain','--untracked-files=all') $null
+    $StatusArgs = @('-C',$Repo,'status','--porcelain','--untracked-files=all','--ignore-submodules=none')
+    if ($AfterChecks) {
+        # Host capabilities change generated reports; exclude only exact declared reports.
+        $Manifest = Get-Content -LiteralPath (Join-Path $Repo 'release-manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        $StatusArgs += @('--','.')
+        foreach ($Report in @($Manifest.excluded_generated_reports)) {
+            if ($Report -isnot [string] -or $Report -notmatch '^tests/[A-Za-z0-9][A-Za-z0-9._-]*\.(json|txt)$' -or $Manifest.files -contains $Report) { throw 'Invalid generated report allowlist' }
+            $StatusArgs += (':(top,literal,exclude)' + $Report)
+        }
+    }
+    $Dirty = Invoke-Native $Git $StatusArgs $null
     if ($Head -cne $ExpectedCommit -or $TagCommit -cne $ExpectedCommit -or $Dirty) { throw 'Tag/HEAD mismatch or dirty clone' }
 }
 function Test-SuccessfulDrill {
@@ -624,7 +634,7 @@ function Collect-SessionEvidence {
     }
     Write-Utf8Lf (Join-Path $EvidenceRoot 'SHA256SUMS') $Sums
     foreach ($Snapshot in $Snapshots) {
-        $SkillIds = @{}
+        $SkillIds = [System.Collections.Hashtable]::new([StringComparer]::Ordinal)
         foreach ($Line in ($Snapshot.Data.Text -split "`n")) {
             if ([string]::IsNullOrWhiteSpace($Line)) { continue }
             try { $Record = $Line | ConvertFrom-Json } catch { throw 'Invalid/truncated JSONL; snapshots retained for human review' }
@@ -698,7 +708,8 @@ function Invoke-OncallMode([string]$Mode, [switch]$FromUpdate) {
             $null = Invoke-Native $Python @('tools/build_release.py','--output',$ReleaseZip) (Join-Path $Artifacts 'build-release.txt')
             if ((Get-FileHash -LiteralPath $ReleaseZip -Algorithm SHA256).Hash -ine $ExpectedZipSha256) { throw 'Rebuilt ZIP differs from Mac release SHA256' }
             $null = Invoke-Native $Python @('tools/validate_release.py','--zip',$ReleaseZip) (Join-Path $Artifacts 'validate-release.txt')
-            Assert-CloneIdentity
+            Assert-HashesEqual $Before (Get-ManifestHashes $Repo)
+            Assert-CloneIdentity -AfterChecks
         } finally { Pop-Location }
         $ReleaseZipHash = (Get-FileHash -LiteralPath $ReleaseZip -Algorithm SHA256).Hash
         $InstallUnpack = Join-Path $Artifacts 'install-clean'

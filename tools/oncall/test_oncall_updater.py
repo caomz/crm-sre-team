@@ -135,6 +135,51 @@ class OncallUpdaterStaticTests(unittest.TestCase):
                 self.assertEqual(stack.pop(), pairs[char])
         self.assertEqual(stack, [])
 
+    def test_native_exit_code_uses_global_scope_without_local_shadowing(self):
+        native = function_body(self.text, "Invoke-Native")
+        assignments = re.findall(r"\$(?:(\w+):)?LASTEXITCODE\s*(?:[+*/%\-]?=|\+\+|--)",
+                                 self.code, re.I)
+        self.assertEqual([scope.lower() for scope in assignments], ["global"])
+        self.assertIn("$global:LASTEXITCODE = $null", native)
+        self.assertIn("$Code = $global:LASTEXITCODE", native)
+        call = "$Captured = @(& $Program @Arguments 2>&1)"
+        self.assertLess(native.index("$global:LASTEXITCODE = $null"), native.index(call))
+        self.assertLess(native.index(call), native.index("$Code = $global:LASTEXITCODE"))
+        self.assertNotRegex(native, r"\$Code\s*=\s*\$(?:local:|script:|private:)?LASTEXITCODE\b")
+
+    def test_post_check_clone_identity_excludes_only_exact_generated_reports(self):
+        identity = function_body(self.text, "Assert-CloneIdentity")
+        self.assertIn("[switch]$AfterChecks", identity)
+        self.assertIn("if ($AfterChecks) {", identity)
+        after_checks = identity.split("if ($AfterChecks) {", 1)[1].split(
+            "    $Dirty = Invoke-Native", 1)[0]
+        self.assertIn("$StatusArgs += @('--','.')", after_checks)
+        self.assertIn("foreach ($Report in @($Manifest.excluded_generated_reports))", after_checks)
+        self.assertIn("'^tests/[A-Za-z0-9][A-Za-z0-9._-]*\\.(json|txt)$'", after_checks)
+        self.assertIn("$Manifest.files -contains $Report", after_checks)
+        self.assertIn("$StatusArgs += (':(top,literal,exclude)' + $Report)", after_checks)
+        self.assertEqual(identity.count("literal,exclude"), 1)
+        self.assertIn("$Dirty = Invoke-Native $Git $StatusArgs $null", identity)
+        self.assertIn("'--untracked-files=all','--ignore-submodules=none'", identity)
+        self.assertIn("$Head -cne $ExpectedCommit -or $TagCommit -cne $ExpectedCommit -or $Dirty", identity)
+        plan = self.text.split("function Invoke-OncallMode", 1)[1].split("# R2-BEGIN stage-17", 1)[0]
+        strict = plan.index("\n        Assert-CloneIdentity\n")
+        final = plan.index("Assert-CloneIdentity -AfterChecks")
+        hashes = plan.rindex("Assert-HashesEqual $Before (Get-ManifestHashes $Repo)")
+        self.assertLess(strict, plan.index("'tools/build_bundle.py'"))
+        self.assertTrue(plan.index("'tools/validate_release.py'") < hashes < final)
+        self.assertEqual(plan.count("Assert-HashesEqual $Before (Get-ManifestHashes $Repo)"), 2)
+
+    def test_skill_receipt_call_ids_use_ordinal_case_sensitive_keys(self):
+        evidence = function_body(self.text, "Collect-SessionEvidence")
+        comparer = "$SkillIds = [System.Collections.Hashtable]::new([StringComparer]::Ordinal)"
+        self.assertIn(comparer, evidence)
+        self.assertNotIn("$SkillIds = @{}", evidence)
+        self.assertNotIn("OrdinalIgnoreCase", evidence)
+        self.assertLess(evidence.index(comparer), evidence.index("foreach ($Line"))
+        self.assertIn("$SkillIds[[string]$ToolNode.callId] = $true", evidence)
+        self.assertIn("$SkillIds.ContainsKey([string]$ToolNode.callId)", evidence)
+
     def test_six_modes_required_release_inputs_and_pinned_lengths(self):
         self.assertIn("[ValidateSet('PLAN','APPLY','VERIFY','ROLLBACK','DRILL','UPDATE')]", self.text)
         self.assertIn("[string]$Mode = 'PLAN'", self.text)
@@ -372,7 +417,7 @@ class OncallUpdaterStaticTests(unittest.TestCase):
         self.assertIn("$SessionId -cne $Located[0].SessionId", evidence)
         self.assertIn("$SkillIds.ContainsKey([string]$ToolNode.callId)", evidence)
         self.assertIn("$Version + '\\skills\\'", evidence)
-        self.assertLess(evidence.index("'SHA256SUMS'"), evidence.index("$SkillIds = @{}"))
+        self.assertLess(evidence.index("'SHA256SUMS'"), evidence.index("$SkillIds ="))
         self.assertIn("Agent body loading is not proved", evidence)
 
     def test_repository_only_registration_sorted_unique_safe_and_excluded(self):
@@ -415,125 +460,86 @@ class OncallUpdaterStaticTests(unittest.TestCase):
         self.assertIn("标签注释", readme)
         self.assertIn("repository_only_files", readme)
 
-    def test_readme_bootstrap_fetches_one_tag_with_normal_source_config(self):
+    def test_readme_bootstrap_checks_local_commit_before_clone_without_network(self):
         block = self.bootstrap
         for name, value in [("Tag", "<tag>"), ("ExpectedCommit", "<40-hex>"),
                             ("ExpectedZipSha256", "<64-hex>"),
                             ("SourceRepo", r"D:\python_code\github_my\crm-sre-team")]:
             self.assertEqual(block.count(f"${name} = '{value}'"), 1)
             self.assertLess(block.index(f"${name} = '{value}'"), block.index("try {"))
-        self.assertIn("$RefSpec = 'refs/tags/' + $Tag + ':refs/tags/' + $Tag", block)
-        fetch = next(line.strip() for line in block.splitlines() if " fetch " in line)
-        self.assertEqual(fetch, "$FetchOutput = (git -C $SourceRepo -c core.hooksPath=NUL fetch "
-                               "--no-tags --no-recurse-submodules origin $RefSpec 2>&1 | "
-                               "ForEach-Object { $_.ToString() }) -join \"`n\"")
-        self.assertEqual(block.count(" fetch "), 1)
-        self.assertNotIn("credential.helper", fetch)
-        self.assertNotIn("$Tag:refs", block)
-        self.assertNotIn("https://", block)
-        self.assertNotRegex(block, r"\$env:GIT_CONFIG_[A-Za-z0-9_]+\s*=")
-        self.assertNotRegex(block, r"SetEnvironmentVariable\(['\"]GIT_CONFIG_")
-        self.assertNotRegex(block, r"(?m)^\s*git\s+(?:-C\s+\$SourceRepo\s+)?(?:-c\s+\S+\s+)*"
-                                  r"(?:pull|checkout|reset|merge|push|remote|config)\b")
-        self.assertIn("refs/tags/", block)
-        resolve = "rev-parse --verify ('refs/tags/' + $Tag + '^{commit}') 2>$null"
-        self.assertIn(resolve, block)
-        match = "$SourceCommit.Count -ne 1 -or $SourceCommit[0].ToLowerInvariant() -cne $ExpectedCommit.ToLowerInvariant()"
-        self.assertIn(match, block)
-        self.assertLess(block.index(fetch), block.index(resolve))
-        self.assertLess(block.index(resolve), block.index(match))
-        self.assertLess(block.index(match), block.index("clone --no-local"))
+        self.assertIn("Fill the three verified release values first", block)
+        check = "git -C $SourceRepo -c core.hooksPath=NUL cat-file -e ($ExpectedCommit + '^{commit}') 2>$null"
+        clone = "git -c core.hooksPath=NUL clone -q --no-local --no-checkout "
+        clone += "--config core.autocrlf=false --config core.hooksPath=NUL $SourceRepo $Bootstrap"
+        self.assertIn(check, block)
+        self.assertIn(clone, block)
+        self.assertLess(block.index(check), block.index("$Bootstrap ="))
+        self.assertLess(block.index(check), block.index(clone))
+        self.assertIn("Local project does not contain the target commit yet; update it first, then rerun", block)
+        for pattern in [r"(?i)fetch\s+origin\b", r"(?i)https?://", r"(?i)\bssh\b",
+                        r"(?i)\bgithub\.com\b", r"\$RefSpec\b", r"\$SourceCommit\b"]:
+            self.assertNotRegex(block, pattern)
+        self.assertIn("(no network)", block)
+        source_commands = [line.strip() for line in block.splitlines()
+                           if line.strip().startswith("git -C $SourceRepo ")]
+        self.assertEqual(source_commands, [check])
+        self.assertNotIn("refs/tags/", block)
+        self.assertNotIn("--branch", block)
 
-    def test_readme_fetch_failure_prints_redacted_diagnostics_and_success_is_silent(self):
+    def test_readme_bootstrap_copies_local_refs_and_binds_tag_in_new_bootstrap(self):
         block = self.bootstrap
-        fetch = next(line.strip() for line in block.splitlines() if " fetch " in line)
-        self.assertLess(block.index("$ErrorActionPreference = 'Continue'"), block.index(fetch))
-        failure = re.search(r"if \(\$LASTEXITCODE -ne 0\) \{\n(.*?)\n        \}", block, re.S).group(1)
-        replacements = re.findall(
-            r"\[regex\]::Replace\(\$FetchOutput, '((?:''|[^'])*)', '([^']*)'\)", failure)
-        self.assertEqual(len(replacements), 2)
-        self.assertEqual([replacement for _, replacement in replacements], ["$1***@", "***"])
-        printed = "Write-Host $FetchOutput"
-        self.assertEqual(block.count(printed), 1)
-        self.assertIn(printed, failure)
-        self.assertLess(failure.rindex("[regex]::Replace"), failure.index(printed))
-        self.assertLess(failure.index(printed), failure.index("throw "))
-        outside_failure = block.replace(failure, "", 1)
-        self.assertEqual(outside_failure.count("$FetchOutput"), 1)
-        self.assertNotRegex(outside_failure, r"(?i)Write-(?:Host|Output|Error|Warning).*\b(?:origin|https?://)\b")
-
-        # Exercise the documented regexes with synthetic diagnostics in Python.
-        # This does not parse or execute PowerShell; ToString/stream behavior
-        # still requires Windows PS 5.1 verification.
-        cases = [
-            ("fatal: unable to access 'https://operator:secret@example.invalid/team.git/': "
-             "Could not resolve proxy: proxy.invalid",
-             "fatal: unable to access 'https://***@example.invalid/team.git/': "
-             "Could not resolve proxy: proxy.invalid"),
-            ("fatal: SSH://operator:secret@example.invalid/team.git: Permission denied",
-             "fatal: SSH://***@example.invalid/team.git: Permission denied"),
-            ("fatal: detected dubious ownership in repository at 'D:\\repos\\team'",
-             "fatal: detected dubious ownership in repository at 'D:\\repos\\team'"),
-            (" ! [rejected] release -> release (would clobber existing tag)",
-             " ! [rejected] release -> release (would clobber existing tag)"),
-            ("fatal: couldn't find remote ref refs/tags/release",
-             "fatal: couldn't find remote ref refs/tags/release"),
-        ]
-        for token in ["github_pat_FAKE_123", "ghp_FAKE123", "gho_FAKE123", "ghu_FAKE123",
-                      "ghs_FAKE123", "ghr_FAKE123", "glpat-FAKE_123-abc", "GHP_FAKE123"]:
-            cases.append((f"fatal: invalid credential {token}", "fatal: invalid credential ***"))
-        for diagnostic, expected in cases:
-            with self.subTest(diagnostic=diagnostic):
-                redacted = diagnostic
-                for pattern, replacement in replacements:
-                    def replace(match):
-                        return replacement.replace("$1", match.group(1)) if "$1" in replacement else replacement
-                    redacted = re.sub(pattern.replace("''", "'"), replace, redacted)
-                self.assertEqual(redacted, expected)
+        fetch = "git -C $Bootstrap -c core.hooksPath=NUL fetch -q --no-tags $SourceRepo "
+        fetch += "'+refs/remotes/*:refs/crm-source-remotes/*'"
+        resolve = "git -C $Bootstrap -c core.hooksPath=NUL cat-file -e ($ExpectedCommit + '^{commit}')"
+        tag = "git -C $Bootstrap -c core.hooksPath=NUL tag -f $Tag $ExpectedCommit"
+        checkout = "git -C $Bootstrap -c core.hooksPath=NUL checkout -q --detach $Tag"
+        for command in [fetch, resolve, tag, checkout]:
+            self.assertIn(command, block)
+        self.assertTrue(block.index("clone -q --no-local --no-checkout") < block.index(fetch)
+                        < block.index(resolve) < block.index(tag) < block.index(checkout)
+                        < block.index("$Script = Join-Path $Bootstrap"))
+        self.assertEqual(block.count(" fetch "), 1)
+        self.assertEqual(block.count(" tag -f "), 1)
+        self.assertIn("不访问网络", self.readme)
+        self.assertIn("本地项目须由用户自行更新到包含 `ExpectedCommit`", self.readme)
+        self.assertIn("来源仓库的分支、工作树、索引、标签和远程配置都不改", self.readme)
+        self.assertIn("不依赖来源仓库里的标签", self.readme)
+        self.assertIn("提交仅在远程跟踪引用上", self.readme)
+        self.assertIn("完整性依靠 `ExpectedCommit` 与插件 ZIP SHA256", self.readme)
+        self.assertIn("仅用于没有本地项目的机器", self.readme)
 
     def test_readme_bootstrap_local_clone_and_update_stop_after_each_native_failure(self):
         block = self.bootstrap
         self.assertIn("$Bootstrap = 'D:\\crm-v36-handoff\\bootstrap-' + [guid]::NewGuid().ToString('N')", block)
         collision = "if (Test-Path -LiteralPath $Bootstrap -ErrorAction Stop) { throw 'Bootstrap path already exists' }"
         self.assertIn(collision, block)
-        self.assertLess(block.index(collision), block.index(" fetch "))
-        clone = "clone --no-local --branch $Tag --single-branch --config core.autocrlf=false "
-        clone += "--config core.hooksPath=NUL $SourceRepo $Bootstrap"
-        self.assertIn(clone, block)
-        clone_line = next(line.strip() for line in block.splitlines() if " clone " in line)
-        self.assertNotRegex(clone_line, r">|\||Out-Null|\$null")
+        self.assertLess(block.index(collision), block.index(" clone "))
         update = "powershell -NoProfile -ExecutionPolicy Bypass -File $Script -Mode UPDATE "
         update += "-Tag $Tag -ExpectedCommit $ExpectedCommit -ExpectedZipSha256 $ExpectedZipSha256 -RunPytest"
         self.assertIn(update, block)
-        self.assertLess(block.index(clone), block.index("$Script = Join-Path $Bootstrap"))
+        self.assertLess(block.index(" checkout "), block.index("$Script = Join-Path $Bootstrap"))
         self.assertLess(block.index("$Script = Join-Path $Bootstrap"), block.index(update))
-        native_prefixes = ("git ", "$FetchOutput = (git ", "$SourceCommit = @(git ", "powershell ")
-        for commands, count in [(block, 4), (self.github_bootstrap, 2)]:
+        for commands, count in [(block, 7), (self.github_bootstrap, 2)]:
             self.assertTrue(commands.startswith(". {\n"))
             self.assertNotRegex(commands, r"-Command\s+\{")
             self.assertIn(update, [line.strip() for line in commands.splitlines()])
             lines = commands.splitlines()
             native_count = 0
             for index, line in enumerate(lines):
-                if line.strip().startswith(native_prefixes):
+                if line.strip().startswith(("git ", "powershell ")):
                     native_count += 1
                     self.assertTrue(lines[index + 1].strip().startswith("if ($LASTEXITCODE -ne 0) {"))
             self.assertEqual(native_count, count)
+        update_line = next(line.strip() for line in block.splitlines() if line.strip().startswith("powershell "))
+        self.assertNotRegex(update_line, r">|\||Out-Null|\$null")
 
-    def test_readme_bootstrap_restores_original_prompt_environment_in_finally(self):
+    def test_readme_local_bootstrap_restores_error_preference_in_finally(self):
         block = self.bootstrap
-        for name, saved in [("GIT_TERMINAL_PROMPT", "SavedGitTerminalPrompt"),
-                            ("GCM_INTERACTIVE", "SavedGcmInteractive")]:
-            snapshot = f"${saved} = [Environment]::GetEnvironmentVariable('{name}', 'Process')"
-            self.assertIn(snapshot, block)
-            self.assertLess(block.index(snapshot), block.index("try {"))
-            restore = f"[Environment]::SetEnvironmentVariable('{name}', ${saved}, 'Process')"
-            self.assertIn(restore, block.split("} finally {", 1)[1])
-        # GetEnvironmentVariable returns null when absent; restoring null removes it.
-        self.assertIn("原值不存在时移除变量", self.readme)
+        self.assertIn("$SavedErrorActionPreference = $ErrorActionPreference", block.split("try {", 1)[0])
         self.assertIn("$ErrorActionPreference = $SavedErrorActionPreference", block.split("} finally {", 1)[1])
-        env_assignments = re.findall(r"\$env:([A-Za-z0-9_]+)\s*=", block)
-        self.assertEqual(env_assignments, ["GIT_TERMINAL_PROMPT", "GCM_INTERACTIVE"])
+        self.assertLess(block.index("$ErrorActionPreference = 'Continue'"), block.index("cat-file -e"))
+        self.assertNotRegex(block, r"\$env:|GetEnvironmentVariable|SetEnvironmentVariable")
+        self.assertNotRegex(mask_literals(block), r"\bexit\b")
 
     def test_readme_github_alternative_uses_dot_sourcing_and_visible_clone_errors(self):
         block = self.github_bootstrap
