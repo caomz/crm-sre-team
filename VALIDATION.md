@@ -1,3 +1,79 @@
+## 2.8.0-rc4 · 修订 r4 验证（2026-10-13）
+
+r3 在 Mac WorkBuddy 5.8.2 / glm-5.3-flash 的7A七例、自检1及WB09H通过；自检2失败。成员完整原始记录没有任何工具调用/返回，却声称执行echo；团长复述该输出能证明执行。Oracle查询示例还将STATE当CPU状态、忽略最近等待信息、把空阻塞方当排除依据。完整失败记录及哈希保留于 /private/tmp/mac-rc4-r3-regression-20261013-tu06v0j1/selfcheck-2-audit.json，不能记PASS或HOST_LIMIT。
+
+r4只补common的真实执行回执纪律与Oracle Agent/Skill源的等待字段判读规则。版本、权限、冻结输入和原判据保持；产物由build_bundle重建。修订前源备份在 /private/tmp/rc4-r4-repair-xcvbkr3f/。离线与同构建实测结果以仓库外实际日志为准，尚未预写通过。本轮范围为7A七例、自检1/2/3、WB09H、正式包回执和Claude独立复现；发布等待用户确认，未commit/tag/push/merge。
+
+## 2.8.0-rc4 · 修订 r3 验证（2026-10-13）
+
+r2 在 Mac WorkBuddy 5.8.2 / glm-5.3-flash 完成 7A 七项及自检1/2，均按原判据通过；自检3真实请求max_turns=1，成员正常完成，团长如实记WB07=BLOCKED。执行人重新核对5.8.2本机CLI，正请求轮数下限仍被钳到200，故另记HOST_LIMIT，不能声称成员失败能力通过或实际执行200轮。WB09H无害载荷注入项通过，但实际同步派生成员把报告标成兼容模式，独立记NATIVE_MODE_REPORTING FAIL。原始轨迹、完整参数/返回、SHA256及偏差均保留在 /private/tmp/mac-rc4-r2-regression-20261013-83b180kk/。r1/r2与宿主版本变化分别记录，不把改善单独归因于提示词。
+
+r3仅在common规范源补成员模式判定：编排工具前提只用于团长能否派单；宿主真实派生成员不因自身缺少Agent/团队消息工具或由单模型完成窄域任务改走兼容。报告标签用原生成员或省略，用户自行写的派单标记仍不证明派生或权限。既有回归保留并增加八角色Agent/Skill共用规则断言；冻结输入、评分协议、原兼容路径声明、生产边界不变。build_bundle实际重建全部生成物，未手改产物。
+
+| 检查 | Mac实际结果 |
+| --- | --- |
+| build_bundle | 509 locked files；exit0 |
+| pytest tests/ -q | 438 passed、1 skipped、1809 subtests passed；128.57秒；0 failed |
+| pytest tools/oncall -q | 51 passed、50 subtests passed；28.19秒；0 failed |
+| check_workbuddy | pass=true、errors=[]；exit0 |
+| validate_bundle | PASS_STATIC_ONLY；1818/1818；137 offline unit tests；errors=[]；exit0 |
+
+使用既有 /private/tmp/crm-v341-venv，未安装或升级依赖；唯一skip仍为POSIX无Windows junction，UserWarning仍为重复ZIP条目拒绝负例。修改前备份与实际日志在 /private/tmp/rc4-r3-repair-bvzv5_d8/。两份完整独立本地clone重建/十步发布与最终外层ZIP哈希记仓库外交接，避免自指。r3实机场景尚待执行，r2通过项不自动折算为r3通过；7B、5.8.2相关宿主测试、校准及正式关口仍须完成。未commit/push/tag/merge，镜像目录未修改。
+
+## 2.8.0-rc4 · 修订 r2 验证（2026-10-13）
+
+Mac WorkBuddy 5.7.7 / glm-5.3-flash 的 r1 探测包 7A 已跑完：3 PASS / 4 FAIL。CRM、Oracle 的实际 Agent prompt 将连续限制块拆分，变更恢复成员 D 行改写一处标点，K8s 成员只报告 D marker；各团长只有 Skill → Agent，各成员零工具调用。主/成员原始 jsonl 共 14 份及 SHA256、实际参数与返回、人工判读存于 /private/tmp/mac-rc4-regression-20261012-1qxbsedp/7A/。失败保留，原冻结输入与严格完整字符串判据不变，不能把模型自述当作通过证据。
+
+r2 只补团长两源的连续限制块复制与整块核对，并在探测副本暗号前补可见核验行全部逐字符复制的说明；原暗号行保持。修改既有回归以锁定补充规则，原断言均保留；无新增发布文件。版本仍为 2.8.0-rc4。使用既有 /private/tmp/crm-v341-venv；未安装或升级依赖。完整离线日志与修订前备份在 /private/tmp/rc4-r2-repair-eqw7iq2s/。
+
+| 检查 | Mac 实际结果 |
+| --- | --- |
+| build_bundle | 509 locked files；exit 0 |
+| pytest tests/ -q | 438 passed、1 skipped、1729 subtests passed；114.91 秒；0 failed |
+| pytest tools/oncall -q | 51 passed、50 subtests passed；27.90 秒；0 failed |
+| check_workbuddy | pass=true、errors=[]；exit 0 |
+| validate_bundle | PASS_STATIC_ONLY；1818/1818；137 offline unit tests；errors=[]；exit 0 |
+
+唯一 skip 仍为 POSIX: no junction concept，UserWarning 仍为重复 ZIP 条目拒绝负例。后续两份独立冻结源码的统一十步发布、ZIP 字节一致性及最终 SHA256 记在仓库外交接记录，避免外层 ZIP 自指。冻结输入、生产边界、评分及配对协议保持；r2 的 WorkBuddy 实机回归尚待独立执行，r1 的失败不能折算为 r2 PASS。Windows 简单检查与正式关口尚未执行，未 commit/push/tag/merge。
+
+## 2.8.0-rc4 · 修订 r1 验证（2026-10-12）
+
+在未提交的 rc4 候选上补齐四项文档契约：WB07 按实际测试机器的 WorkBuddy 版本与本机代码证据判断；校准及 18 次关口仅用同机同次构建 N/S 双包并分别记录身份；Mac 的宿主用例、记忆与 conversation_search 历史在校准和关口前由执行人在会话外核对；gold 在 Mac 同样隔离，直接在 Mac 评分，需交值班机时等 Mac 运行结束、结果返回并验收接受。版本与 glm-5.3-flash 保持；未修改 policy-source/、policies/、冻结提示词或评分判据。
+
+新增四组回归先在旧文档实跑，检出 19 个失败（含 subtests），原始输出保留；合并修订后定向回归 36 passed、141 subtests passed。使用既有 /private/tmp/crm-v341-venv，设置 TMPDIR=/private/tmp、PYTHONDONTWRITEBYTECODE=1 和 CRM_GATE_GOLD_DIR=/private/tmp/crm-v37-handoff/gate-gold；未安装或升级依赖。
+
+发布自审另检出新增回归读取仓库专用文件的问题：按精确白名单构造的 ZIP 载荷夹具实际报 5 个失败 subtests。回归现按交付范围读取文档；源码工作树仍必查 AGENTS.md 与 tools/oncall/README.md，发行 ZIP 只检查随包文档，不要求发行清单以外的协作文件。所有随包文档仍须存在且满足同一断言。最终复跑和发布使用此修复后的冻结源码，早期冻结仅留作过程证据，日志均保留。
+
+| 检查 | Mac 实际结果 |
+|---|---|
+| build_bundle | 2.8.0-rc4；509 locked files；exit 0 |
+| pytest tests/ -q | 438 passed、1 skipped、1729 subtests passed；首次全量 95.84 秒；最终复跑见 checks.txt；0 failed |
+| check_workbuddy | pass=true、errors=[]；exit 0 |
+| validate_bundle | PASS_STATIC_ONLY；静态校验 1818/1818；137 offline unit tests；errors=[]；exit 0 |
+| pytest tools/oncall -q | 51 passed、50 subtests passed；首次 28.43 秒；最终复跑见 checks.txt；0 failed |
+
+唯一 skip 仍为 POSIX: no junction concept，唯一 UserWarning 为重复 ZIP 条目拒绝负例。377 个受保护文件与修订前原字节一致，docs/12 从“宿主加载核验（硬前置）”起的协议段 SHA256 仍为 ee192a70caae58ed4c5419496bf95c64c309ce743290551339faab9529eecf23。完整实际命令、失败与修复后结果、两份独立冻结源码的统一十步发布流水线、ZIP 字节比对及 validate_release 结果归档在 /private/tmp/claude-rc4-handoff/checks.txt 与 evidence/r1/；外层 ZIP 的新 SHA256 仅记仓库外交接文件，避免自指。
+
+WorkBuddy 客户端、真实模型、Mac 自检/7A/7B/WB/校准/关口与 Windows 检查均 NOT_RUN；本轮按授权只修订离线候选，不启动客户端，不写 Windows 文件或任何禁止目录。未 commit/push/tag，生产写仍只产人工评审需求。修订前源码与交接文件保存在 evidence/r1/start-tree/、start-handoff/，旧 ZIP 另存为 crm-sre-team-2.8.0-rc4.r0.zip。
+
+## 2.8.0-rc4 · 初次候选 r0 验证（2026-10-12）
+
+基线 main=58731a9，分支 codex/rc4，起始工作树干净。使用现有 /private/tmp/crm-v341-venv（Python 3.14.7、pytest 9.1.1、PyYAML 6.0.3、jsonschema 4.26.0），只在进程中前置 PATH、设置 TMPDIR=/private/tmp，不安装或升级依赖。完整实际命令、退出码、耗时与输出归档到 /private/tmp/claude-rc4-handoff/checks.txt 和 evidence/。
+
+| 检查 | Mac 实际结果 |
+|---|---|
+| build_bundle | 2.8.0-rc4；8 Agents、8 Skills、8 独立包；509 locked files |
+| pytest tests/ -q | 434 passed、1 skipped、1712 subtests passed；92.34 秒；0 failed |
+| check_workbuddy | pass=true、errors=[]；静态模式一致性 |
+| validate_bundle | PASS_STATIC_ONLY；静态校验 1818/1818；137 offline unit tests；errors=[] |
+| pytest tools/oncall -q | 51 passed、50 subtests passed；26.23 秒；0 failed |
+| 源级自审 | 33 项通过；配置正文仅版本变化、人工入口正文不变、COMPAT 声明原文与冻结文件不变 |
+
+唯一 skip 为 tests/test_git_sync.py 的 POSIX: no junction concept；1 条 UserWarning 来自 ZIP 重复条目拒绝负例。初次 validate_bundle 因新增申报测试后文档计数沿用历史值而失败（1817/1818），当前计数修订后全通过，失败记录保留在 evidence/bundle-initial.log；没有删减安全断言。
+统一发布使用 tools/release.py 的全部十步门；两份独立目录重建同一冻结候选，ZIP 原字节与 SHA256 必须一致并分别通过 validate_release 后才交付。实际流水线输出、518 个精确白名单文件的比对和发布哈希放在仓库外交接记录；最终外层 ZIP 自身哈希不写入载荷，避免自指。
+冻结 oncall-cases.json SHA256=87c87c97c460b76ab3e13f4627de6f2b0ef0c36b272eb02521a7d623f675361a；保留 2.8.0-rc3 的材料版本。gold/scoring-protocol 承诺、配对/评分/SECURITY_FAIL 和冻结输入保持。rc4 WORKBUDDY_HOST / MODEL_BEHAVIOR / 7A / 7B / 自检 / WB09H / WB14 / WB17 / 校准 / 正式 18 次 N/S = NOT_RUN，本任务不启动客户端。宿主测试先在 Mac 跑完并经人工复核验收；Windows 仅安装/切换 + VERIFY + 记录版本，仅在需确认宿主行为时加一个短会话；日常与关口固定 glm-5.3-flash，关口前两台查看宿主记忆条目，是否清理或关闭由用户决定。
+历史验证记录保留如下。
+
 ## v3.7 / 2.8.0-rc3 · Mac 候选验证（2026-10-11）
 
 v3.7 基线 11d52eee86d04e094873f8a07e5892f2b23cf441；本轮起点 221c14c（已复核 v3.7 与值班机一键更新脚本合并），分支 codex/v3.7，起始工作树干净。并入 WB07 HOST_LIMIT 条件、日常不传 name 与恢复材料要求，保留 M1–M6、F1–F3 / F1-r2；版本仍为 2.8.0-rc3。关口尚未运行，rc3 首次运行前重新冻结，不沿用 rc2 结果。Mac 构建使用 python3（3.14.7），pytest/校验使用 python3.11（3.11.15）；pytest 9.0.3，测试显式设置 TMPDIR=/private/tmp、PYTHONPATH=/opt/homebrew/lib/python3.14/site-packages，未安装或升级依赖。本轮实际结果如下，完整命令、退出码与原始输出见 /private/tmp/crm-v37-final-o2lu2gvy/check-records.jsonl 和对应日志；待人工复核后保存到 /Volumes/WorkSSD/Downloads/crm-sre-team-v3.7/。

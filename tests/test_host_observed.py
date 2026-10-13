@@ -73,7 +73,10 @@ class DispatchMarkerTests(unittest.TestCase):
     def test_05_common_md_contains_marker_rule(self):
         text = _read(ROOT / "policy-source/prompts/common.md")
         self.assertIn('任务文本第一行以“【团长派单】”开头时', text)
-        self.assertIn('不输出“单模型分析，未进行多专家委派”这类兼容声明', text)
+        native = next(line for line in text.splitlines() if line.startswith('2. WORKBUDDY_NATIVE'))
+        self.assertIn('保持成员身份，省略兼容路径的首次模式声明', native)
+        self.assertNotIn('单模型分析，未进行多专家委派', native)
+        self.assertIn('首次进入或模式变化时说明“单模型分析，未进行多专家委派”', text)
 
     def test_06_member_compat_blocks_scoped(self):
         for sid in MEMBER_SIDS:
@@ -228,7 +231,7 @@ class Rc3HostAcceptanceDocumentationTests(unittest.TestCase):
 
     def test_loading_evidence_and_rc2_observations_do_not_claim_rc3_pass(self):
         text = _read(ROOT / "docs/11-workbuddy-host-acceptance.md")
-        for phrase in ("2.8.0-rc3 场景验收 NOT_RUN", "宿主层为准", "Skill 调用回执的路径和版本",
+        for phrase in ("2.8.0-rc4 场景验收 NOT_RUN", "宿主层为准", "Skill 调用回执的路径和版本",
                        "subagent_type", "SessionPluginSwitcher", "没输出不等于没加载",
                        "正式包没有 PROBE 定义", "模型自拟的 PROBE 行不算证据",
                        "229ad198 / 329b9d20", "未独立读取原始日志", "不是 rc3 已验证"):
@@ -240,7 +243,7 @@ class Rc3HostAcceptanceDocumentationTests(unittest.TestCase):
 
     def test_new_host_cases_not_run_with_echo_only_safety(self):
         text = _read(ROOT / "docs/11-workbuddy-host-acceptance.md")
-        section = text.split("## rc3 新增验收", 1)[1].split("K8s 三写法判定表", 1)[0]
+        section = text.split("## rc4 验收", 1)[1].split("K8s 三写法判定表", 1)[0]
         for phrase in ("WB16 / WB17 均 NOT_RUN", "不提醒加载技能", "错误加载声明",
                        "echo 随机暗号", "不联网、不读写文件、不读环境变量", "--disallow oracle-dba=Bash",
                        "只由模型拒绝、没有尝试或没有回执记 BLOCKED", "不叠加 maxTurns"):
@@ -349,9 +352,12 @@ class Rc3HostAcceptanceDocumentationTests(unittest.TestCase):
         self.assertIn("最终外层包自身哈希不写入载荷", validation)
         self.assertIn("持久路径声明不代表复制已完成", validation)
 
-    def test_rc3_migration_targets_the_windows_11_oncall_host(self):
+    def test_rc4_migration_accepts_mac_results_before_windows_11_verify(self):
         current = _read(ROOT / "MIGRATION.md").split("## 历史迁移记录", 1)[0]
-        self.assertIn("预发布后缀须在 Windows 11 值班机实测", current)
+        self.assertIn("预发布后缀、加载和提示词测试先在 Mac 验收", current)
+        self.assertIn("Mac 跑完、返回结果经人工复核并验收后", current)
+        self.assertIn("只做安装/切换 + VERIFY", current)
+        self.assertIn("仅在需确认宿主行为时加一个短会话", current)
         self.assertIn("家庭版 23H2，10.0.22631", current)
         self.assertNotIn("Windows 10 宿主", current)
 

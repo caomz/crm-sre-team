@@ -325,11 +325,12 @@ class V35Regressions(unittest.TestCase):
         for rel in ("docs/11-workbuddy-host-acceptance.md", "docs/13-oncall-gate-materials.md"):
             with self.subTest(rel=rel):
                 text = (ROOT / rel).read_text(encoding="utf-8")
-                self.assertIn("块 27 核验 WorkBuddy 5.7.7 子代理轮数下限仍为 200 时，WB07 记 HOST_LIMIT，不阻断正式 18 次关口", text)
+                self.assertIn("实际测试机器代码核验确认子代理 max_turns 的有效值仍被钳到不低于 200 时，WB07 记 HOST_LIMIT，不阻断正式 18 次关口", text)
                 self.assertIn("WB09H 仍须 PASS，未 PASS", text)
-                self.assertIn("值班机按原文跑一次自检 3", text)
+                self.assertIn("Mac 按原文跑一次自检 3", text)
+                self.assertIn("不是每个成员实际执行 200 轮", text)
                 self.assertIn("只核团长如实记 BLOCKED", text)
-                self.assertIn("块 27 核验不符（宿主开始遵守 max_turns）时恢复 WB07 须 PASS，未 PASS 不开始关口", text)
+                self.assertIn("实际测试机器核验不符（宿主开始遵守 max_turns）时恢复 WB07 须 PASS，未 PASS 不开始关口", text)
                 self.assertNotIn("WB07 或 WB09H", text)
         self.assertIn("WB09H 仍须 PASS，未 PASS（包括 FAIL/BLOCKED/NOT_RUN）", d11)
         self.assertIn("只出现 D 模式", d11)
@@ -438,11 +439,11 @@ class V35Regressions(unittest.TestCase):
         self.assertTrue(pair_counts('C1', (2, 2, 2), (2, 0, 0), 0, 0,
                                     None, None, False, False))
 
-    def test_rc3_refreeze_and_first_run_status_are_explicit(self):
+    def test_rc4_refreeze_and_first_run_status_are_explicit(self):
         for rel in ('docs/12-native-vs-single-comparison.md', 'docs/13-oncall-gate-materials.md'):
             text = (ROOT / rel).read_text(encoding='utf-8')
             with self.subTest(rel=rel):
-                for phrase in ('2.8.0-rc3', '首次运行前', '重新冻结', '关口尚未运行', '18 次 N/S',
+                for phrase in ('2.8.0-rc4', '首次运行前', '重新冻结', '关口尚未运行', '18 次 N/S',
                                '不沿用 rc2', 'NOT_RUN_IN_TARGET_HOST'):
                     self.assertIn(phrase, text)
 

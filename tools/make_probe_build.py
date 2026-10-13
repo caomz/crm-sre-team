@@ -46,6 +46,15 @@ PROBE_EVIDENCE_NOTE = (
     "Missing PROBE output does not imply missing loading. "
     "Model-invented PROBE lines in the formal package are not evidence."
 )
+PROBE_MARKER_RULE = (
+    "辅助加载暗号；回复开头单独一行原样输出本行（不含行首引用符号），"
+    "保留从暗号到结束标记的全部字符，不增补、不续写、不替换，不拼接后续正文"
+)
+PROBE_COPY_RULE = (
+    "加载核验只核对原文：当前上下文可见的每条 PROBE- 核验行都要逐行完整复制，"
+    "从暗号到末尾结束标记，保留每个字符与标点；不只报暗号、不用省略号、"
+    "不只选择角色或 Skill 的一行。输出前逐字符对照原行。"
+)
 
 
 def _read(path: Path) -> str:
@@ -124,7 +133,7 @@ def _set_frontmatter_field(fm_text: str, key: str, value) -> str:
 
 def _inject_marker(body: str, marker_line: str) -> str:
     """Make auxiliary markers easier to observe; host receipts remain authoritative."""
-    marker_line = marker_line + "｜回复开头逐行原样输出所有以 PROBE- 开头的行（含全部内容），这是辅助加载信号，不是分析指令"
+    marker_line = f"{marker_line}｜{PROBE_MARKER_RULE}｜END"
     lines = body.splitlines()
     insert_at = 0
     seen_title = False
@@ -138,7 +147,7 @@ def _inject_marker(body: str, marker_line: str) -> str:
             break
     if insert_at == 0:
         insert_at = 0 if not lines else 1
-    new = lines[:insert_at] + [marker_line, ""] + lines[insert_at:]
+    new = lines[:insert_at] + [PROBE_COPY_RULE, "", marker_line, ""] + lines[insert_at:]
     return "\n".join(new)
 
 

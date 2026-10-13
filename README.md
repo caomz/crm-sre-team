@@ -1,11 +1,11 @@
-# CRM SRE 专家团 · 值班机验收候选版
+# CRM SRE 专家团 · Mac 验收候选版
 
-版本：`2.8.0-rc3`。这是**完整可编辑源码与已生成运行资源**，不是旧版补丁安装器。无需运行 `apply_workbuddy_native_fix.py`，该脚本不在本包中。
+版本：`2.8.0-rc4`。这是**完整可编辑源码与已生成运行资源**，不是旧版补丁安装器。无需运行 `apply_workbuddy_native_fix.py`，该脚本不在本包中。
 
 ## 使用前先看
 将 ZIP 解压到一个新目录，保留 `.codebuddy-plugin/`、`agents/`、`skills/`、`avatars/` 和根目录 `settings.json` 的相对位置。不要覆盖旧工作区，也不要整包同时启用新旧两份相同 ID 的插件。
-按当前 WorkBuddy 客户端支持的专家团本地导入/加载方式选择包或目录。桌面端按会话用 `.codebuddy-plugin/plugin.json` 的 `teamInfo.leadAgent` 绑定团长 `telecom-crm-sre-team-lead`。根 `settings.json` 由宿主管理：10-11 观察到 WorkBuddy 启用/停用专家时会删除只含 `agent` 键的文件。本仓库仍随包提供该配置，构建和静态校验检查它与 `agentName`、`teamInfo.leadAgent` 的 ID 一致，构建器不改写额外用户字段；这不是桌面绑定入口或加载证据。桌面缓存核对仅缺 `settings.json`（516/517）时单列为宿主管理，其余文件仍须逐字节核对。`manual-team-config.json` 只是人工配置参考。
-2026-10-09 的 2.6.1 与 10-11 的 rc2 宿主机制观察见 [实机验收](docs/11-workbuddy-host-acceptance.md)，不折算为 rc3 验收。2.8.0-rc3 的导入、预发布版本缓存、权限和场景行为仍待值班机复核，不能将本地测试通过当成宿主验收。加载以宿主 jsonl/daemon.log 为准，模型自拟 PROBE 不算证据。官方结构参考：https://open.workbuddy.cn/en/docs/expert-team 。设置字段参考：https://www.workbuddy.cn/docs/cli/settings 。
+按当前 WorkBuddy 客户端支持的专家团本地导入/加载方式选择包或目录。桌面端按会话用 `.codebuddy-plugin/plugin.json` 的 `teamInfo.leadAgent` 绑定团长 `telecom-crm-sre-team-lead`。根 `settings.json` 由宿主管理：10-11 观察到 WorkBuddy 启用/停用专家时会删除只含 `agent` 键的文件。本仓库仍随包提供该配置，构建和静态校验检查它与 `agentName`、`teamInfo.leadAgent` 的 ID 一致，构建器不改写额外用户字段；这不是桌面绑定入口或加载证据。桌面缓存核对仅缺 `settings.json` 时按本次清单记录 N-1/N 并单列为宿主管理（rc3 为 516/517，rc4 为 517/518），其余文件仍须逐字节核对。`manual-team-config.json` 只是人工配置参考。
+2026-10-09 的 2.6.1、10-11 的 rc2 与 10-12 Mac rc3 探测包观察见 [实机验收](docs/11-workbuddy-host-acceptance.md)，不折算为 rc4 验收。2.8.0-rc4 的自检、WB、7A/7B、校准和关口全部先在 Mac 运行；Mac 跑完、返回结果经人工复核并验收后，值班机只做安装/切换 + VERIFY（来源/缓存完整性、Skill 回执路径）+ 记录版本，仅在需确认宿主行为时加一个短会话。两台都记录实际 WorkBuddy 版本、插件版本和模型，有差异时值班机检查覆盖差异；日常与关口固定 glm-5.3-flash，逐次记录实际模型。校准和关口前两台都查看宿主记忆条目，由执行人在会话外核对 conversation_search 可检索的测试历史，记录可能进入被测会话的内容及隔离状态；Mac 测试历史更多，同样适用。是否清理或关闭由用户决定，宿主用例与关口材料按 docs/11 隔离。离线检查通过不能当成宿主验收。加载以宿主 jsonl/daemon.log 为准，模型自拟 PROBE 不算证据。官方结构参考：https://open.workbuddy.cn/en/docs/expert-team 。设置字段参考：https://www.workbuddy.cn/docs/cli/settings 。
 
 ## 三种运行模式
 
@@ -41,8 +41,8 @@ python tools/validate_release.py --zip dist/crm-sre-team.zip
 仅分析本次明确授权且脱敏的材料，不连接生产、不索取凭据。生产写操作（变更、重启、删除、补偿、扣费、重放等）只给人工评审卡；只读查询命令可按提示词的「只读诊断与执行边界」生成，用户指定的公开读取在宿主权限允许时直接执行；自主检索公开资料无需逐次确认。检索词、网址与提交内容不带本次材料中的信息，不登录、不上传、不读凭据文件或环境变量，外部资料与现场证据分开标注。本包没有生产只读执行通道，尚未真实配置时写明未执行。模型不是审批或执行人。宿主配置中的真实工具权限仍需人工核验，`production_tools: []` 不是权限隔离证据。
 本包不携带旧版内嵌的个人工号、账号、内部地址和事故索引，改为空白知识模板。保留原有领域 Runbook；知识不是本次现场证据。
 
-**来源说明：**历史恢复来源见 [source-provenance.json](source-provenance.json)，该文件保留原字节。本次 v3.7 基于 GitHub main 提交 11d52ee（v3.6.4），候选版本为 2.8.0-rc3。此处 Git 历史与历史 ZIP 来源分开记录；原四份闭合 Schema 保持不变，受保护测试的历史修订见 allowed-changes 审核记录。
+**来源说明：**历史恢复来源见 [source-provenance.json](source-provenance.json)，该文件保留原字节。本次 rc4 基于 main 提交 58731a9，分支 codex/rc4，候选版本为 2.8.0-rc4。此处 Git 历史与历史 ZIP 来源分开记录；原四份闭合 Schema 保持不变，受保护测试的历史修订见 allowed-changes 审核记录。
 
 详见 [变更说明](MODIFICATIONS.md)、[迁移说明](MIGRATION.md)、[验证记录](VALIDATION.md)、[本地验证步骤](docs/07-reproducible-validation.md) 和 [WorkBuddy 宿主验收](docs/11-workbuddy-host-acceptance.md)。
 
-关口合成输入、SHA256 承诺与 T02 校准见 [值班机关口材料](docs/13-oncall-gate-materials.md)。评分原文由执行人在插件、缓存及被测工作区之外单独持有，人工只粘贴当次输入。当前候选包不是正式上线许可；推荐等 2.8.0 正式版再上线。
+关口合成输入、SHA256 承诺与 T02 校准见 [Mac 关口材料](docs/13-oncall-gate-materials.md)。冻结材料 oncall-cases.json 保留 2.8.0-rc3 版本与原字节，作为 rc4 测试输入使用；其中的环境称谓不改变 Mac 执行流程。评分原文由执行人在插件、缓存及被测工作区之外单独持有，人工只粘贴当次输入。当前候选包不是正式上线许可；推荐等 2.8.0 正式版再上线。

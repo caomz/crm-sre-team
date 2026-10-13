@@ -1,9 +1,9 @@
 {
-  "version": "2.8.0-rc3",
+  "version": "2.8.0-rc4",
   "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
   "result": "PASS_STATIC_ONLY",
-  "checks_total": 1817,
-  "checks_passed": 1817,
+  "checks_total": 1818,
+  "checks_passed": 1818,
   "relative_links_checked": 228,
   "offline_contract_tests_run": 46,
   "offline_contract_test_failures": 0,
@@ -235,6 +235,11 @@
     },
     {
       "id": "explicit_read_encoding:tests/test_probe_build.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tests/test_rc4_regressions.py",
       "passed": true,
       "detail": []
     },

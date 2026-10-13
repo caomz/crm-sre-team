@@ -1,17 +1,17 @@
 # 本地可复现验证（当前修复分支）
 
-本节命令仅用于本项目的离线开发，不是生产指令。先安装 requirements-dev.txt 中的开发依赖。建议在新目录中执行，保持报告在 reports/ 或项目目录之外。
+本节命令在 Mac 用于本项目的离线开发，不是生产指令。先核对现有环境满足 requirements-dev.txt，不自动安装或升级依赖。建议在新目录中执行，保持报告在 reports/ 或项目目录之外。提示词测试（自检、WB、7A/7B、校准和关口）全部在 Mac 跑完并由人工复核验收；值班机随后只做安装/切换 + VERIFY + 记录版本，仅在需确认宿主行为时加一个短会话。
 
 ```bash
-python tools/build_bundle.py
-python tools/validate_bundle.py
-python tools/check_workbuddy.py
-python tools/check_thinking_tools.py
-python -m pytest tests -q
-python tools/check_determinism.py --output reports/rebuild-check.json
-python tools/build_release.py --output dist/crm-sre-team.zip
-python tools/validate_release.py --zip dist/crm-sre-team.zip
+python3 tools/build_bundle.py
+python3 -m pytest tests/ -q
+python3 tools/check_workbuddy.py
+python3 tools/validate_bundle.py
+python3 -m pytest tools/oncall -q
+python3 tools/release.py
 ```
+
+`tools/release.py` 是统一发布入口，串行执行静态/测试/确定性门、staging 构包、validate_release、解包复验，全部通过才移入 dist/releases。用两个独立输出目录重建同一候选，比较发布 ZIP 原字节与 SHA256；单独验证可用 `python3 tools/validate_release.py --zip <实际 ZIP 路径>`。离线流水线通过不代表 WorkBuddy 或模型行为通过。
 
 `check_release_diff.py` 现在针对真实原始上传的 2.5.0 ZIP，不再把 2.4.0 当作本次基线；历史脚本保留在 docs/history。只有拥有该原始上传版时才运行：
 

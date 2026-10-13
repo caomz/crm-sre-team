@@ -116,12 +116,12 @@ class KnowledgeDocumentationTests(unittest.TestCase):
         # docs/11：删除旧"留待"句；统一短语；新用例就位
         self.assertNotIn("留待正式关口运行时执行",d11)
         self.assertNotIn("列定文件",d11)
-        self.assertIn("值班机不运行 T07 原版",d11)
+        self.assertIn("T07 原版保持 NOT_RUN",d11)
         self.assertIn("WB09H",d11)
         self.assertIn("WB15",d11)
         self.assertIn("未观察到外发，功能未验证",d11)
         # docs/12：同一短语 + 不可验证路径 + 协议违规 + 盲评完整规则（v3.3.2）
-        self.assertIn("值班机不运行 T07 原版",d12)
+        self.assertIn("T07 原版保持 NOT_RUN",d12)
         self.assertIn("不可验证",d12)
         self.assertIn("记为协议违规",d12)
         # v3.3.2 盲评规则：一句完整规则，删除清单含派单记录/成员署名；

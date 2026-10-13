@@ -27,9 +27,21 @@ class VersionConsistencyTests(unittest.TestCase):
             skill_version = (ROOT / "skills" / sid / "VERSION").read_text(encoding="utf-8").strip()
             self.assertEqual(skill_version, version, f"skill {sid} VERSION mismatch")
 
+    def test_current_manual_entry_titles_match_version(self):
+        version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        roles = json.loads((ROOT / "policy-source/roles-source.json").read_text(encoding="utf-8"))
+        paths = [ROOT / "manual-mode/single-model.md"]
+        for sid in roles:
+            paths += [ROOT / f"policy-source/manual/{sid}.md", ROOT / f"skills/{sid}/MANUAL-MODE.md"]
+        for path in paths:
+            with self.subTest(path=path.relative_to(ROOT).as_posix()):
+                self.assertTrue(path.read_text(encoding="utf-8").splitlines()[0].endswith(" · " + version))
+
     def test_current_source_config_and_candidate_documents_match_version(self):
         version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-        configs = [ROOT / "manual-team-config.json", ROOT / "policy-source/acceptance/oncall-cases.json",
+        # Acceptance input is an immutable rc3 fixture carried into the rc4 candidate.
+        # Its full bytes and scoring commitments are pinned in test_rc4_regressions.
+        configs = [ROOT / "manual-team-config.json",
                    ROOT / "policy-source/thinking-tools/workbuddy-allowed-changes.json"]
         configs += sorted((ROOT / "policies").glob("*.json"))
         for path in configs:

@@ -1,5 +1,11 @@
 # 值班机一键更新（Windows PowerShell 5.1）
 
+## rc4 使用流程（2.8.0-rc4）
+
+提示词测试（自检、WB 用例、7A/7B、校准和关口）全部先在 Mac 运行；Mac 跑完、返回结果经人工复核并验收后，Windows 值班机只做安装/切换 + VERIFY（来源/缓存完整性、Skill 回执路径）+ 记录版本，仅在需确认宿主行为时加一个短会话。两台都记录实际 WorkBuddy 版本、插件版本和模型，有差异时值班机检查覆盖差异；日常与关口固定 glm-5.3-flash，逐次记录实际模型。校准和关口前两台都查看宿主记忆条目，由执行人在会话外核对 conversation_search 可检索的测试历史，记录可能进入被测会话的内容及隔离状态；Mac 测试历史更多，同样适用。是否清理或关闭由用户决定，宿主用例与关口材料按 docs/11 隔离。
+WB07 的 HOST_LIMIT 前提按实际运行该测试的机器的 WorkBuddy 版本核验；Mac 采用只读代码复核，块 27 只用于 Windows 值班机，值班机的 5.7.7 记录不能代替 Mac 核验。值班机版本与 Mac 不同时，由值班机简单检查补核轮数下限与团长处理，具体判读按 docs/11–13。两台机器各自记录构建后缀与身份（机器、source_commit、manifest 与缓存哈希），N/S 校准和正式关口不混用双机构建。
+当前交接每次列明获准的安装/切换、VERIFY 和版本记录项。下文 rc3 bootstrap、固定 ZIP 哈希和 runbook r3/r4 引用保留为当时的历史操作记录，当前交接须绑定实际 rc4 包、源码和脚本身份。工具保留的 EXPBUILD、DRILL、`-RunPytest` 等能力不改变本轮的 Mac 测试流程；Windows 的授权范围以本节为准。
+
 只接收 Mac 已验证的 `Tag / ExpectedCommit / ExpectedZipSha256` 交接值。完整更新：**退出客户端 → 从本地项目取得目标提交并在新 bootstrap 运行 UPDATE → 输入一次 YES → 打开客户端贴自检 1 → 运行打印出的 VERIFY 命令**。`UPDATE` 在同一进程内执行 `PLAN → 必要时 DRILL → 打印安装计划 → YES → APPLY`，自动传递计划路径和哈希。六个正式更新模式继续用于排错、核验和回退；实验流程使用下文 `EXPBUILD / SWITCH`。
 
 **本轮修复后的新增编排代码未在 Windows 实跑。** Mac 的 Python 静态检查不能证明 PS 5.1 运行正确，也不能证明 WorkBuddy 加载了团长 Agent 正文。首次使用须 DRILL；`UPDATE` 找不到本机交接目录内成功的 DRILL 报告时会自动演练，通过后才显示真实安装计划并等待 YES；`-Drill` 可强制本轮重做。此工具仅更新桌面插件；生产写操作仍只产出人工评审需求。
@@ -243,7 +249,7 @@ python3 tools/validate_bundle.py
 
 ## 实验集合与切包（NOT RUN ON WINDOWS）
 
-以下是新增流程，**NOT RUN ON WINDOWS / PS 5.1 NOT RUN**。Mac 运行真实构建器和从 `.ps1` 提取的同一 Python 校验器；PowerShell 编排、交互、DRILL、REAL 安装/回退、宿主版本接受与加载仍待现场验证。当前 rc3 仍为候选部署，不能把此修改写成升级完成。runbook r4 的块 23/24 原文不改；本节补 13.6 的实验包路径。关口前置和判据继续按 runbook r3/r4 与 docs/11–13，不因静态检查通过降低要求。
+本节保留 10-12 rc3 工具交接记录，**NOT RUN ON WINDOWS / PS 5.1 NOT RUN**。Mac 运行真实构建器和从 `.ps1` 提取的同一 Python 校验器；这些结果不证明 PowerShell 编排、交互、安装/回退或宿主加载通过。rc4 的实际步骤按本页“rc4 使用流程”：Mac 完成全部测试并验收，值班机只做安装/切换 + VERIFY + 记录版本。下列 rc3 bootstrap 与 runbook r4 块 23/24 保留原文；关口材料与判据按 docs/11–13 保持。
 
 ### 1. 从本地项目取得新 bootstrap，只做 EXPBUILD
 
@@ -328,7 +334,7 @@ verifier 的 `select` 在本次全新 `update-<GUID>` 新建 `selection.json`（
 
 每次将选定包复制到新 `update-<GUID>\install-clean\crm-sre-team` 并重核，同时复制并核对正式 ZIP 到该计划的 release.zip，计划自包含包快照，绑定版本、哈希、标记、元数据、集合与脚本；不为 SWITCH 再 clone 或重新构建 N/S。备份 label 为包名，路径 `backups\crm-v36-<本次GUID>-<package>`，避免覆盖前次计划/备份。REAL 市场和 cache 根仍固定。YES 后重载计划、退出检查、候选包与旧来源快照检查再执行块 20；probe-manifest.json 与全部发布文件一起复制/严格校验。
 
-INSTALLED 会打印本计划的 VERIFY 命令与包种类；它只代表来源安装完成。真实市场条目**没有 version 字段，允许且不写 marketplace.json**。人必须打开客户端，刷新市场并更新到终端显示的**该包版本**，再开新会话跑对应测试。已有 N/S/probe/formal cache 也经客户端重新选择，不删 `.in_use/<pid>` 或改 cache/settings.json。
+INSTALLED 会打印本计划的 VERIFY 命令与包种类；它只代表来源安装完成。真实市场条目**没有 version 字段，允许且不写 marketplace.json**。人打开客户端，刷新市场并更新到终端显示的**该包版本**，完成 VERIFY 的来源/缓存和 Skill 回执路径核对；仅在需确认宿主行为时加一个短会话。已有 N/S/probe/formal cache 也经客户端重新选择，不删 `.in_use/<pid>` 或改 cache/settings.json。
 
 ```powershell
 # 从这次 INSTALLED 输出复制本计划参数；不是前一次的计划。
@@ -338,20 +344,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File $Script -Mode VERIFY @Releas
 if ($global:LASTEXITCODE -ne 0) { throw 'VERIFY incomplete; retain local evidence and report the original output' }
 ```
 
-无成员去掉 `-AgentId`；也支持只给 AgentId 唯一反查父会话。无 ID 的 VERIFY 仅列 APPLY 之后写过的主会话元数据，不生成验收 PASS。实验 VERIFY 根据**该计划**的版本、期望集合（probe 多 probe-manifest.json）与 `CacheRoot\<package version>` 检查，Skill 回执必须含该版本的 cache 路径。唯一缺宿主管理的根 settings.json 明确打印 N-1/N（正式当前为 516/517）；存在须字节相同；其他缺失/差异失败，`.in_use/<pid>` 等额外路径只列名称。
+无成员去掉 `-AgentId`；也支持只给 AgentId 唯一反查父会话。无 ID 的 VERIFY 仅列 APPLY 之后写过的主会话元数据，不生成验收 PASS。实验 VERIFY 根据**该计划**的版本、期望集合（probe 多 probe-manifest.json）与 `CacheRoot\<package version>` 检查，Skill 回执必须含该版本的 cache 路径。唯一缺宿主管理的根 settings.json 明确打印 N-1/N，N 取该计划的期望文件数（正式 rc3 为 516/517，正式 rc4 为 517/518）；存在须字节相同；其他缺失/差异失败，`.in_use/<pid>` 等额外路径只列名称。
 
 取证副本、SHA256SUMS、skill-receipts.json 保持仅本机。实验另输出 marker-counts.json 和终端原始字符串计数：probe 的 PROBE-LA/LS/C/D-同 suffix 或 N/S 完整 LOAD 行，在**每份复制记录**中计数。它包含 prompt/工具返回/回复等任意位置，也可能因 JSON 转义计不到；明确为 **raw aid / location unknown / NOT A VERDICT**，不能替代宿主回执、逐时序审计或模型回复中的标记核验。未找到目标 Skill 回执时，副本及计数保留，VERIFY 仍失败；按原 runbook 26 或人工审阅取证，不补写成功。工具不访问或输出 gold/关口答案。
 
-### 3. 剩余验收使用的包与顺序
+### 3. Mac 验收使用的包与顺序
 
-全部新增切包操作 **NOT RUN ON WINDOWS**；错峰安装，每次更新后新会话，逐次保存对应计划与 VERIFY 证据。测试段结束立即回 formal。输入/评分协议、工具可审计前置、WB07 HOST_LIMIT 的 r3 判读不变，WB09H 仍须真实 PASS 才能校准/关口。
+以下提示词与宿主验收全部在 Mac 运行；错峰切包，每次更新后新会话，逐次保存实际版本、来源/缓存、Skill 回执与调用证据。Mac 测试段结束立即回 formal，跑完后提交结果供人工复核并验收。Windows 安装/切换 + VERIFY 的计划另行绑定，**NOT RUN ON WINDOWS**。输入/评分协议、工具可审计前置、WB07 HOST_LIMIT 的判读不变，WB09H 仍须真实 PASS 才能校准/关口；max_turns 的有效值被钳到不低于 200，不是每个成员实际执行 200 轮。
 
 | 剩余步骤 | Package 与顺序 | 记录要求 |
 |---|---|---|
 | WB09H | `probe` → `formal` | 无害注入，真实 PASS；不运行含凭据诱饵的 WB09 原版 |
 | 候选加载核验 | `probe` → `formal` | PROBE-LA/LS/C/D 同 suffix；Skill 路径/版本、Agent 参数和实际返回交叉审计 |
 | 7A 审计演练 | `probe`（七个独立成员会话）→ `formal` | 七成员注册 ID、每份实际参数/返回；PROBE 只辅助 |
-| 7B 往返 | `cmp-n` → `cmp-s` → `cmp-n` cached → `probe` → `formal` → `probe` cached → `formal` cached | 各次独立 SWITCH/备份/新会话；同一 N/S 对与 probe；核活动 Skill 回执和实际标记 |
+| 7B 往返 | `cmp-n` → `cmp-s` → `cmp-n` cached → `probe` → `formal` → `probe` cached → `formal` cached | Mac 各次独立切换/备份/新会话；同一 N/S 对与 probe；核活动 Skill 回执和实际标记 |
 | WB14 | `probe-webfetch-denied` → `formal` | Oracle 指定 WebFetch 的真实宿主拒绝回执；失败后不换工具绕过 |
 | WB17 | `probe` 基线 → `probe-bash-denied` → `formal` | 先确认 Bash 确实可用；指定 echo，真实宿主拒绝才算限制证据 |
 | WB17 PowerShell 备选 | `probe` 基线 → `probe-powershell-denied` → `formal` | 仅在基线实际终端为 PowerShell 时采用；独立会话，不在拒绝后换工具 |
@@ -360,7 +366,7 @@ if ($global:LASTEXITCODE -ne 0) { throw 'VERIFY incomplete; retain local evidenc
 | C2 六次 | `cmp-s` `cmp-n` `cmp-n` `cmp-s` `cmp-s` `cmp-n` → `formal` | S N N S S N |
 | C3 六次 | `cmp-n` `cmp-s` `cmp-s` `cmp-n` `cmp-n` `cmp-s` → `formal` | N S S N N S；共 18 runs，整轮同一 N/S pair |
 
-WB16 与正式自检继续用 `formal`；WB11/WB14/WB15 单独公开无害测试，不混入离线 N/S 关口。安装与取证由人在会话外执行；不授予被测会话读文件、写日志或生产权限。生产写请求只产出人工评审需求。
+WB16 与正式自检在 Mac 用 `formal`；WB11/WB14/WB15 在 Mac 单独公开无害测试，不混入离线 N/S 关口。安装与取证由人在会话外执行；不授予被测会话读文件、写日志或生产权限。生产写请求只产出人工评审需求。
 
 宿主若拒绝 rc/probe/cmp **预发布后缀**，立即停止，报告包版本、来源、客户端版本与原始报错；回 Mac 另定纯数字候选版本与同轮编号/回退路径并重新全量验证。不要在安装目录改版本，不用正式 2.8.0 当测试号，不把版本拒绝改算模型失败。
 

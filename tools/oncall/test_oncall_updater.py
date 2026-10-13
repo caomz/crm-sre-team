@@ -841,6 +841,25 @@ class ExperimentStaticTests(unittest.TestCase):
                      'probe-bash-denied', 'probe-powershell-denied']:
             self.assertIn('`' + name + '`', section)
 
+    def test_rc4_readme_requires_accepted_mac_tests_before_windows_verify(self):
+        current = self.readme.split('## rc4 使用流程', 1)[1].split('\n## ', 1)[0]
+        for phrase in ('2.8.0-rc4', '全部先在 Mac 运行', '人工复核并验收后',
+                       '只做安装/切换 + VERIFY', '来源/缓存完整性、Skill 回执路径', '记录版本',
+                       '仅在需确认宿主行为时加一个短会话', '两台都记录实际 WorkBuddy 版本、插件版本和模型',
+                       '有差异时值班机检查覆盖差异', '固定 glm-5.3-flash', '逐次记录实际模型',
+                       '关口前两台都查看宿主记忆条目', '是否清理或关闭由用户决定'):
+            self.assertIn(phrase, current)
+        # AGENTS.md is a source-checkout rule file, outside the plugin payload.
+        agents = (ROOT / 'AGENTS.md').read_text(encoding='utf-8')
+        for phrase in ('自检、WB 用例、7A/7B、校准和关口', '全部先在 Mac 运行',
+                       'Mac 跑完、返回结果经人工复核并验收后', '安装/切换 + VERIFY',
+                       '来源/缓存完整性、Skill 回执路径', '记录版本',
+                       '仅在需确认宿主行为时加一个短会话', '两台都记录实际 WorkBuddy 版本、插件版本和模型',
+                       '值班机检查必须覆盖差异', '固定 glm-5.3-flash', '逐次记录实际模型',
+                       '两台机器都要查看宿主记忆条目', '是否清理或关闭由用户决定',
+                       '请求 1 的有效值也是 200', '不是每个成员实际执行 200 轮', 'HOST_LIMIT'):
+            self.assertIn(phrase, agents)
+
 
 @unittest.skipIf(os.name == 'nt', 'Mac functional fixtures use temporary synthetic paths; PS 5.1/host execution is a separate NOT_RUN check')
 class ExperimentFunctionalTests(unittest.TestCase):
@@ -1011,6 +1030,32 @@ class ExperimentFunctionalTests(unittest.TestCase):
                 result = self.call_build(artifacts)
                 self.assertNotEqual(result.returncode, 0, label)
                 self.assertIn('error', result.stderr)
+
+    def test_current_rc4_probe_lines_are_accepted_by_existing_experiment_verifier(self):
+        # Existing round-trip fixtures use a HEAD clone. Cover the current
+        # uncommitted builder separately so rc4 wording is tested before commit.
+        output = self.work / ('rc4-probe-' + uuid.uuid4().hex)
+        self.run_command([sys.executable, str(ROOT / 'tools/make_probe_build.py'),
+                          '--root', str(ROOT), '--out', str(output)])
+        manifest = json.loads((output / 'probe-manifest.json').read_text(encoding='utf-8'))
+        roles = json.loads((ROOT / 'policy-source/roles-source.json').read_text(encoding='utf-8'))
+        targets = [('agents/telecom-crm-sre-team-lead.md', manifest['lead_markers']['marker_la']),
+                   ('skills/stability-director/SKILL.md', manifest['lead_markers']['marker_ls'])]
+        for sid, role in roles.items():
+            if sid != 'stability-director':
+                markers = manifest['markers'][role['agent']]
+                targets += [('agents/' + role['agent'] + '.md', markers['marker_c']),
+                            ('skills/' + sid + '/SKILL.md', markers['marker_d'])]
+        self.assertEqual(len(targets), 16)
+        self.assertEqual(manifest['source_version'], (ROOT / 'VERSION').read_text().strip())
+        for rel, marker in targets:
+            with self.subTest(rel=rel):
+                self.ns['check_marker'](output, rel, marker)
+                lines = (output / rel).read_text(encoding='utf-8').splitlines()
+                line = next(line for line in lines if line.startswith('> ' + marker + '｜'))
+                self.assertIn('回复开头单独一行原样输出本行', line)
+                self.assertIn('不增补、不续写、不替换，不拼接后续正文', line)
+                self.assertTrue(line.endswith('｜END'))
 
     def test_provenance_and_comparison_manifest_negative_cases(self):
         for key, value in [('source_commit', 'unknown'), ('source_commit', 'ffffffff'),

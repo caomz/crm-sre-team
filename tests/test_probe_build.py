@@ -23,8 +23,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import make_probe_build as mpb  # noqa: E402
 
-MARKER_ECHO = "回复开头逐行原样输出所有以 PROBE- 开头的行"
-OLD_ECHO = "回复首行原样输出本行暗号"
+MARKER_ECHO = "回复开头单独一行原样输出本行（不含行首引用符号）"
+OLD_ECHO = "回复开头逐行原样输出所有以 PROBE- 开头的行"
 
 
 def _load_module():
@@ -205,6 +205,42 @@ class ProbeBuildTests(unittest.TestCase):
             self.assertIn("Missing PROBE output does not imply missing loading", summary["cheat_sheet"])
             self.assertNotIn("=> Agent text loaded", summary["cheat_sheet"])
             self.assertEqual(summary["overrides"]["disallowedTools"], {"oracle-dba": ["Bash"]})
+
+    def test_10_every_probe_line_is_self_contained_and_ends_before_body(self):
+        expected_rule = (
+            "辅助加载暗号；回复开头单独一行原样输出本行（不含行首引用符号），"
+            "保留从暗号到结束标记的全部字符，不增补、不续写、不替换，不拼接后续正文"
+        )
+        targets = [
+            ("agents/telecom-crm-sre-team-lead.md", self.manifest["lead_markers"]["marker_la"]),
+            ("skills/stability-director/SKILL.md", self.manifest["lead_markers"]["marker_ls"]),
+        ]
+        for sid, role in _roles().items():
+            if sid != "stability-director":
+                markers = self.manifest["markers"][role["agent"]]
+                targets += [(f"agents/{role['agent']}.md", markers["marker_c"]),
+                            (f"skills/{sid}/SKILL.md", markers["marker_d"])]
+        self.assertEqual(len(targets), 16)
+        for rel, marker in targets:
+            with self.subTest(rel=rel):
+                body = (self.out / rel).read_text(encoding="utf-8")
+                lines = body.splitlines()
+                expected = f"> {marker}｜{expected_rule}｜END"
+                self.assertEqual([line for line in lines if line.startswith("> PROBE-")], [expected])
+                self.assertEqual(lines[lines.index(expected) + 1], "")
+                self.assertIn(mpb.PROBE_COPY_RULE + "\n\n" + expected, body)
+                self.assertNotIn(OLD_ECHO, body)
+                if rel.startswith("skills/"):
+                    self.assertNotIn("此 SKILL.md", expected)
+                self.assertIn("Host evidence is authoritative", self.manifest["evidence_note"])
+
+    def test_11_marker_injection_preserves_following_text_verbatim(self):
+        following = "此 SKILL.md 的正文不属于暗号。\n后续段落保留原内容。"
+        actual = mpb._inject_marker("\n# 测试标题\n\n" + following, "> PROBE-D-a1b2c3d4")
+        marker, remaining = actual.split("｜END\n\n", 1)
+        self.assertIn(MARKER_ECHO, marker)
+        self.assertNotIn("此 SKILL.md", marker)
+        self.assertEqual(remaining, following)
 
 if __name__ == "__main__":
     unittest.main()
