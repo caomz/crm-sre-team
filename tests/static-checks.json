@@ -5779,12 +5779,12 @@
       "detail": ""
     },
     {
-      "id": "relative_link:README.md:MIGRATION.md",
+      "id": "relative_link:README.md:CHANGELOG.md",
       "passed": true,
       "detail": ""
     },
     {
-      "id": "relative_link:README.md:MODIFICATIONS.md",
+      "id": "relative_link:README.md:MIGRATION.md",
       "passed": true,
       "detail": ""
     },
@@ -5794,12 +5794,12 @@
       "detail": ""
     },
     {
-      "id": "relative_link:README.md:docs/07-reproducible-validation.md",
+      "id": "relative_link:README.md:docs/03-integration-contract.md",
       "passed": true,
       "detail": ""
     },
     {
-      "id": "relative_link:README.md:docs/11-workbuddy-host-acceptance.md",
+      "id": "relative_link:README.md:docs/07-reproducible-validation.md",
       "passed": true,
       "detail": ""
     },
