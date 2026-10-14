@@ -9,12 +9,14 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-from release import compute_tree_digest, PIPELINE_STEPS, run_pipeline
+from release import compute_tree_digest, PIPELINE_STEPS, run_pipeline, StepRunner, Pipeline
 
 
 def bundle_report():
@@ -88,8 +90,8 @@ class FakeRunner:
         sha = hashlib.sha256(output.read_bytes()).hexdigest()
         return {"files": 2, "sha256": sha, "archive": str(output), "scope": "MANIFEST_CONTENT_INTEGRITY_NOT_HOST_VERIFICATION"}
 
-    def run_validate_release(self, zip_path):
-        self.calls.append(("validate_release", str(zip_path)))
+    def run_validate_release(self, zip_path, root=None):
+        self.calls.append(("validate_release", str(zip_path), str(root) if root else None))
         default = (0, {"pass": True, "errors": [], "scope": "ZIP_INTEGRITY_NOT_RUNTIME",
                        "files_total": 2, "files_checked": 2,
                        "sha256": hashlib.sha256(Path(zip_path).read_bytes()).hexdigest()})
@@ -370,8 +372,8 @@ class ReleasePipelineTests(unittest.TestCase):
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as td:
                 root = make_minimal_project(Path(td) / "project")
                 class MutatedRunner(FakeRunner):
-                    def run_validate_release(self, zip_path):
-                        code, report = super().run_validate_release(zip_path)
+                    def run_validate_release(self, zip_path, root=None):
+                        code, report = super().run_validate_release(zip_path, root)
                         return code, {**report, **mutation}
                 result = run_pipeline(root, runner=MutatedRunner())
                 assert_six_points(self, result, root, "validate_release", "invalid report")
@@ -385,6 +387,61 @@ class ReleasePipelineTests(unittest.TestCase):
                         return {**super().build_release(root, output), **mutation}
                 result = run_pipeline(root, runner=MutatedRunner())
                 assert_six_points(self, result, root, "build_staging", "invalid report")
+
+    def test_rc5_01_validate_release_uses_candidate_root_and_trusted_script(self):
+        runner = StepRunner()
+        candidate_zip = self.root / "synthetic.zip"
+        with patch("release.subprocess.run", return_value=SimpleNamespace(returncode=0, stdout=b"{}")) as subprocess_call:
+            runner.run_validate_release(candidate_zip, self.root)
+        args = subprocess_call.call_args.args[0]
+        self.assertEqual(Path(args[1]), runner._PROJECT_ROOT / "tools/validate_release.py")
+        self.assertEqual(Path(args[args.index("--root") + 1]), self.root)
+        fake = FakeRunner(); result = run_pipeline(self.root, runner=fake)
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(next(call for call in fake.calls if call[0] == "validate_release")[2], str(self.root))
+
+    def test_rc5_02_unique_staging_and_tamper_aborts_promotion(self):
+        class TamperAfterReport(Pipeline):
+            def _step_generate_report(self):
+                result = super()._step_generate_report()
+                self.release_zip.write_bytes(self.release_zip.read_bytes() + b"tampered-after-report")
+                return result
+        frozen_time = SimpleNamespace(now=lambda tz: SimpleNamespace(strftime=lambda fmt: "20261013T000000Z"))
+        with patch("release.datetime", frozen_time):
+            first = Pipeline(self.root, runner=FakeRunner())
+            second = Pipeline(self.root, runner=FakeRunner())
+        a, b = first.run(), second.run()
+        self.assertTrue(a["ok"], a)
+        self.assertTrue(b["ok"], b)
+        self.assertNotEqual(a["staging_dir"], b["staging_dir"])
+        before = set((self.root / "dist/releases").iterdir())
+        result = TamperAfterReport(self.root, runner=FakeRunner()).run()
+        self.assertFalse(result["ok"], result)
+        self.assertEqual(result["failed_step"], "promote")
+        self.assertIn("SHA256", result["error"])
+        self.assertEqual(set((self.root / "dist/releases").iterdir()), before)
+
+    def test_rc5_03_pre_report_nine_steps_and_final_receipt_ten_with_counts(self):
+        result = run_pipeline(self.root, runner=FakeRunner())
+        self.assertTrue(result["ok"], result)
+        output = Path(result["release_dir"])
+        pre = json.loads((output / "validation-report.json").read_text(encoding="utf-8"))
+        self.assertEqual(pre["report_phase"], "PRE_PROMOTION")
+        self.assertEqual([s["name"] for s in pre["steps"]], PIPELINE_STEPS[:9])
+        self.assertEqual(next(s for s in pre["steps"] if s["name"] == "tests")["tests_run"], 182)
+        receipt = json.loads((output / "release-receipt.json").read_text(encoding="utf-8"))
+        self.assertEqual(receipt["publication_status"], "PROMOTED_LOCAL_ONLY")
+        self.assertEqual(receipt["release_dir"], str(output))
+        self.assertEqual([s["name"] for s in receipt["steps"]], PIPELINE_STEPS)
+        self.assertEqual(next(s for s in receipt["steps"] if s["name"] == "tests")["tests_passed"], 182)
+        self.assertEqual(receipt["release_sha256"], hashlib.sha256((output / "crm-sre-team-2.6.1.zip").read_bytes()).hexdigest())
+
+    def test_rc5_04_complete_temporary_suffixes_do_not_change_tree_digest(self):
+        before = compute_tree_digest(self.root)
+        (self.root / "validation.tmp.json").write_text('{"temporary":true}')
+        (self.root / "validation.tmp.txt").write_text("temporary")
+        (self.root / "cache.pyc").write_bytes(b"temporary")
+        self.assertEqual(compute_tree_digest(self.root), before)
 
 
 if __name__ == "__main__":

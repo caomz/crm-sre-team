@@ -1,12 +1,12 @@
 {
-  "version": "2.8.0-rc4",
+  "version": "2.8.0-rc5",
   "skill_id": "oracle-dba",
   "agent_id": "telecom-crm-oracle-dba",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "MANUAL-MODE.md": "341cd3b287d4b41f96beb124ada96f93bdb792daa92bc446e407c01f9f55029f",
-    "SKILL.md": "2b7fda2d0a5d493d05685c7a4e24a4a4a562baef0cfd19ef383f84c1040f257a",
-    "VERSION": "9dcc9f31b898a7088ad0d8a9da1c8418865c26382be47078670ac6bdf4680c68",
+    "MANUAL-MODE.md": "638c72ac93d7e16c58b16c06ac5833b12e2dd42c70d05b0839a080478b24c90c",
+    "SKILL.md": "5254f9ef00ff6264f6f2cd4e5107d50fb9e1844e3a8e4e2431d5e9033ac742fa",
+    "VERSION": "84405446ac4ee6dcc6733d4bd8117e7993363b8ef0836e4fa45fc000eb8ca1a7",
     "agents/openai.yaml": "6a91f030cee86a11117a4ae898a530e172d07b75bc3b86b99a9fe3235adf6dc6",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",
     "assets/templates/environment-profile.md": "78e08de517192293f5b584e4038873226e026ebc75ff43da6dbdd843b21a2153",
@@ -22,6 +22,7 @@
     "references/harness-contract.md": "f5ae570143a807fb5f86636fa00259378ad30767483e5cf944c810b363970c24",
     "references/incident-workflow.md": "4dd7dc4abe413df1cb3f711ee148bf182746f453c40a6a13a5685007e6384f93",
     "references/judgment-basis.md": "77cbd643e23fee16bfa9936735909ddfe75acd067c1a44eb597710dc22ab0385",
+    "references/knowledge-integration.md": "d7cab25ede679c8133c47606eaee6741592a740ed2ae68bd34f2b2810af4d092",
     "references/offline-contract.md": "b76e2f9c1915b654fda30296248f18a30bd13ab6b278483da1b8df26fdfd1d1e",
     "references/ooda-reasoning.md": "41fdd479a7c6b45f6242faea6204c80c5b0189ce1227ef44300ccc716b425b16",
     "references/oracle-runbook.md": "dac72a3e698155585a84e2adb912d1d504875988a10010204a859fbad36b16c4",
@@ -32,6 +33,7 @@
     "references/team-topology.md": "28e0ffd582e52eccacca1ea0f70deef9160571ce09c6d6636cb01f4633c1c6ea",
     "references/thinking-tools.md": "480a845c8f18e0e18ef5aeedb6f6226d75abeb4b398067ed1fcc5c650f89ed67",
     "schemas/common.schema.json": "c0bc6a5ff501d20bcd4df5630b5f72d4619e113f7e1a1ddd9a5d5018821fc201",
+    "schemas/eval-ledger.schema.json": "1124f813e17ad722fefe0f8a5a02502a6a3be3f199596b2da1dca169a6eb97cb",
     "schemas/feedback.schema.json": "2039466b720222f58fcf9c4d6ebf249a069b67e3d42f253907d6a65ffd303103",
     "schemas/lead-result.schema.json": "c23e03010242ba352ed7df547deba13c7c72e58bba26e10fcc76395fe4632ec1",
     "schemas/member-result.schema.json": "741bcbfb11371d54b0535f4d473d81ce21b1eddf55624537d669660b741d88c9"

@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from zipfile import ZipFile
@@ -54,7 +55,7 @@ def compute_tree_digest(root: Path) -> str:
             continue
         if p.name in _TRANSIENT_FILES:
             continue
-        if p.suffix in _TRANSIENT_SUFFIXES:
+        if any(p.name.endswith(suffix) for suffix in _TRANSIENT_SUFFIXES):
             continue
         if rel in generated:
             continue
@@ -119,11 +120,11 @@ class StepRunner:
         from build_release import build_release as _build
         return _build(root, output)
 
-    def run_validate_release(self, zip_path: Path):
+    def run_validate_release(self, zip_path: Path, root: Path):
         """Returns (exit_code, result_dict_or_None)."""
         script = self._PROJECT_ROOT / "tools" / "validate_release.py"
         proc = subprocess.run(
-            [sys.executable, str(script), "--root", str(self._PROJECT_ROOT), "--zip", str(zip_path)],
+            [sys.executable, str(script), "--root", str(root), "--zip", str(zip_path)],
             capture_output=True, timeout=120)
         result = None
         try:
@@ -213,6 +214,7 @@ class Pipeline:
         self.tree_digest = None
         self.version = None
         self.timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        self.run_id = self.timestamp + "-" + uuid.uuid4().hex
 
     def run(self):
         """Execute all steps. Returns structured result dict."""
@@ -223,6 +225,7 @@ class Pipeline:
             except Exception as exc:
                 result = {"ok": False, "error": type(exc).__name__ + ": " + str(exc)}
             self.steps_executed.append({
+                **result,
                 "name": step_name,
                 "ok": result.get("ok", False),
                 "error": result.get("error"),
@@ -253,13 +256,13 @@ class Pipeline:
     def _handle_failure(self, step_name, result):
         """Move staging to failed/. Always write log."""
         if self.staging_dir and self.staging_dir.exists():
-            failed_target = self.failed_dir / (self.timestamp + "-" + step_name)
+            failed_target = self.failed_dir / (self.run_id + "-" + step_name)
             self.failed_dir.mkdir(parents=True, exist_ok=True)
             try:
                 shutil.move(str(self.staging_dir), str(failed_target))
             except OSError:
                 pass
-        log_dir = self.failed_dir / self.timestamp
+        log_dir = self.failed_dir / self.run_id
         log_dir.mkdir(parents=True, exist_ok=True)
         log_path = log_dir / "log.txt"
         log_path.write_text(
@@ -331,9 +334,9 @@ class Pipeline:
         return {"ok": True, "exit_code": exit_code}
 
     def _step_build_staging(self):
-        staging_name = self.version + "-" + self.timestamp
+        staging_name = self.version + "-" + self.run_id
         self.staging_dir = self.staging_base / staging_name
-        self.staging_dir.mkdir(parents=True, exist_ok=True)
+        self.staging_dir.mkdir(parents=True, exist_ok=False)
         zip_name = "crm-sre-team-" + self.version + ".zip"
         self.release_zip = self.staging_dir / zip_name
         try:
@@ -354,7 +357,7 @@ class Pipeline:
         return {"ok": True}
 
     def _step_validate_release(self):
-        exit_code, result = self.runner.run_validate_release(self.release_zip)
+        exit_code, result = self.runner.run_validate_release(self.release_zip, self.root)
         if exit_code != 0:
             return {"ok": False, "error": "validate_release exit_code=" + str(exit_code), "exit_code": exit_code}
         with ZipFile(self.release_zip) as archive:
@@ -396,7 +399,8 @@ class Pipeline:
             "tree_digest": self.tree_digest,
             "release_zip": self.release_zip.name if self.release_zip else None,
             "release_sha256": self.release_sha256,
-            "steps": list(self.steps_executed),
+            "report_phase": "PRE_PROMOTION",
+            "steps": list(self.steps_executed) + [{"name": "generate_report", "ok": True, "error": None, "exit_code": None}],
             "scope": "OFFLINE_BUILD_CONSISTENCY_RELEASE_GATE",
         }
         report_path = self.staging_dir / "validation-report.json"
@@ -406,6 +410,7 @@ class Pipeline:
         lines = [
             "# Release Validation Report -- " + str(self.version),
             "",
+            "- Report phase: PRE_PROMOTION (发布前报告；最终状态以 release-receipt.json 为准)",
             "- Timestamp: " + self.timestamp,
             "- Tree digest: `" + str(self.tree_digest) + "`" if self.tree_digest else "- Tree digest: (not computed)",
             "- Release ZIP: `" + str(self.release_zip.name) + "`" if self.release_zip else "- Release ZIP: (not built)",
@@ -414,7 +419,7 @@ class Pipeline:
             "## Steps",
             "",
         ]
-        for s in self.steps_executed:
+        for s in report["steps"]:
             status = "PASS" if s["ok"] else "FAIL"
             err = s.get("error") or "ok"
             lines.append("- [" + status + "] **" + s["name"] + "** -- " + err)
@@ -434,9 +439,28 @@ class Pipeline:
         target = self.releases_dir / self.staging_dir.name
         if target.exists():
             return {"ok": False, "error": "release target already exists: " + target.name}
+        verified = hashlib.sha256(self.release_zip.read_bytes()).hexdigest()
+        if verified != self.release_sha256:
+            return {"ok": False, "error": "final ZIP SHA256 changed before promotion"}
         shutil.move(str(self.staging_dir), str(target))
         self.staging_dir = target
-        return {"ok": True}
+        self.release_zip = target / self.release_zip.name
+        result = {"ok": True, "release_sha256": verified}
+        receipt = {
+            "scope": "OFFLINE_LOCAL_PROMOTION_NOT_GIT_OR_EXTERNAL_PUBLICATION",
+            "publication_status": "PROMOTED_LOCAL_ONLY",
+            "version": self.version,
+            "timestamp": self.timestamp,
+            "run_id": self.run_id,
+            "release_dir": str(target),
+            "release_zip": str(self.release_zip),
+            "release_sha256": verified,
+            "tree_digest": self.tree_digest,
+            "steps": list(self.steps_executed) + [{**result, "name": "promote", "error": None, "exit_code": None}],
+        }
+        (target / "release-receipt.json").write_text(
+            json.dumps(receipt, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        return result
 
 
 # ---------------------------------------------------------------------------

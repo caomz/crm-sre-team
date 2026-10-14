@@ -1,10 +1,10 @@
 {
-  "version": "2.8.0-rc4",
+  "version": "2.8.0-rc5",
   "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
   "result": "PASS_STATIC_ONLY",
-  "checks_total": 1818,
-  "checks_passed": 1818,
-  "relative_links_checked": 228,
+  "checks_total": 1888,
+  "checks_passed": 1888,
+  "relative_links_checked": 229,
   "offline_contract_tests_run": 46,
   "offline_contract_test_failures": 0,
   "offline_contract_test_errors": 0,
@@ -184,12 +184,22 @@
       "detail": ""
     },
     {
+      "id": "explicit_read_encoding:tests/test_acceptance_audit.py",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "explicit_read_encoding:tests/test_comparison_build.py",
       "passed": true,
       "detail": []
     },
     {
       "id": "explicit_read_encoding:tests/test_contracts.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tests/test_fde_delivery.py",
       "passed": true,
       "detail": []
     },
@@ -240,6 +250,11 @@
     },
     {
       "id": "explicit_read_encoding:tests/test_rc4_regressions.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tests/test_rc5_knowledge.py",
       "passed": true,
       "detail": []
     },
@@ -614,6 +629,11 @@
       "detail": ""
     },
     {
+      "id": "generated_text_lf:skills/change-capacity-dr/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "generated_text_lf:skills/change-capacity-dr/references/offline-contract.md",
       "passed": true,
       "detail": ""
@@ -655,6 +675,11 @@
     },
     {
       "id": "generated_text_lf:skills/change-capacity-dr/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "generated_text_lf:skills/change-capacity-dr/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -764,6 +789,11 @@
       "detail": ""
     },
     {
+      "id": "generated_text_lf:skills/crm-business-flow/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "generated_text_lf:skills/crm-business-flow/references/offline-contract.md",
       "passed": true,
       "detail": ""
@@ -810,6 +840,11 @@
     },
     {
       "id": "generated_text_lf:skills/crm-business-flow/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "generated_text_lf:skills/crm-business-flow/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -924,6 +959,11 @@
       "detail": ""
     },
     {
+      "id": "generated_text_lf:skills/java-runtime/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "generated_text_lf:skills/java-runtime/references/offline-contract.md",
       "passed": true,
       "detail": ""
@@ -965,6 +1005,11 @@
     },
     {
       "id": "generated_text_lf:skills/java-runtime/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "generated_text_lf:skills/java-runtime/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -1079,6 +1124,11 @@
       "detail": ""
     },
     {
+      "id": "generated_text_lf:skills/k8s-platform/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "generated_text_lf:skills/k8s-platform/references/offline-contract.md",
       "passed": true,
       "detail": ""
@@ -1120,6 +1170,11 @@
     },
     {
       "id": "generated_text_lf:skills/k8s-platform/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "generated_text_lf:skills/k8s-platform/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -1229,6 +1284,11 @@
       "detail": ""
     },
     {
+      "id": "generated_text_lf:skills/linux-infra/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "generated_text_lf:skills/linux-infra/references/linux-runbook.md",
       "passed": true,
       "detail": ""
@@ -1275,6 +1335,11 @@
     },
     {
       "id": "generated_text_lf:skills/linux-infra/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "generated_text_lf:skills/linux-infra/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -1384,6 +1449,11 @@
       "detail": ""
     },
     {
+      "id": "generated_text_lf:skills/observability-diagnosis/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "generated_text_lf:skills/observability-diagnosis/references/observability-runbook.md",
       "passed": true,
       "detail": ""
@@ -1430,6 +1500,11 @@
     },
     {
       "id": "generated_text_lf:skills/observability-diagnosis/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "generated_text_lf:skills/observability-diagnosis/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -1539,6 +1614,11 @@
       "detail": ""
     },
     {
+      "id": "generated_text_lf:skills/oracle-dba/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "generated_text_lf:skills/oracle-dba/references/offline-contract.md",
       "passed": true,
       "detail": ""
@@ -1585,6 +1665,11 @@
     },
     {
       "id": "generated_text_lf:skills/oracle-dba/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "generated_text_lf:skills/oracle-dba/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -1709,6 +1794,11 @@
       "detail": ""
     },
     {
+      "id": "generated_text_lf:skills/stability-director/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "generated_text_lf:skills/stability-director/references/linux-runbook.md",
       "passed": true,
       "detail": ""
@@ -1785,6 +1875,11 @@
     },
     {
       "id": "generated_text_lf:skills/stability-director/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "generated_text_lf:skills/stability-director/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -2184,6 +2279,11 @@
       "detail": ""
     },
     {
+      "id": "json:schemas/eval-ledger.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "json:schemas/feedback.schema.json",
       "passed": true,
       "detail": ""
@@ -2214,6 +2314,11 @@
       "detail": ""
     },
     {
+      "id": "json:skills/change-capacity-dr/schemas/eval-ledger.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "json:skills/change-capacity-dr/schemas/feedback.schema.json",
       "passed": true,
       "detail": ""
@@ -2235,6 +2340,11 @@
     },
     {
       "id": "json:skills/crm-business-flow/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "json:skills/crm-business-flow/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -2264,6 +2374,11 @@
       "detail": ""
     },
     {
+      "id": "json:skills/java-runtime/schemas/eval-ledger.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "json:skills/java-runtime/schemas/feedback.schema.json",
       "passed": true,
       "detail": ""
@@ -2285,6 +2400,11 @@
     },
     {
       "id": "json:skills/k8s-platform/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "json:skills/k8s-platform/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -2314,6 +2434,11 @@
       "detail": ""
     },
     {
+      "id": "json:skills/linux-infra/schemas/eval-ledger.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "json:skills/linux-infra/schemas/feedback.schema.json",
       "passed": true,
       "detail": ""
@@ -2335,6 +2460,11 @@
     },
     {
       "id": "json:skills/observability-diagnosis/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "json:skills/observability-diagnosis/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -2364,6 +2494,11 @@
       "detail": ""
     },
     {
+      "id": "json:skills/oracle-dba/schemas/eval-ledger.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "json:skills/oracle-dba/schemas/feedback.schema.json",
       "passed": true,
       "detail": ""
@@ -2385,6 +2520,11 @@
     },
     {
       "id": "json:skills/stability-director/schemas/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "json:skills/stability-director/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -2704,6 +2844,11 @@
       "detail": []
     },
     {
+      "id": "legacy_risk_fragments:skills/change-capacity-dr/references/knowledge-integration.md",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "legacy_risk_fragments:skills/change-capacity-dr/references/offline-contract.md",
       "passed": true,
       "detail": []
@@ -2820,6 +2965,11 @@
     },
     {
       "id": "legacy_risk_fragments:skills/crm-business-flow/references/judgment-basis.md",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "legacy_risk_fragments:skills/crm-business-flow/references/knowledge-integration.md",
       "passed": true,
       "detail": []
     },
@@ -2954,6 +3104,11 @@
       "detail": []
     },
     {
+      "id": "legacy_risk_fragments:skills/java-runtime/references/knowledge-integration.md",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "legacy_risk_fragments:skills/java-runtime/references/offline-contract.md",
       "passed": true,
       "detail": []
@@ -3079,6 +3234,11 @@
       "detail": []
     },
     {
+      "id": "legacy_risk_fragments:skills/k8s-platform/references/knowledge-integration.md",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "legacy_risk_fragments:skills/k8s-platform/references/offline-contract.md",
       "passed": true,
       "detail": []
@@ -3195,6 +3355,11 @@
     },
     {
       "id": "legacy_risk_fragments:skills/linux-infra/references/judgment-basis.md",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "legacy_risk_fragments:skills/linux-infra/references/knowledge-integration.md",
       "passed": true,
       "detail": []
     },
@@ -3324,6 +3489,11 @@
       "detail": []
     },
     {
+      "id": "legacy_risk_fragments:skills/observability-diagnosis/references/knowledge-integration.md",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "legacy_risk_fragments:skills/observability-diagnosis/references/observability-runbook.md",
       "passed": true,
       "detail": []
@@ -3445,6 +3615,11 @@
     },
     {
       "id": "legacy_risk_fragments:skills/oracle-dba/references/judgment-basis.md",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "legacy_risk_fragments:skills/oracle-dba/references/knowledge-integration.md",
       "passed": true,
       "detail": []
     },
@@ -3585,6 +3760,11 @@
     },
     {
       "id": "legacy_risk_fragments:skills/stability-director/references/k8s-platform-runbook.md",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "legacy_risk_fragments:skills/stability-director/references/knowledge-integration.md",
       "passed": true,
       "detail": []
     },
@@ -3844,6 +4024,11 @@
       "detail": ""
     },
     {
+      "id": "no_runtime_code_fences:skills/change-capacity-dr/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "no_runtime_code_fences:skills/change-capacity-dr/references/offline-contract.md",
       "passed": true,
       "detail": ""
@@ -3960,6 +4145,11 @@
     },
     {
       "id": "no_runtime_code_fences:skills/crm-business-flow/references/judgment-basis.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "no_runtime_code_fences:skills/crm-business-flow/references/knowledge-integration.md",
       "passed": true,
       "detail": ""
     },
@@ -4094,6 +4284,11 @@
       "detail": ""
     },
     {
+      "id": "no_runtime_code_fences:skills/java-runtime/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "no_runtime_code_fences:skills/java-runtime/references/offline-contract.md",
       "passed": true,
       "detail": ""
@@ -4219,6 +4414,11 @@
       "detail": ""
     },
     {
+      "id": "no_runtime_code_fences:skills/k8s-platform/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "no_runtime_code_fences:skills/k8s-platform/references/offline-contract.md",
       "passed": true,
       "detail": ""
@@ -4335,6 +4535,11 @@
     },
     {
       "id": "no_runtime_code_fences:skills/linux-infra/references/judgment-basis.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "no_runtime_code_fences:skills/linux-infra/references/knowledge-integration.md",
       "passed": true,
       "detail": ""
     },
@@ -4464,6 +4669,11 @@
       "detail": ""
     },
     {
+      "id": "no_runtime_code_fences:skills/observability-diagnosis/references/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "no_runtime_code_fences:skills/observability-diagnosis/references/observability-runbook.md",
       "passed": true,
       "detail": ""
@@ -4585,6 +4795,11 @@
     },
     {
       "id": "no_runtime_code_fences:skills/oracle-dba/references/judgment-basis.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "no_runtime_code_fences:skills/oracle-dba/references/knowledge-integration.md",
       "passed": true,
       "detail": ""
     },
@@ -4725,6 +4940,11 @@
     },
     {
       "id": "no_runtime_code_fences:skills/stability-director/references/k8s-platform-runbook.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "no_runtime_code_fences:skills/stability-director/references/knowledge-integration.md",
       "passed": true,
       "detail": ""
     },
@@ -5179,6 +5399,11 @@
       "detail": ""
     },
     {
+      "id": "reference_copy:change-capacity-dr/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "reference_copy:change-capacity-dr/offline-contract.md",
       "passed": true,
       "detail": ""
@@ -5240,6 +5465,11 @@
     },
     {
       "id": "reference_copy:crm-business-flow/judgment-basis.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "reference_copy:crm-business-flow/knowledge-integration.md",
       "passed": true,
       "detail": ""
     },
@@ -5319,6 +5549,11 @@
       "detail": ""
     },
     {
+      "id": "reference_copy:java-runtime/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "reference_copy:java-runtime/offline-contract.md",
       "passed": true,
       "detail": ""
@@ -5389,6 +5624,11 @@
       "detail": ""
     },
     {
+      "id": "reference_copy:k8s-platform/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "reference_copy:k8s-platform/offline-contract.md",
       "passed": true,
       "detail": ""
@@ -5450,6 +5690,11 @@
     },
     {
       "id": "reference_copy:linux-infra/judgment-basis.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "reference_copy:linux-infra/knowledge-integration.md",
       "passed": true,
       "detail": ""
     },
@@ -5524,6 +5769,11 @@
       "detail": ""
     },
     {
+      "id": "reference_copy:observability-diagnosis/knowledge-integration.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "reference_copy:observability-diagnosis/observability-runbook.md",
       "passed": true,
       "detail": ""
@@ -5590,6 +5840,11 @@
     },
     {
       "id": "reference_copy:oracle-dba/judgment-basis.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "reference_copy:oracle-dba/knowledge-integration.md",
       "passed": true,
       "detail": ""
     },
@@ -5675,6 +5930,11 @@
     },
     {
       "id": "reference_copy:stability-director/k8s-platform-runbook.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "reference_copy:stability-director/knowledge-integration.md",
       "passed": true,
       "detail": ""
     },
@@ -5810,6 +6070,11 @@
     },
     {
       "id": "relative_link:README.md:docs/13-oncall-gate-materials.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "relative_link:README.md:docs/14-fde-delivery.md",
       "passed": true,
       "detail": ""
     },
@@ -6984,6 +7249,11 @@
       "detail": ""
     },
     {
+      "id": "schema_copy:change-capacity-dr/eval-ledger.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "schema_copy:change-capacity-dr/feedback.schema.json",
       "passed": true,
       "detail": ""
@@ -7000,6 +7270,11 @@
     },
     {
       "id": "schema_copy:crm-business-flow/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "schema_copy:crm-business-flow/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -7024,6 +7299,11 @@
       "detail": ""
     },
     {
+      "id": "schema_copy:java-runtime/eval-ledger.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "schema_copy:java-runtime/feedback.schema.json",
       "passed": true,
       "detail": ""
@@ -7040,6 +7320,11 @@
     },
     {
       "id": "schema_copy:k8s-platform/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "schema_copy:k8s-platform/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -7064,6 +7349,11 @@
       "detail": ""
     },
     {
+      "id": "schema_copy:linux-infra/eval-ledger.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "schema_copy:linux-infra/feedback.schema.json",
       "passed": true,
       "detail": ""
@@ -7080,6 +7370,11 @@
     },
     {
       "id": "schema_copy:observability-diagnosis/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "schema_copy:observability-diagnosis/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -7104,6 +7399,11 @@
       "detail": ""
     },
     {
+      "id": "schema_copy:oracle-dba/eval-ledger.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "schema_copy:oracle-dba/feedback.schema.json",
       "passed": true,
       "detail": ""
@@ -7120,6 +7420,11 @@
     },
     {
       "id": "schema_copy:stability-director/common.schema.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "schema_copy:stability-director/eval-ledger.schema.json",
       "passed": true,
       "detail": ""
     },
@@ -7144,6 +7449,11 @@
       "detail": []
     },
     {
+      "id": "schema_no_host_owned_properties:schemas/eval-ledger.schema.json",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "schema_no_host_owned_properties:schemas/feedback.schema.json",
       "passed": true,
       "detail": []
@@ -7160,6 +7470,11 @@
     },
     {
       "id": "schema_no_host_owned_properties:skills/change-capacity-dr/schemas/common.schema.json",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "schema_no_host_owned_properties:skills/change-capacity-dr/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": []
     },
@@ -7184,6 +7499,11 @@
       "detail": []
     },
     {
+      "id": "schema_no_host_owned_properties:skills/crm-business-flow/schemas/eval-ledger.schema.json",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "schema_no_host_owned_properties:skills/crm-business-flow/schemas/feedback.schema.json",
       "passed": true,
       "detail": []
@@ -7200,6 +7520,11 @@
     },
     {
       "id": "schema_no_host_owned_properties:skills/java-runtime/schemas/common.schema.json",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "schema_no_host_owned_properties:skills/java-runtime/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": []
     },
@@ -7224,6 +7549,11 @@
       "detail": []
     },
     {
+      "id": "schema_no_host_owned_properties:skills/k8s-platform/schemas/eval-ledger.schema.json",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "schema_no_host_owned_properties:skills/k8s-platform/schemas/feedback.schema.json",
       "passed": true,
       "detail": []
@@ -7240,6 +7570,11 @@
     },
     {
       "id": "schema_no_host_owned_properties:skills/linux-infra/schemas/common.schema.json",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "schema_no_host_owned_properties:skills/linux-infra/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": []
     },
@@ -7264,6 +7599,11 @@
       "detail": []
     },
     {
+      "id": "schema_no_host_owned_properties:skills/observability-diagnosis/schemas/eval-ledger.schema.json",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "schema_no_host_owned_properties:skills/observability-diagnosis/schemas/feedback.schema.json",
       "passed": true,
       "detail": []
@@ -7284,6 +7624,11 @@
       "detail": []
     },
     {
+      "id": "schema_no_host_owned_properties:skills/oracle-dba/schemas/eval-ledger.schema.json",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "schema_no_host_owned_properties:skills/oracle-dba/schemas/feedback.schema.json",
       "passed": true,
       "detail": []
@@ -7300,6 +7645,11 @@
     },
     {
       "id": "schema_no_host_owned_properties:skills/stability-director/schemas/common.schema.json",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "schema_no_host_owned_properties:skills/stability-director/schemas/eval-ledger.schema.json",
       "passed": true,
       "detail": []
     },
