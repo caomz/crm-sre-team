@@ -40,7 +40,7 @@ FRAGMENT_SHA = {
     "stage-17": "320a89cd94c2c53a553df95ea53ebe647bf27255fd9cb5cfab3f66a2a5be5c66",
 }
 REPO_ONLY = ["tools/oncall/README.md", "tools/oncall/Update-CrmSreTeam.ps1",
-             "tools/oncall/test_oncall_updater.py"]
+             "tools/oncall/runbooks/ONCALL_RUNBOOK.r6.md", "tools/oncall/test_oncall_updater.py"]
 
 
 def decode_script(raw):
