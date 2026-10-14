@@ -40,7 +40,8 @@ FRAGMENT_SHA = {
     "stage-17": "320a89cd94c2c53a553df95ea53ebe647bf27255fd9cb5cfab3f66a2a5be5c66",
 }
 REPO_ONLY = ["tools/oncall/README.md", "tools/oncall/Update-CrmSreTeam.ps1",
-             "tools/oncall/runbooks/ONCALL_RUNBOOK.r6.md", "tools/oncall/test_oncall_updater.py"]
+             "tools/oncall/runbooks/ONCALL_RUNBOOK.r6.md", "tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md",
+             "tools/oncall/test_oncall_updater.py"]
 
 
 def decode_script(raw):
@@ -1159,6 +1160,74 @@ class ExperimentFunctionalTests(unittest.TestCase):
                 self.assertEqual(actual[marker], 2)
             self.assertEqual(self.ns['raw_marker_counts']('unrelated', markers), {marker: 0 for marker in markers})
 
+
+
+class PendingRunbookTests(unittest.TestCase):
+    """Repository-only runbook contracts; these are not PowerShell execution."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.r6 = ROOT / 'tools/oncall/runbooks/ONCALL_RUNBOOK.r6.md'
+        cls.r7 = ROOT / 'tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md'
+        cls.text = cls.r7.read_text(encoding='utf-8')
+        cls.blocks = re.findall(r'```powershell\n(.*?)\n```', cls.text, re.S)
+
+    def test_preserved_r6_and_three_registered_prompts(self):
+        self.assertEqual(hashlib.sha256(self.r6.read_bytes()).hexdigest(),
+                         '89e4af06f9601a42db672692bf37465eba06625b96bcf0c9a8cc447dbb5660e7')
+        blocks = re.findall(r'```text\n(.*?)\n```', self.text, re.S)
+        self.assertEqual([hashlib.sha256(b.encode()).hexdigest() for b in blocks], [
+            '49893af69b52e0b5eb3cf8b44935c12f31500e776af2c0a112a33d3bef6249c6',
+            '88db28bff7dc040f2e4d04add9be6ca67a8d3c09221071465fb4bd4d96055b18',
+            'b057d3dca04e2760afc84357b3f25d611e81ef30300ca1d4c6762ad9790e3337'])
+
+    def test_three_verify_blocks_define_identity_and_bootstrap(self):
+        blocks = [b for b in self.blocks if '-Mode VERIFY' in b]
+        self.assertEqual(len(blocks), 3)
+        for block in blocks:
+            with self.subTest(block=blocks.index(block)):
+                for token in ["$Tag = 'crm-sre-team-2.8.0-rc5'",
+                              "$ExpectedCommit = '58682ff17dd9e3f9f6be0c681f2b110a758fad9a'",
+                              "$ExpectedZipSha256 = '7d69c2ce5b70f9e86ec5d5f61164a69f4c8c4c2b7812366d6592ebff7629a74e'",
+                              '$Bootstrap = Read-Host', '$PlanPath = Read-Host', '$PlanSha256 = Read-Host',
+                              '$SessionId = Read-Host', "$Script = Join-Path $Bootstrap 'tools\\oncall\\Update-CrmSreTeam.ps1'",
+                              '-SessionId $SessionId']:
+                    self.assertIn(token, block)
+                pattern = re.search(r"\$Bootstrap -cnotmatch '([^']+)'", block).group(1)
+                self.assertRegex(r'D:\crm-v36-handoff\bootstrap-' + 'a' * 32, pattern)
+                self.assertIsNone(re.fullmatch(pattern, r'D:\crm-v36-handoff\bootstrap-' + 'a' * 31))
+        self.assertIn('-AgentId $AgentId', blocks[-1])
+        self.assertIn('$AgentId = Read-Host', blocks[-1])
+        self.assertNotIn('2.8.0-rc4', self.text)
+        self.assertEqual(self.text.count('rc3'), 1)
+
+    def test_config_creation_and_query_are_separate(self):
+        create = next(b for b in self.blocks if '$ConfigBytes =' in b)
+        query = next(b for b in self.blocks if '$SavedOutputEncoding =' in b)
+        self.assertLess(create.index('[string]::IsNullOrWhiteSpace($KbRoot)'), create.index('[IO.FileMode]::CreateNew'))
+        self.assertIn('$KbRoot = Read-Host', create)
+        self.assertIn('$KbPython = Read-Host', create)
+        self.assertNotIn('CreateNew', query)
+        self.assertNotIn('WriteAllBytes', query)
+        self.assertIn('[Console]::OutputEncoding = $SavedOutputEncoding', query)
+        self.assertIn("& '$KbPython' -X utf8 '$SearchScript' '$KbKeyword' --top 5", query)
+        self.assertNotIn('Invoke-Expression', query)
+        for token in ['fcntl', 'writer_lock', 'stamp', 'K14', 'K15', '未观察到']:
+            self.assertIn(token, self.text)
+
+    def test_tool_only_export_and_repository_only_inventory(self):
+        export = next(b for b in self.blocks if '$SelectedRecords =' in b)
+        self.assertIn('[IO.FileMode]::CreateNew', export)
+        self.assertIn('[IO.File]::ReadLines', export)
+        self.assertIn('$Item | ConvertTo-Json', export)
+        self.assertNotIn('$Row | ConvertTo-Json', export)
+        self.assertNotIn('$Row.providerData', export)
+        for forbidden in ['Remove-Item', 'Stop-Process', 'WriteAllBytes', 'Invoke-Expression']:
+            self.assertNotIn(forbidden, export)
+        manifest = json.loads((ROOT / 'release-manifest.json').read_text())
+        for name in ['tools/oncall/runbooks/ONCALL_RUNBOOK.r6.md', 'tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md']:
+            self.assertIn(name, manifest['repository_only_files'])
+            self.assertNotIn(name, manifest['files'])
 
 
 if __name__ == "__main__":
