@@ -16,10 +16,18 @@
 | ExpectedCommit | 58682ff17dd9e3f9f6be0c681f2b110a758fad9a |
 | ExpectedZipSha256 | 7d69c2ce5b70f9e86ec5d5f61164a69f4c8c4c2b7812366d6592ebff7629a74e |
 
-本地项目已同步到包含待处理分支的状态后，以下命令只读查看手册，不切分支、不修改工作区、不连接远端：
+值班机不访问GitHub。本地项目须已含origin/codex/pending-oncall-runbook；先只读取得该引用的SHA，与交付时给出的提交SHA一致后，再按该SHA查看手册，不切分支、不修改工作区：
 
 ```powershell
-git -C D:\python_code\github_my\crm-sre-team show codex/pending-oncall-runbook:tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md
+. {
+    $RunbookCommit = git -C D:\python_code\github_my\crm-sre-team rev-parse origin/codex/pending-oncall-runbook
+    if ($LASTEXITCODE -ne 0) { throw 'Local pending branch is missing; ask the user to synchronize locally' }
+    $Host.UI.RawUI.FlushInputBuffer()
+    $DeliveredCommit = (Read-Host 'Paste the delivered runbook commit SHA (40 hex)').Trim()
+    if ($DeliveredCommit -notmatch '^[0-9a-fA-F]{40}$' -or $RunbookCommit.Trim() -ine $DeliveredCommit) { throw 'Local pending branch does not match the delivered commit; stop' }
+    git -C D:\python_code\github_my\crm-sre-team --no-pager show ($DeliveredCommit + ':tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md')
+    if ($LASTEXITCODE -ne 0) { throw 'Could not read the runbook from the delivered commit' }
+}
 ```
 
 本分支不在本轮合并到 main。其手册和 oncall 测试为 repository-only；从分支试构建的 ZIP 仅用于差异核对，不能替代上表已发布 rc5 ZIP。
@@ -34,10 +42,12 @@ git -C D:\python_code\github_my\crm-sre-team show codex/pending-oncall-runbook:t
     try {
         $ErrorActionPreference = 'Stop'
         if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) { throw 'Use Windows PowerShell 5.1' }
-        $HostVersion = Read-Host 'Actual WorkBuddy version from UI (x.y.z)'
-        $ActualModel = Read-Host 'Actual selected model (glm-5.3-flash)'
-        $PreviousRunComplete = Read-Host 'Previous SWITCH/UPDATE complete with no do-not-start warning? Type YES'
-        if ($HostVersion -notmatch '^\d+\.\d+\.\d+$' -or $ActualModel -cne 'glm-5.3-flash' -or $PreviousRunComplete -cne 'YES') { throw 'Stop: verify host/model or report the incomplete previous run' }
+        $Host.UI.RawUI.FlushInputBuffer()
+        $HostVersion = (Read-Host 'Actual WorkBuddy version from UI (x.y.z)').Trim()
+        $ActualModel = (Read-Host 'Actual selected model (glm-5.3-flash)').Trim()
+        $PreviousRunComplete = (Read-Host 'Previous SWITCH/UPDATE complete with no do-not-start warning? Type YES').Trim()
+        if ($HostVersion -notmatch '^[vV]?\d+\.\d+\.\d+$' -or $ActualModel -ine 'glm-5.3-flash' -or $PreviousRunComplete -ine 'YES') { throw 'Stop: verify host/model or report the incomplete previous run' }
+        $HostVersion = $HostVersion -replace '^[vV]', ''
         $SourceRepo = 'D:\python_code\github_my\crm-sre-team'
         $ExpectedCommit = '58682ff17dd9e3f9f6be0c681f2b110a758fad9a'
         $Tag = 'crm-sre-team-2.8.0-rc5'
@@ -100,7 +110,7 @@ git -C D:\python_code\github_my\crm-sre-team show codex/pending-oncall-runbook:t
         if ($LASTEXITCODE -ne 0) { throw 'New bootstrap checkout failed' }
         $Script = Join-Path $Bootstrap 'tools\oncall\Update-CrmSreTeam.ps1'
         if (-not (Test-Path -LiteralPath $Script -PathType Leaf)) { throw 'Updater missing in published commit' }
-        $GitExe = (Get-Command git -CommandType Application -ErrorAction Stop).Source
+        $GitExe = @(Get-Command -Name git -CommandType Application -All -ErrorAction Stop)[0].Source
         powershell -NoProfile -ExecutionPolicy Bypass -File $Script -Mode UPDATE -Tag $Tag -ExpectedCommit $ExpectedCommit -ExpectedZipSha256 $ExpectedZipSha256 -GitExe $GitExe
         if ($LASTEXITCODE -ne 0) { throw 'UPDATE stopped; retain bootstrap, reports and backups' }
     } finally { $ErrorActionPreference = $SavedErrorActionPreference }
@@ -120,10 +130,11 @@ git -C D:\python_code\github_my\crm-sre-team show codex/pending-oncall-runbook:t
     $Tag = 'crm-sre-team-2.8.0-rc5'
     $ExpectedCommit = '58682ff17dd9e3f9f6be0c681f2b110a758fad9a'
     $ExpectedZipSha256 = '7d69c2ce5b70f9e86ec5d5f61164a69f4c8c4c2b7812366d6592ebff7629a74e'
-    $Bootstrap = Read-Host 'Paste THIS UPDATE bootstrap path'
-    $PlanPath = Read-Host 'Paste THIS UPDATE PlanPath'
-    $PlanSha256 = Read-Host 'Paste THIS UPDATE PlanSha256'
-    $SessionId = Read-Host 'Paste the NEW SESSION ID'
+    $Host.UI.RawUI.FlushInputBuffer()
+    $Bootstrap = (Read-Host 'Paste THIS UPDATE bootstrap path').Trim()
+    $PlanPath = (Read-Host 'Paste THIS UPDATE PlanPath').Trim()
+    $PlanSha256 = (Read-Host 'Paste THIS UPDATE PlanSha256').Trim()
+    $SessionId = (Read-Host 'Paste the NEW SESSION ID').Trim()
 
     $SavedErrorActionPreference = $ErrorActionPreference
     try {
@@ -135,7 +146,7 @@ git -C D:\python_code\github_my\crm-sre-team show codex/pending-oncall-runbook:t
         if ($PlanPath -cnotmatch '^D:\\crm-v36-handoff\\update-[0-9a-f]{32}\\install-plan\.json$' -or $PlanSha256 -notmatch '^[0-9a-fA-F]{64}$' -or $SessionId -notmatch '^[A-Za-z0-9][A-Za-z0-9-]*$') { throw 'Invalid current plan, SHA256 or session ID' }
 
         if (-not (Test-Path -LiteralPath $PlanPath -PathType Leaf) -or (Get-FileHash -LiteralPath $PlanPath -Algorithm SHA256).Hash -ine $PlanSha256) { throw 'Current plan missing or SHA256 mismatch' }
-        $GitExe = (Get-Command git -CommandType Application -ErrorAction Stop).Source
+        $GitExe = @(Get-Command -Name git -CommandType Application -All -ErrorAction Stop)[0].Source
         $BootstrapCommit = & $GitExe -C $Bootstrap -c core.hooksPath=NUL rev-parse HEAD
         if ($LASTEXITCODE -ne 0 -or $BootstrapCommit.Trim() -ine $ExpectedCommit) { throw 'Bootstrap is not the published rc5 commit' }
         powershell -NoProfile -ExecutionPolicy Bypass -File $Script -Mode VERIFY -Tag $Tag -ExpectedCommit $ExpectedCommit -ExpectedZipSha256 $ExpectedZipSha256 -GitExe $GitExe -PlanPath $PlanPath -PlanSha256 $PlanSha256 -SessionId $SessionId
@@ -156,20 +167,21 @@ VERIFY核来源、缓存及真实Skill回执路径2.8.0-rc5。root settings.json
     try {
         $ErrorActionPreference = 'Stop'
         if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) { throw 'Use Windows PowerShell 5.1' }
-        $KbRoot = Read-Host 'Authorized local knowledge root (absolute path)'
-        $KbPython = Read-Host 'Local Python executable (absolute path)'
+        $Host.UI.RawUI.FlushInputBuffer()
+        $KbRoot = (Read-Host 'Authorized local knowledge root (absolute path)').Trim()
+        $KbPython = (Read-Host 'Local Python executable (absolute path)').Trim()
         if ([string]::IsNullOrWhiteSpace($KbRoot) -or [string]::IsNullOrWhiteSpace($KbPython) -or $KbRoot -notmatch '^[A-Za-z]:\\' -or $KbPython -notmatch '^[A-Za-z]:\\' -or $KbRoot.Contains("'") -or $KbPython.Contains("'") -or -not (Test-Path -LiteralPath $KbRoot -PathType Container) -or -not (Test-Path -LiteralPath $KbPython -PathType Leaf)) { throw 'Stop: root/python must be existing absolute local paths without single quotes' }
         @('wiki\index.md','scripts\kb_search_zh.py','.kb\search_index_zh.json') | ForEach-Object {
             [pscustomobject]@{Check=$_; Exists=(Test-Path -LiteralPath (Join-Path $KbRoot $_) -PathType Leaf)}
-        }
+        } | Format-Table -AutoSize | Out-Host
         Get-ChildItem -LiteralPath $KbRoot -Directory | ForEach-Object {
             if (($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Reparse directory refused' }
             [pscustomobject]@{Directory=$_.Name; MarkdownCount=@(Get-ChildItem -LiteralPath $_.FullName -Filter '*.md' -File -Recurse).Count}
-        }
+        } | Format-Table -AutoSize | Out-Host
         $KbIndex = Join-Path $KbRoot '.kb\search_index_zh.json'
         if (Test-Path -LiteralPath $KbIndex -PathType Leaf) {
             $Meta = Get-Item -LiteralPath $KbIndex
-            [pscustomobject]@{Check='search_index'; Bytes=$Meta.Length; UpdatedUtc=$Meta.LastWriteTimeUtc}
+            [pscustomobject]@{Check='search_index'; Bytes=$Meta.Length; UpdatedUtc=$Meta.LastWriteTimeUtc} | Format-Table -AutoSize | Out-Host
         }
     } finally { $ErrorActionPreference = $SavedErrorActionPreference }
 }
@@ -191,13 +203,16 @@ Mac副本的`scripts/kb_common.py`在文件开头`import fcntl`，Windows没有�
     try {
         $ErrorActionPreference = 'Stop'
         if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) { throw 'Use Windows PowerShell 5.1' }
-        $KbRoot = Read-Host 'Authorized local knowledge root (absolute path)'
-        $KbPython = Read-Host 'Local Python executable (absolute path)'
+        $Host.UI.RawUI.FlushInputBuffer()
+        $KbRoot = (Read-Host 'Authorized local knowledge root (absolute path)').Trim()
+        $KbPython = (Read-Host 'Local Python executable (absolute path)').Trim()
         if ([string]::IsNullOrWhiteSpace($KbRoot) -or [string]::IsNullOrWhiteSpace($KbPython) -or $KbRoot -notmatch '^[A-Za-z]:\\' -or $KbPython -notmatch '^[A-Za-z]:\\' -or $KbRoot.Contains("'") -or $KbPython.Contains("'") -or -not (Test-Path -LiteralPath $KbRoot -PathType Container) -or -not (Test-Path -LiteralPath $KbPython -PathType Leaf)) { throw 'Stop without writing: invalid root/python' }
         $ConfigDir = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.crm-sre-team'
         $ConfigPath = Join-Path $ConfigDir 'knowledge.json'
-        if (Test-Path -LiteralPath $ConfigPath) { throw 'Configuration exists; do not overwrite; use ④b' }
-        $Config = [ordered]@{schema='crm-sre-knowledge/v1'; root=$KbRoot; python=$KbPython; search_script='scripts/kb_search_zh.py'; search_index='.kb/search_index_zh.json'; entry='wiki/index.md'; top=5; max_pages=3; allowed_read_dirs=@('wiki'); exclude_markers=@('private','confidential','secret','敏感','私密')}
+        if (Test-Path -LiteralPath $ConfigPath) { throw 'Configuration exists; do not overwrite; use step 4b' }
+        $SensitiveMarker = ([char]0x654f).ToString() + ([char]0x611f).ToString()
+        $PrivateMarker = ([char]0x79c1).ToString() + ([char]0x5bc6).ToString()
+        $Config = [ordered]@{schema='crm-sre-knowledge/v1'; root=$KbRoot; python=$KbPython; search_script='scripts/kb_search_zh.py'; search_index='.kb/search_index_zh.json'; entry='wiki/index.md'; top=5; max_pages=3; allowed_read_dirs=@('wiki'); exclude_markers=@('private','confidential','secret',$SensitiveMarker,$PrivateMarker)}
         $ConfigJson = $Config | ConvertTo-Json -Depth 4
         $ConfigJson | ConvertFrom-Json -ErrorAction Stop | Out-Null
         if (-not (Test-Path -LiteralPath $ConfigDir)) { New-Item -ItemType Directory -Path $ConfigDir -ErrorAction Stop | Out-Null }
@@ -211,7 +226,7 @@ Mac副本的`scripts/kb_common.py`在文件开头`import fcntl`，Windows没有�
 
 ### ④b 试跑查询：可单独重跑，不写配置
 
-只读取已有配置，先校验关键词（中文、字母、数字、空格、`-`、`_`，1–32字符且非空白），再核对配置与路径。显示命令严格采用技能Windows格式，实际以参数调用，不用Invoke-Expression。查询期间临时设置UTF-8 OutputEncoding，结束或失败均恢复。此人工试跑不授予团长其他终端权限。
+只读取已有配置，先校验关键词（中文、字母、数字、空格、`-`、`_`，1–32字符且非空白），再核对配置与路径。运行前由知识库维护人提供scripts\kb_search_zh.py的期望SHA256；不匹配就停，不把当前文件哈希当作期望值自行放行。显示命令严格采用技能Windows格式，实际以参数调用，不用Invoke-Expression。输出先捕获，以夹具脚本的results数组及absolute_path字段统计结果数和Wiki内存在的有效路径数；不打印路径、知识片段或原错误正文，解析失败只打印退出码和捕获文本的UTF-8字节数。查询期间临时设置UTF-8 OutputEncoding，结束或失败均恢复。此人工试跑不授予团长其他终端权限。
 
 ```powershell
 . {
@@ -220,7 +235,8 @@ Mac副本的`scripts/kb_common.py`在文件开头`import fcntl`，Windows没有�
     try {
         $ErrorActionPreference = 'Stop'
         if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) { throw 'Use Windows PowerShell 5.1' }
-        $KbKeyword = Read-Host 'One authorized business topic, no secrets (1-32 characters)'
+        $Host.UI.RawUI.FlushInputBuffer()
+        $KbKeyword = (Read-Host 'One authorized business topic, no secrets (1-32 characters)').Trim()
         if ([string]::IsNullOrWhiteSpace($KbKeyword) -or $KbKeyword -notmatch '^[\u4e00-\u9fffA-Za-z0-9 _-]{1,32}$') { throw 'Invalid keyword; query not executed' }
         $ConfigPath = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.crm-sre-team\knowledge.json'
         if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) { throw 'Configuration missing; stop without creating it' }
@@ -231,10 +247,36 @@ Mac副本的`scripts/kb_common.py`在文件开头`import fcntl`，Windows没有�
         if ([string]::IsNullOrWhiteSpace($KbRoot) -or [string]::IsNullOrWhiteSpace($KbPython) -or $KbRoot -notmatch '^[A-Za-z]:\\' -or $KbPython -notmatch '^[A-Za-z]:\\' -or $KbRoot.Contains("'") -or $KbPython.Contains("'") -or -not (Test-Path -LiteralPath $KbRoot -PathType Container) -or -not (Test-Path -LiteralPath $KbPython -PathType Leaf)) { throw 'Invalid configured root/python; query not executed' }
         $SearchScript = Join-Path $KbRoot 'scripts\kb_search_zh.py'
         if (-not (Test-Path -LiteralPath $SearchScript -PathType Leaf)) { throw 'Query script missing; retain config and report' }
+        $ExpectedSearchSha256 = (Read-Host 'Expected SHA256 of scripts\kb_search_zh.py (64 hex)').Trim()
+        if ($ExpectedSearchSha256 -notmatch '^[0-9a-fA-F]{64}$' -or (Get-FileHash -LiteralPath $SearchScript -Algorithm SHA256).Hash -ine $ExpectedSearchSha256) { throw 'Query script SHA256 mismatch; query not executed' }
         [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
         Write-Host "& '$KbPython' -X utf8 '$SearchScript' '$KbKeyword' --top 5"
-        & $KbPython -X utf8 $SearchScript $KbKeyword --top 5
-        if ($LASTEXITCODE -ne 0) { throw 'Query failed; retain config, report fcntl or original error, use documented navigation fallback' }
+        $QueryPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Continue'
+            $QueryOutput = @(& $KbPython -X utf8 $SearchScript $KbKeyword --top 5 2>&1)
+            $QueryExitCode = $LASTEXITCODE
+        } finally { $ErrorActionPreference = $QueryPreference }
+        $QueryText = ($QueryOutput | ForEach-Object { $_.ToString() }) -join "`n"
+        $QueryByteCount = (New-Object System.Text.UTF8Encoding($false)).GetByteCount($QueryText)
+        try {
+            $QueryResult = $QueryText | ConvertFrom-Json -ErrorAction Stop
+            if ($null -eq $QueryResult -or $QueryResult.PSObject.Properties.Name -notcontains 'results' -or $null -eq $QueryResult.results) { throw 'Unrecognized query result shape' }
+            $ResultCount = @($QueryResult.results).Count
+            $ValidPathCount = 0
+            $WikiPrefix = [IO.Path]::GetFullPath((Join-Path $KbRoot 'wiki')).TrimEnd('\') + '\'
+            foreach ($Result in @($QueryResult.results)) {
+                $ResultPath = [string]$Result.absolute_path
+                if ([string]::IsNullOrWhiteSpace($ResultPath) -or -not [IO.Path]::IsPathRooted($ResultPath)) { continue }
+                try {
+                    $ResultFullPath = [IO.Path]::GetFullPath($ResultPath)
+                    if ($ResultFullPath.StartsWith($WikiPrefix,[StringComparison]::OrdinalIgnoreCase) -and (Test-Path -LiteralPath $ResultFullPath -PathType Leaf)) { $ValidPathCount++ }
+                } catch { continue }
+            }
+            Write-Host "ExitCode=$QueryExitCode; Results=$ResultCount; ValidPaths=$ValidPathCount"
+        } catch {
+            Write-Host "ExitCode=$QueryExitCode; CapturedUtf8Bytes=$QueryByteCount"
+        }
     } finally {
         [Console]::OutputEncoding = $SavedOutputEncoding
         $ErrorActionPreference = $SavedErrorActionPreference
@@ -266,10 +308,11 @@ Mac副本的`scripts/kb_common.py`在文件开头`import fcntl`，Windows没有�
     $Tag = 'crm-sre-team-2.8.0-rc5'
     $ExpectedCommit = '58682ff17dd9e3f9f6be0c681f2b110a758fad9a'
     $ExpectedZipSha256 = '7d69c2ce5b70f9e86ec5d5f61164a69f4c8c4c2b7812366d6592ebff7629a74e'
-    $Bootstrap = Read-Host 'Paste THIS UPDATE bootstrap path'
-    $PlanPath = Read-Host 'Paste THIS UPDATE PlanPath'
-    $PlanSha256 = Read-Host 'Paste THIS UPDATE PlanSha256'
-    $SessionId = Read-Host 'Paste the NEW SESSION ID'
+    $Host.UI.RawUI.FlushInputBuffer()
+    $Bootstrap = (Read-Host 'Paste THIS UPDATE bootstrap path').Trim()
+    $PlanPath = (Read-Host 'Paste THIS UPDATE PlanPath').Trim()
+    $PlanSha256 = (Read-Host 'Paste THIS UPDATE PlanSha256').Trim()
+    $SessionId = (Read-Host 'Paste the NEW SESSION ID').Trim()
 
     $SavedErrorActionPreference = $ErrorActionPreference
     try {
@@ -281,7 +324,7 @@ Mac副本的`scripts/kb_common.py`在文件开头`import fcntl`，Windows没有�
         if ($PlanPath -cnotmatch '^D:\\crm-v36-handoff\\update-[0-9a-f]{32}\\install-plan\.json$' -or $PlanSha256 -notmatch '^[0-9a-fA-F]{64}$' -or $SessionId -notmatch '^[A-Za-z0-9][A-Za-z0-9-]*$') { throw 'Invalid current plan, SHA256 or session ID' }
 
         if (-not (Test-Path -LiteralPath $PlanPath -PathType Leaf) -or (Get-FileHash -LiteralPath $PlanPath -Algorithm SHA256).Hash -ine $PlanSha256) { throw 'Current plan missing or SHA256 mismatch' }
-        $GitExe = (Get-Command git -CommandType Application -ErrorAction Stop).Source
+        $GitExe = @(Get-Command -Name git -CommandType Application -All -ErrorAction Stop)[0].Source
         $BootstrapCommit = & $GitExe -C $Bootstrap -c core.hooksPath=NUL rev-parse HEAD
         if ($LASTEXITCODE -ne 0 -or $BootstrapCommit.Trim() -ine $ExpectedCommit) { throw 'Bootstrap is not the published rc5 commit' }
         powershell -NoProfile -ExecutionPolicy Bypass -File $Script -Mode VERIFY -Tag $Tag -ExpectedCommit $ExpectedCommit -ExpectedZipSha256 $ExpectedZipSha256 -GitExe $GitExe -PlanPath $PlanPath -PlanSha256 $PlanSha256 -SessionId $SessionId
@@ -314,11 +357,12 @@ WorkBuddy不是5.8.2时，默认补跑本节冻结自检2和第⑤节知识库�
     $Tag = 'crm-sre-team-2.8.0-rc5'
     $ExpectedCommit = '58682ff17dd9e3f9f6be0c681f2b110a758fad9a'
     $ExpectedZipSha256 = '7d69c2ce5b70f9e86ec5d5f61164a69f4c8c4c2b7812366d6592ebff7629a74e'
-    $Bootstrap = Read-Host 'Paste THIS UPDATE bootstrap path'
-    $PlanPath = Read-Host 'Paste THIS UPDATE PlanPath'
-    $PlanSha256 = Read-Host 'Paste THIS UPDATE PlanSha256'
-    $SessionId = Read-Host 'Paste the NEW SESSION ID'
-    $AgentId = Read-Host 'Paste the NEW Self-check 2 member AgentId'
+    $Host.UI.RawUI.FlushInputBuffer()
+    $Bootstrap = (Read-Host 'Paste THIS UPDATE bootstrap path').Trim()
+    $PlanPath = (Read-Host 'Paste THIS UPDATE PlanPath').Trim()
+    $PlanSha256 = (Read-Host 'Paste THIS UPDATE PlanSha256').Trim()
+    $SessionId = (Read-Host 'Paste the NEW SESSION ID').Trim()
+    $AgentId = (Read-Host 'Paste the NEW Self-check 2 member AgentId').Trim()
     $SavedErrorActionPreference = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Stop'
@@ -329,7 +373,7 @@ WorkBuddy不是5.8.2时，默认补跑本节冻结自检2和第⑤节知识库�
         if ($PlanPath -cnotmatch '^D:\\crm-v36-handoff\\update-[0-9a-f]{32}\\install-plan\.json$' -or $PlanSha256 -notmatch '^[0-9a-fA-F]{64}$' -or $SessionId -notmatch '^[A-Za-z0-9][A-Za-z0-9-]*$') { throw 'Invalid current plan, SHA256 or session ID' }
         if ($AgentId -notmatch '^agent-[A-Za-z0-9-]+$') { throw 'Invalid NEW member AgentId' }
         if (-not (Test-Path -LiteralPath $PlanPath -PathType Leaf) -or (Get-FileHash -LiteralPath $PlanPath -Algorithm SHA256).Hash -ine $PlanSha256) { throw 'Current plan missing or SHA256 mismatch' }
-        $GitExe = (Get-Command git -CommandType Application -ErrorAction Stop).Source
+        $GitExe = @(Get-Command -Name git -CommandType Application -All -ErrorAction Stop)[0].Source
         $BootstrapCommit = & $GitExe -C $Bootstrap -c core.hooksPath=NUL rev-parse HEAD
         if ($LASTEXITCODE -ne 0 -or $BootstrapCommit.Trim() -ine $ExpectedCommit) { throw 'Bootstrap is not the published rc5 commit' }
         powershell -NoProfile -ExecutionPolicy Bypass -File $Script -Mode VERIFY -Tag $Tag -ExpectedCommit $ExpectedCommit -ExpectedZipSha256 $ExpectedZipSha256 -GitExe $GitExe -PlanPath $PlanPath -PlanSha256 $PlanSha256 -SessionId $SessionId -AgentId $AgentId
@@ -348,11 +392,14 @@ WorkBuddy不是5.8.2时，默认补跑本节冻结自检2和第⑤节知识库�
 . {
     $SavedErrorActionPreference = $ErrorActionPreference
     $Stream = $null
+    $ReadStream = $null
+    $Reader = $null
     try {
         $ErrorActionPreference = 'Stop'
         if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) { throw 'Use Windows PowerShell 5.1' }
-        $UpdateDir = Read-Host 'THIS UPDATE directory (D:\crm-v36-handoff\update-<32hex>)'
-        $SelectedRecords = Read-Host 'Authorized absolute main/member JSONL paths; separate with semicolons'
+        $Host.UI.RawUI.FlushInputBuffer()
+        $UpdateDir = (Read-Host 'THIS UPDATE directory (D:\crm-v36-handoff\update-<32hex>)').Trim()
+        $SelectedRecords = (Read-Host 'Authorized absolute main/member JSONL paths; separate with semicolons').Trim()
         if ($UpdateDir -cnotmatch '^D:\\crm-v36-handoff\\update-[0-9a-f]{32}$' -or -not (Test-Path -LiteralPath $UpdateDir -PathType Container)) { throw 'Invalid current update directory' }
         $ProjectsRoot = [IO.Path]::GetFullPath((Join-Path ([Environment]::GetFolderPath('UserProfile')) '.workbuddy\projects')).TrimEnd('\')
         $ProjectsPrefix = $ProjectsRoot + '\'
@@ -376,36 +423,45 @@ WorkBuddy不是5.8.2时，默认补跑本节冻结自检2和第⑤节知识库�
         foreach ($Path in $Records) {
             $Full = [IO.Path]::GetFullPath($Path)
             $LineNo = 0
-            foreach ($Line in [IO.File]::ReadLines($Full,$Utf8)) {
-                $LineNo++
-                if ([string]::IsNullOrWhiteSpace($Line)) { continue }
-                $Row = $Line | ConvertFrom-Json -ErrorAction Stop
-                if ($Row.type -cnotin @('function_call','function_call_result')) { continue }
-                $Item = [ordered]@{record=[IO.Path]::GetFileName($Full); line=$LineNo; type=$Row.type; name=$Row.name; command=$null; file_path=$null; status=$null; exit_code=$null}
-                if ($Row.type -ceq 'function_call') {
-                    $Args = $Row.arguments
-                    if ($Args -is [string]) { $Args = $Args | ConvertFrom-Json -ErrorAction Stop }
-                    if ($Args.command -is [string]) { $Item.command = $Args.command }
-                    if ($Args.file_path -is [string]) { $Item.file_path = $Args.file_path }
-                } else {
-                    if ($Row.status -is [string]) { $Item.status = $Row.status }
-                    if ($Row.exit_code -is [int] -or $Row.exit_code -is [long]) { $Item.exit_code = $Row.exit_code }
-                    elseif ($Row.exitCode -is [int] -or $Row.exitCode -is [long]) { $Item.exit_code = $Row.exitCode }
-                    else {
-                        $ResultText = $null
-                        if ($Row.output -is [string]) { $ResultText = $Row.output }
-                        elseif ($Row.output.text -is [string]) { $ResultText = $Row.output.text }
-                        if ($null -ne $ResultText -and $ResultText -match '(?m)^Exit Code:\s*(-?\d+)\s*$') { $Item.exit_code = [long]$Matches[1] }
+            $ReadStream = [IO.File]::Open($Full,'Open','Read','ReadWrite')
+            try {
+                $Reader = [IO.StreamReader]::new($ReadStream,$Utf8,$true)
+                while (($Line = $Reader.ReadLine()) -ne $null) {
+                    $LineNo++
+                    if ([string]::IsNullOrWhiteSpace($Line)) { continue }
+                    $Row = $Line | ConvertFrom-Json -ErrorAction Stop
+                    if ($Row.type -cnotin @('function_call','function_call_result')) { continue }
+                    $Item = [ordered]@{record=[IO.Path]::GetFileName($Full); line=$LineNo; type=$Row.type; name=$Row.name; command=$null; file_path=$null; status=$null; exit_code=$null}
+                    if ($Row.type -ceq 'function_call') {
+                        $CallArgs = $Row.arguments
+                        if ($CallArgs -is [string]) { $CallArgs = $CallArgs | ConvertFrom-Json -ErrorAction Stop }
+                        if ($CallArgs.command -is [string]) { $Item.command = $CallArgs.command }
+                        if ($CallArgs.file_path -is [string]) { $Item.file_path = $CallArgs.file_path }
+                    } else {
+                        if ($Row.status -is [string]) { $Item.status = $Row.status }
+                        if ($Row.exit_code -is [int] -or $Row.exit_code -is [long]) { $Item.exit_code = $Row.exit_code }
+                        elseif ($Row.exitCode -is [int] -or $Row.exitCode -is [long]) { $Item.exit_code = $Row.exitCode }
+                        else {
+                            $ResultText = $null
+                            if ($Row.output -is [string]) { $ResultText = $Row.output }
+                            elseif ($Row.output.text -is [string]) { $ResultText = $Row.output.text }
+                            if ($null -ne $ResultText -and $ResultText -match '(?m)^Exit Code:\s*(-?\d+)\s*$') { $Item.exit_code = [long]$Matches[1] }
+                        }
                     }
+                    $Bytes = $Utf8.GetBytes(($Item | ConvertTo-Json -Compress -Depth 4) + "`n")
+                    $Stream.Write($Bytes,0,$Bytes.Length)
                 }
-                $Bytes = $Utf8.GetBytes(($Item | ConvertTo-Json -Compress -Depth 4) + "`n")
-                $Stream.Write($Bytes,0,$Bytes.Length)
+            } finally {
+                if ($null -ne $Reader) { $Reader.Dispose(); $Reader = $null }
+                if ($null -ne $ReadStream) { $ReadStream.Dispose(); $ReadStream = $null }
             }
         }
         $Stream.Flush(); $Stream.Dispose(); $Stream = $null
         Write-Host "Tool-only evidence: $Destination"
         Get-FileHash -LiteralPath $Destination -Algorithm SHA256
     } finally {
+        if ($null -ne $Reader) { $Reader.Dispose() }
+        if ($null -ne $ReadStream) { $ReadStream.Dispose() }
         if ($null -ne $Stream) { $Stream.Dispose() }
         $ErrorActionPreference = $SavedErrorActionPreference
     }

@@ -1189,15 +1189,15 @@ class PendingRunbookTests(unittest.TestCase):
                 for token in ["$Tag = 'crm-sre-team-2.8.0-rc5'",
                               "$ExpectedCommit = '58682ff17dd9e3f9f6be0c681f2b110a758fad9a'",
                               "$ExpectedZipSha256 = '7d69c2ce5b70f9e86ec5d5f61164a69f4c8c4c2b7812366d6592ebff7629a74e'",
-                              '$Bootstrap = Read-Host', '$PlanPath = Read-Host', '$PlanSha256 = Read-Host',
-                              '$SessionId = Read-Host', "$Script = Join-Path $Bootstrap 'tools\\oncall\\Update-CrmSreTeam.ps1'",
+                              '$Bootstrap = (Read-Host', '$PlanPath = (Read-Host', '$PlanSha256 = (Read-Host',
+                              '$SessionId = (Read-Host', "$Script = Join-Path $Bootstrap 'tools\\oncall\\Update-CrmSreTeam.ps1'",
                               '-SessionId $SessionId']:
                     self.assertIn(token, block)
                 pattern = re.search(r"\$Bootstrap -cnotmatch '([^']+)'", block).group(1)
                 self.assertRegex(r'D:\crm-v36-handoff\bootstrap-' + 'a' * 32, pattern)
                 self.assertIsNone(re.fullmatch(pattern, r'D:\crm-v36-handoff\bootstrap-' + 'a' * 31))
         self.assertIn('-AgentId $AgentId', blocks[-1])
-        self.assertIn('$AgentId = Read-Host', blocks[-1])
+        self.assertIn('$AgentId = (Read-Host', blocks[-1])
         self.assertNotIn('2.8.0-rc4', self.text)
         self.assertEqual(self.text.count('rc3'), 1)
 
@@ -1205,8 +1205,8 @@ class PendingRunbookTests(unittest.TestCase):
         create = next(b for b in self.blocks if '$ConfigBytes =' in b)
         query = next(b for b in self.blocks if '$SavedOutputEncoding =' in b)
         self.assertLess(create.index('[string]::IsNullOrWhiteSpace($KbRoot)'), create.index('[IO.FileMode]::CreateNew'))
-        self.assertIn('$KbRoot = Read-Host', create)
-        self.assertIn('$KbPython = Read-Host', create)
+        self.assertIn('$KbRoot = (Read-Host', create)
+        self.assertIn('$KbPython = (Read-Host', create)
         self.assertNotIn('CreateNew', query)
         self.assertNotIn('WriteAllBytes', query)
         self.assertIn('[Console]::OutputEncoding = $SavedOutputEncoding', query)
@@ -1218,7 +1218,7 @@ class PendingRunbookTests(unittest.TestCase):
     def test_tool_only_export_and_repository_only_inventory(self):
         export = next(b for b in self.blocks if '$SelectedRecords =' in b)
         self.assertIn('[IO.FileMode]::CreateNew', export)
-        self.assertIn('[IO.File]::ReadLines', export)
+        self.assertIn("[IO.File]::Open($Full,'Open','Read','ReadWrite')", export)
         self.assertIn('$Item | ConvertTo-Json', export)
         self.assertNotIn('$Row | ConvertTo-Json', export)
         self.assertNotIn('$Row.providerData', export)
@@ -1228,6 +1228,87 @@ class PendingRunbookTests(unittest.TestCase):
         for name in ['tools/oncall/runbooks/ONCALL_RUNBOOK.r6.md', 'tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md']:
             self.assertIn(name, manifest['repository_only_files'])
             self.assertNotIn(name, manifest['files'])
+
+    def test_metadata_result_groups_format_separately(self):
+        metadata = self.text.split('## ③ ', 1)[1].split('### fcntl', 1)[0]
+        block = re.search(r'```powershell\n(.*?)\n```', metadata, re.S).group(1)
+        self.assertEqual(block.count('| Format-Table -AutoSize | Out-Host'), 3)
+        for group in ['@(', 'Get-ChildItem -LiteralPath $KbRoot -Directory', "if (Test-Path -LiteralPath $KbIndex -PathType Leaf)"]:
+            self.assertIn(group, block)
+        segments = block.split('| Format-Table -AutoSize | Out-Host')
+        for segment, field in zip(segments, ['Check=$_', 'Directory=$_.Name', "Check='search_index'"]):
+            self.assertIn(field, segment)
+
+    def test_read_host_blocks_flush_before_first_prompt_and_trim(self):
+        for number, block in enumerate(self.blocks):
+            if 'Read-Host' not in block:
+                continue
+            with self.subTest(block=number):
+                self.assertEqual(block.count('$Host.UI.RawUI.FlushInputBuffer()'), 1)
+                self.assertLess(block.index('$Host.UI.RawUI.FlushInputBuffer()'), block.index('Read-Host'))
+                for line in block.splitlines():
+                    if 'Read-Host' in line:
+                        self.assertRegex(line, r"\$\w+ = \(Read-Host '[^']*'\)\.Trim\(\)$")
+
+    def test_powershell_blocks_ascii_and_config_marker_codepoints(self):
+        for number, block in enumerate(self.blocks):
+            with self.subTest(block=number):
+                self.assertTrue(block.isascii())
+        create = next(b for b in self.blocks if '$ConfigBytes =' in b)
+        for var, expected in [('$SensitiveMarker', '敏感'), ('$PrivateMarker', '私密')]:
+            value = re.search(re.escape(var) + r' = (.*)', create).group(1)
+            chars = re.findall(r'\[char\]0x([0-9a-fA-F]+)', value)
+            self.assertEqual(''.join(chr(int(c, 16)) for c in chars), expected)
+        self.assertIn("exclude_markers=@('private','confidential','secret',$SensitiveMarker,$PrivateMarker)", create)
+
+    def test_git_selection_and_delivered_commit_read_only_view(self):
+        selector = '@(Get-Command -Name git -CommandType Application -All -ErrorAction Stop)[0].Source'
+        git_blocks = [b for b in self.blocks if '$GitExe =' in b]
+        self.assertEqual(len(git_blocks), 4)
+        for block in git_blocks:
+            self.assertIn('$GitExe = ' + selector, block)
+        view = self.blocks[0]
+        self.assertIn('rev-parse origin/codex/pending-oncall-runbook', view)
+        self.assertIn('$DeliveredCommit = (Read-Host', view)
+        self.assertIn('$RunbookCommit.Trim() -ine $DeliveredCommit', view)
+        self.assertLess(view.index('$RunbookCommit.Trim() -ine $DeliveredCommit'), view.index('--no-pager show'))
+        self.assertIn("($DeliveredCommit + ':tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md')", view)
+        for forbidden in ['fetch', 'checkout', 'switch', 'clone', 'push']:
+            self.assertIsNone(re.search(r'(?m)^\s*git .*\b' + forbidden + r'\b', view))
+
+    def test_tool_export_reads_shared_stream_and_avoids_args_variable(self):
+        export = next(b for b in self.blocks if '$SelectedRecords =' in b)
+        self.assertNotIn('$Args', export)
+        self.assertIn('$CallArgs = $Row.arguments', export)
+        self.assertIn("[IO.File]::Open($Full,'Open','Read','ReadWrite')", export)
+        self.assertIn('[IO.StreamReader]::new($ReadStream,$Utf8,$true)', export)
+        self.assertIn('while (($Line = $Reader.ReadLine()) -ne $null)', export)
+        self.assertRegex(export, r'(?s)\} finally \{\s*if \(\$null -ne \$Reader\) \{ \$Reader\.Dispose\(\); \$Reader = \$null \}\s*if \(\$null -ne \$ReadStream\) \{ \$ReadStream\.Dispose\(\); \$ReadStream = \$null \}')
+        self.assertIn('$ReadStream.Dispose()', export)
+        self.assertNotIn('[IO.File]::ReadLines', export)
+
+    def test_query_script_hash_and_metadata_only_capture(self):
+        query = next(b for b in self.blocks if '$SavedOutputEncoding =' in b)
+        self.assertIn('$ExpectedSearchSha256 = (Read-Host', query)
+        self.assertIn('(Get-FileHash -LiteralPath $SearchScript -Algorithm SHA256).Hash -ine $ExpectedSearchSha256', query)
+        self.assertLess(query.index('SHA256 mismatch'), query.index('$QueryOutput = @(&'))
+        self.assertIn('$QueryOutput = @(& $KbPython -X utf8 $SearchScript $KbKeyword --top 5 2>&1)', query)
+        self.assertIn('$QueryResult.results', query)
+        self.assertIn('$Result.absolute_path', query)
+        self.assertIn('ExitCode=$QueryExitCode; Results=$ResultCount; ValidPaths=$ValidPathCount', query)
+        self.assertIn('ExitCode=$QueryExitCode; CapturedUtf8Bytes=$QueryByteCount', query)
+        self.assertNotIn('snippet', query)
+        for line in query.splitlines():
+            if 'Write-Host' in line:
+                self.assertNotIn('$QueryText', line)
+                self.assertNotIn('$QueryOutput', line)
+
+    def test_preflight_model_yes_and_version_normalization(self):
+        preflight = self.blocks[1]
+        self.assertIn("$HostVersion -notmatch '^[vV]?\\d+\\.\\d+\\.\\d+$'", preflight)
+        self.assertIn("$HostVersion = $HostVersion -replace '^[vV]', ''", preflight)
+        self.assertIn("$ActualModel -ine 'glm-5.3-flash'", preflight)
+        self.assertIn("$PreviousRunComplete -ine 'YES'", preflight)
 
 
 if __name__ == "__main__":
