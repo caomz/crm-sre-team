@@ -1179,7 +1179,9 @@ class PendingRunbookTests(unittest.TestCase):
         self.assertEqual([hashlib.sha256(b.encode()).hexdigest() for b in blocks], [
             '49893af69b52e0b5eb3cf8b44935c12f31500e776af2c0a112a33d3bef6249c6',
             '88db28bff7dc040f2e4d04add9be6ca67a8d3c09221071465fb4bd4d96055b18',
-            'b057d3dca04e2760afc84357b3f25d611e81ef30300ca1d4c6762ad9790e3337'])
+            'b057d3dca04e2760afc84357b3f25d611e81ef30300ca1d4c6762ad9790e3337',
+            'c11fc20b0460e8c5d7d09890e571ca6c44e0c19e1b9477255765a3f7d77f014c',
+            '426264c5976eb3b67e20f986b2d16d2b23db33de6a78b5d0bc8e4904ae947531'])
 
     def test_three_verify_blocks_define_identity_and_bootstrap(self):
         blocks = [b for b in self.blocks if '-Mode VERIFY' in b]
@@ -1309,6 +1311,227 @@ class PendingRunbookTests(unittest.TestCase):
         self.assertIn("$HostVersion = $HostVersion -replace '^[vV]', ''", preflight)
         self.assertIn("$ActualModel -ine 'glm-5.3-flash'", preflight)
         self.assertIn("$PreviousRunComplete -ine 'YES'", preflight)
+
+    def d_section(self, heading):
+        found = re.search(r'^' + re.escape(heading) + r'\n(.*?)(?=^#{1,3} |\Z)',
+                          self.text, re.M | re.S)
+        return found.group(1) if found else ''
+
+    def d_block(self, heading):
+        found = re.search(r'```powershell\n(.*?)\n```', self.d_section(heading), re.S)
+        return found.group(1) if found else ''
+
+    def assert_d_contracts(self, checks):
+        # A missing new section must also fail negative assertions in the C baseline.
+        for contract, condition in checks.items():
+            with self.subTest(contract=contract):
+                self.assertTrue(condition, contract)
+
+    def test_d_appendix_prompt_hashes_and_maintainer_scope(self):
+        checks = {}
+        for heading, digest in [
+                ('### A1 新建 rc5 知识库工具的提示词',
+                 'c11fc20b0460e8c5d7d09890e571ca6c44e0c19e1b9477255765a3f7d77f014c'),
+                ('### A2 排除已合并存根页的提示词',
+                 '426264c5976eb3b67e20f986b2d16d2b23db33de6a78b5d0bc8e4904ae947531')]:
+            section = self.d_section(heading)
+            found = re.search(r'```text\n(.*?)\n```', section, re.S)
+            checks[heading + ': exact bytes'] = bool(found) and hashlib.sha256(
+                found.group(1).encode('utf-8')).hexdigest() == digest
+            checks[heading + ': not host test'] = '不是 WorkBuddy 被测提示词' in section
+        a2 = self.d_section('### A2 排除已合并存根页的提示词')
+        checks.update({'A2 not run': '还没运行' in a2,
+                       'A2 both hashes change': '脚本和索引的哈希都会变' in a2,
+                       'A2 new expectations and evidence': '④b 的期望哈希' in a2 and '记进证据' in a2})
+        self.assert_d_contracts(checks)
+
+    def test_d_refresh_session_hygiene_and_plan_lock_recovery(self):
+        refresh = self.d_section('### ②b 客户端刷新与回执会话')
+        block = self.d_block('### ②b 客户端刷新与回执会话')
+        lock = self.d_section('### ②a PLAN 文件占用时的处理')
+        checks = {
+            'UI refresh only': '技能 → 套件 → my-experts ⋯ → 刷新' in refresh and '绝不点“删除”' in refresh,
+            'cache presence gate': bool(block) and "'.workbuddy\\plugins\\cache\\my-experts\\crm-sre-team\\2.8.0-rc5'" in block
+                and 'Test-Path -LiteralPath $CachePath -PathType Container' in block and "throw 'Stop: rc5 cache directory missing" in block,
+            'memory injection reason': '<工作区>\\.workbuddy\\memory\\' in refresh and '注入后续会话' in refresh,
+            'PLAN failure retains update': '保留失败的 update 目录' in lock and '新的 RunId' in lock,
+            'PLAN repeated failures stop': '连续失败就停下' in lock and '报错原文' in lock,
+            'PLAN no destructive workaround': '不删除、不结束进程、不手动改目录' in lock,
+        }
+        for heading in ['### ②b 客户端刷新与回执会话', '## ⑤ WorkBuddy知识库冒烟及独立VERIFY',
+                        '## ⑥ 版本差异、自检2与带成员VERIFY']:
+            section = self.d_section(heading)
+            checks[heading + ': clean session'] = '新建的空文件夹' in section and '新会话' in section
+            checks[heading + ': explicit model'] = '显式选择 GLM-5.3-Flash' in section
+            checks[heading + ': workspace exclusions'] = '插件目录、知识库目录或已有工作区' in section
+        self.assert_d_contracts(checks)
+
+    def test_d_verify_extras_and_ior_retry_deferred(self):
+        extras = self.d_section('### ②c VERIFY 的 extra path')
+        deferred = self.d_section('## 后续事项：IoRetry')
+        self.assert_d_contracts({
+            'source memory is reviewed and retained': '.workbuddy/memory/*' in extras and '不删' in extras and '人工复核' in extras,
+            'cache in-use is normal': '.in_use/<进程号>' in extras and '正常' in extras,
+            'other extras reviewed': '其他 extra path' in extras and '人工复核' in extras,
+            'IoRetry later': '后续事项' in deferred and '不在本提交' in deferred,
+            'updater unchanged': '本提交不改 Update-CrmSreTeam.ps1' in deferred,
+        })
+
+    def test_d_discovery_is_metadata_only_and_fallback_has_mac_gate(self):
+        section = self.d_section('### ③a 缺脚本或索引：只读发现与分支')
+        block = self.d_block('### ③a 缺脚本或索引：只读发现与分支')
+        checks = {token + ': discovery': token in block for token in
+                  ["'kb_*.py'", "'*search_index*'", 'WikiSubdir=', "'.workbuddy'", "'.obsidian'", "'raw\\.svn'"]}
+        checks['discovery does not read content'] = bool(block) and not re.search(
+            r'Get-Content|ReadAllText|ReadAllLines|ReadAllBytes|Get-FileHash|WriteAll|CreateNew|Remove-Item', block)
+        checks['existing tool discovery and separate tables'] = bool(block) and 'Get-KbMetadataFiles' in block and block.count('| Format-Table -AutoSize | Out-Host') >= 3
+        checks['recommend maintainer tool creation'] = '推荐' in section and '附录 A1' in section and 'SHA256' in section and '然后做 ④' in section
+        checks['Mac fallback acceptance required'] = 'Mac 上还没测过' in section and 'Mac 补测并验收之前，值班机不得使用' in section
+        checks['KB opt-out'] = '跳过 ④⑤' in section and 'KB=NOT_CONFIGURED' in section
+        compatibility = self.d_section('### fcntl 兼容性')
+        checks['fcntl fallback is gated'] = '同样受 ③a 的 Mac 补测与验收门约束' in compatibility
+        self.assert_d_contracts(checks)
+
+    def test_d_query_invalid_keyword_diagnostics_and_new_hashes(self):
+        query = next(b for b in self.blocks if '$SavedOutputEncoding =' in b)
+        self.assert_d_contracts({
+            'invalid keyword character codes': '$KbKeyword.ToCharArray()' in query and "'U+{0:X4}' -f [int]$_" in query,
+            'rerun query only': 'rerun step 4b only' in query,
+            'index expected SHA256': '$ExpectedIndexSha256 = (Read-Host' in query
+                and '(Get-FileHash -LiteralPath $SearchIndex -Algorithm SHA256).Hash -ine $ExpectedIndexSha256' in query,
+            'JSON error disqualifies query': "$QueryResult.PSObject.Properties.Name -contains 'error'" in query,
+            'successful query marker': "Write-Host 'QUERY_OK'" in query,
+        })
+
+    def test_d_smoke_line_numbers_exit_codes_topic_and_stub_quality(self):
+        section = self.d_section('### ⑤a 判定补充与主题选择')
+        self.assert_d_contracts({
+            'Read trailing line allowance': '1 ≤ 起 ≤ 止 ≤ 行数 + 1' in section and '末尾换行' in section,
+            'Windows missing exit code not failure': '没有退出码不算失败' in section and 'Exit Code:' in section and 'Mac' in section,
+            'JSON and leader report decide': '有 results、没有 error' in section and '团长报告' in section,
+            'business topic length': '2–8 个汉字或常用英文缩写' in section,
+            'topic exclusions': '问句、标点和停用词' in section and '客户、人员、凭据' in section,
+            'query first': '先用 ④b 试跑，确认有结果' in section,
+            'stub page is quality issue': '存根页' in section and '质量问题，不算失败' in section and '附录 A2' in section,
+        })
+
+    def test_d_console_summary_shared_reads_and_citation_range(self):
+        block = self.d_block('## ⑦b 可选：控制台会话摘要')
+        checks = {
+            'latest three sessions': 'Select-Object -First 3' in block,
+            'Enter chooses first': '$SessionId = $RecentSessions[0].BaseName' in block,
+            'shared JSONL read': "[IO.File]::Open($RecordPath,'Open','Read','ReadWrite')" in block,
+            'shared line-count read': "[IO.File]::Open($CitationPath,'Open','Read','ReadWrite')" in block,
+            'flush and trimmed inputs': '$Host.UI.RawUI.FlushInputBuffer()' in block and "$SessionId = (Read-Host 'Smoke session ID (Enter selects the first record)').Trim()" in block,
+            'call and result correlation': '$Calls.ContainsKey($CallId)' in block and '$Calls[$CallId] = $CallNumber' in block,
+            'status chars first line': 'status={2} chars={3} first={4}' in block and '$FirstLine.Substring(0,160)' in block,
+            'no error-like heuristic': bool(block) and 'ERROR-LIKE' not in block and '<tool_use_error>' not in block,
+            'skip reasoning before parsing': bool(block) and block.find("if ($Line -match '") < block.find('$Rec = $Line | ConvertFrom-Json') and 'reasoning' in block,
+            'no provider data access': bool(block) and 'providerData' not in block and '$Rec | ConvertTo-Json' not in block,
+            'console only': bool(block) and not re.search(r'CreateNew|WriteAll|Set-Content|Out-File|Add-Content|StreamWriter|FileAccess\]::Write', block),
+            'E-K mentions counted': "[regex]::Matches($FinalText, 'E-K\\d+')" in block,
+            'citation existence and wiki': 'Test-Path -LiteralPath $CitationPath -PathType Leaf' in block and '$CitationPath.StartsWith($WikiPrefix,[StringComparison]::OrdinalIgnoreCase)' in block,
+            'citation range includes trailing empty line': '$From -ge 1 -and $To -ge $From -and $To -le ($LineCount + 1)' in block,
+            'read streams released': '$Reader.Dispose()' in block and '$ReadStream.Dispose()' in block and '$CitationReader.Dispose()' in block and '$CitationStream.Dispose()' in block,
+        }
+        self.assert_d_contracts(checks)
+
+    def test_d_change_audit_separates_editor_metadata_without_content_reads(self):
+        block = self.d_block('### A3 只读改动审计')
+        checks = {token + ': audit': token in block for token in
+                  ["$Child.Name -ieq '.git'", 'CreationTime -ge $Since', 'LastWriteTime -ge $Since',
+                   "'raw\\.svn\\trae-ai-tob\\'", '.obsidian', '.trae', '.workbuddy', '.claude',
+                   "Category='TOOL'", "Category='BUSINESS'", 'Group-Object Category,Area', 'Bytes=$File.Length']}
+        checks['audit metadata only'] = bool(block) and not re.search(
+            r'Get-Content|ReadAll|ReadLine|Get-FileHash|CreateNew|WriteAll|Remove-Item', block)
+        checks['audit refuses links'] = bool(block) and 'ReparsePoint' in block
+        self.assert_d_contracts(checks)
+
+    def test_d_oncall_record_identity_counts_verdicts_and_deviations(self):
+        record = self.d_section('## 10-14 值班机实测记录')
+        checks = {token + ': observed fact': token in record for token in [
+            'r6 加上对话里的加固块', '不是 r7', 'Windows 未执行',
+            '| WorkBuddy | 5.8.2 | 5.8.2 |', '| 模型 | GLM-5.3-Flash | glm-5.3-flash |',
+            '4bcddc8f-9012-4c8c-a03a-9a7844f04568', 'd299c0d4-3ddc-432e-9313-8a2f51d516aa',
+            'verify-3cc5a55c9a0f4f92b37354ee9055bbba.json', 'verify-733c49acd06e46f09fa959f7c4fc17ca.json',
+            'raw-evidence-a40c52bae8394df386b4f32473dd7cc0', 'raw-evidence-c41e67193c654afb924ddbce55f3ef07',
+            '132A7393D9F4730A3EC7D4A47AB501CC47A7F36E4001EC2BEF29274FAA9A4EC2',
+            '596B2F29C97C2A2CF8531A301D1968D3515D669F701752551C346FC62704FB2E',
+            '544/545', '359', '356', '⑤ PASS', '自检 2 未运行', 'D:\\qoder\\test',
+            '4 个是 Trae 追踪数据', '2 个是用户在编辑的业务笔记', 'Mac 未审代码']}
+        self.assert_d_contracts(checks)
+
+    def test_d_new_headings_difference_and_evidence_checklist(self):
+        headings = ['### ②a PLAN 文件占用时的处理', '### ②b 客户端刷新与回执会话',
+                    '### ②c VERIFY 的 extra path', '### ③a 缺脚本或索引：只读发现与分支',
+                    '### ⑤a 判定补充与主题选择', '## ⑦b 可选：控制台会话摘要',
+                    '## 10-14 值班机实测记录', '## 附录 A：知识库维护与审计',
+                    '### A1 新建 rc5 知识库工具的提示词', '### A2 排除已合并存根页的提示词',
+                    '### A3 只读改动审计', '## 后续事项：IoRetry']
+        checks = {heading + ': exists once': self.text.count(heading + '\n') == 1 for heading in headings}
+        intro = self.text.split('## 发布身份与只读查看', 1)[0]
+        checks['D difference described'] = '提交 D 增加' in intro and '10-14 值班机实测记录' in intro
+        evidence = self.d_section('## 带回的证据清单')
+        for token in ['⑦b 的控制台输出（可选）', '运行 A2 后的新哈希', '刷新后的缓存存在性',
+                      '空文件夹', 'extra path', '只读发现', 'A3', '字符码']:
+            checks[token + ': evidence'] = token in evidence
+        self.assert_d_contracts(checks)
+
+
+    def test_d2_smoke_record_distinguishes_observation_from_json_verification(self):
+        record = self.d_section('## 10-14 值班机实测记录')
+        smoke = next(line for line in record.splitlines() if line.startswith('- **冒烟**：'))
+        self.assert_d_contracts({
+            'observed stdout first line and character count': '首行是 `{`，共 2613 字符' in smoke
+                and '团长据此列出了结果' in smoke,
+            'smoke JSON parsing was not verified': '没有对这次结果做过 JSON 解析核对' in smoke,
+            'manual query parsing is separate evidence': '同主题的 ④b 人工查询解析通过（QUERY_OK）' in smoke,
+            'record does not claim verified smoke JSON': 'JSON 可解析' not in record,
+        })
+
+    def test_d2_console_summary_isolates_unresolvable_citation_paths(self):
+        block = self.d_block('## ⑦b 可选：控制台会话摘要')
+        protected = re.search(
+            r'try \{\s*\$CitationPath = \[IO\.Path\]::GetFullPath\(\$Match\.Groups\[1\]\.Value\)'
+            r'\s*\} catch \{(?P<handler>.*?)\n\s*\}', block, re.S)
+        handler = protected.group('handler') if protected else ''
+        self.assert_d_contracts({
+            'citation normalization is inside a local try': bool(protected),
+            'unresolvable path reports its citation number': bool(protected)
+                and "Write-Host ('CITE {0}: path not resolvable' -f $CitationCount)" in handler,
+            'unresolvable path continues with the next citation': bool(protected)
+                and bool(re.search(r'^\s*continue\s*$', handler, re.M)),
+        })
+
+    def test_d2_query_error_object_has_private_diagnostic_and_rerun_branch(self):
+        query = next(b for b in self.blocks if '$SavedOutputEncoding =' in b)
+        error_branch = re.search(
+            r"if \(\$null -ne \$QueryResult -and \$QueryResult\.PSObject\.Properties\.Name -contains 'error'\)"
+            r' \{(?P<body>.*?)\n\s*\}', query, re.S)
+        body = error_branch.group('body') if error_branch else ''
+        writes = [line.strip() for line in body.splitlines() if 'Write-Host' in line]
+        self.assert_d_contracts({
+            'error object is classified before validating results': bool(error_branch)
+                and error_branch.start() < query.index("$QueryResult.PSObject.Properties.Name -notcontains 'results'"),
+            'error diagnostic prints no error payload': bool(error_branch) and writes == [
+                'Write-Host "ExitCode=$QueryExitCode; query tool returned an error object"',
+                "Write-Host 'QUERY_ERROR; retain config; rerun step 4b only'"],
+            'error branch exits and leaves unparseable handling separate': bool(error_branch)
+                and bool(re.search(r'^\s*return\s*$', body, re.M))
+                and "Write-Host 'QUERY_UNPARSEABLE; retain config; rerun step 4b only'" in query,
+        })
+
+    def test_d2_intro_attributes_execution_instructions_and_actual_query_outcome(self):
+        intro = self.text.split('## 发布身份与只读查看', 1)[0]
+        instructions = '此前给出的执行说明为：'
+        directives = ['跳过旧「① 前置」', 'UPDATE 到 VERIFY 用同一个窗口',
+                      '③④用同一个窗口', '若④遇到 fcntl 错误']
+        self.assert_d_contracts({
+            'all original directives are attributed to prior instructions': instructions in intro
+                and all(token in intro and intro.index(instructions) < intro.index(token) for token in directives),
+            'actual run used the compatible tool without fcntl failure':
+                '本轮用户的 AI 新建了兼容工具，④查询通过，没有遇到 fcntl 错误' in intro,
+        })
 
 
 if __name__ == "__main__":
