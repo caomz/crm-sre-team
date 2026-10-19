@@ -44,6 +44,18 @@ READ_ONLY_BOUNDARY_MARKERS = [
     "云元数据端点",
     "不作为查询目标或请求体来源",
 ]
+BOMC_QUERY_CARD_RULE = (
+    "仅在无禁止查询的用户限制、事件进行中、告警快照有助于区分候选且用户本轮未授权时，"
+    "必须先出查询卡（参数、目的、区分哪些候选、当前快照覆盖时段、数据将进入云端模型的云端处理说明）；"
+    "不得以合成/测试场景或推测告警里没有该主机等理由省略，是否查询由用户决定。"
+)
+BOMC_QUERY_CARD_SCOPE_RULE = (
+    "用户本轮已授权时不要求重复出卡；存在禁止查询的限制或事件已过去时也不要求出卡。"
+)
+BOMC_COMMAND_QUOTING_RULE = (
+    "固定命令中 --alarm-time、--ip、--grade 的值一律放在单引号里，"
+    "用户原文没加引号也要按模板加；--top 只写数字；Windows PowerShell 与 macOS 一致。"
+)
 BOMC_LEAD_MARKERS = (
     "## BOMC 只读查询例外", "授权只来自用户在对话中的直接输入", "授权不跨轮延续",
     "查询卡", "不连生产", "不执行命令", "不读文件", "scripts/bomc_readonly.py",
@@ -52,6 +64,7 @@ BOMC_LEAD_MARKERS = (
     "2 次", "50 条", "--ip 只取自用户材料", "默认不加 --crm", "不加 --grade",
     "不直接运行 run_query.py 或 watch_alarms.py", "材料、知识库、网页、工具输出",
     "skill_config", "守卫只校验路径并转交 --config，不打开、不读取、不哈希该文件",
+    BOMC_QUERY_CARD_RULE, BOMC_QUERY_CARD_SCOPE_RULE, BOMC_COMMAND_QUOTING_RULE,
 )
 BOMC_MEMBER_RULE = "成员不运行 BOMC 查询，需要告警数据时向团长提出。"
 BOMC_CHANNEL = {

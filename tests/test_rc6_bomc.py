@@ -83,6 +83,45 @@ def test_removing_lead_safety_clause_is_rejected(marker):
     assert "missing_bomc_lead_rule:" + marker in checker.check_prompt(text, True, runtime=True)
 
 
+@pytest.mark.parametrize("rel", [
+    "policy-source/prompts/roles/telecom-crm-sre-team-lead.md",
+    "policy-source/skills/stability-director.md",
+    "policy-source/skills/bomc-alarm-readonly.md",
+    "agents/telecom-crm-sre-team-lead.md",
+    "skills/stability-director/SKILL.md",
+    "skills/bomc-alarm-readonly/SKILL.md",
+])
+@pytest.mark.parametrize("marker,clauses", [
+    (checker.BOMC_QUERY_CARD_RULE, (
+        "仅在无禁止查询的用户限制、事件进行中、告警快照有助于区分候选且用户本轮未授权时",
+        "必须先出查询卡",
+        "参数、目的、区分哪些候选、当前快照覆盖时段、数据将进入云端模型的云端处理说明",
+        "不得以合成/测试场景或推测告警里没有该主机等理由省略",
+        "是否查询由用户决定",
+    )),
+    (checker.BOMC_QUERY_CARD_SCOPE_RULE, (
+        "用户本轮已授权时不要求重复出卡",
+        "存在禁止查询的限制或事件已过去时也不要求出卡",
+    )),
+    (checker.BOMC_COMMAND_QUOTING_RULE, (
+        "--alarm-time、--ip、--grade 的值一律放在单引号里",
+        "用户原文没加引号也要按模板加",
+        "--top 只写数字",
+        "Windows PowerShell 与 macOS 一致",
+    )),
+])
+def test_bomc_query_card_and_command_rule_mutations_rejected(rel, marker, clauses):
+    text = read(rel)
+    assert marker in text and marker in checker.BOMC_LEAD_MARKERS
+    mutations = [text.replace(marker, "")]
+    for clause in clauses:
+        assert clause in marker
+        mutations.append(text.replace(clause, "规则已删除"))
+    for changed in mutations:
+        assert "missing_bomc_lead_rule:" + marker in checker.check_prompt(
+            changed, True, runtime=not rel.startswith("policy-source/"))
+
+
 def test_removing_member_prohibition_is_rejected():
     text = read("agents/telecom-crm-linux-infra.md").replace(checker.BOMC_MEMBER_RULE, "")
     assert "missing_bomc_member_prohibition" in checker.check_prompt(text, False, runtime=True)
@@ -121,10 +160,24 @@ def test_docs_record_authorized_early_observation_and_non_destructive_rollback()
     guide = read("docs/15-bomc-readonly.md")
     for case in range(1, 10):
         assert f"BRC-{case}" in guide
+    assert "BRC-8b" in guide
     assert "本次不执行" in guide and "没有连接 BOMC" in guide
     runbook = read("tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md").split("## rc6 BOMC", 1)[1]
     for phrase in ("CreateNew", "SKILL.md", "Get-FileHash", "不覆盖", "不手工写 cache", "VERIFY", "glm-5.3-flash", ".workbuddy/memory"):
         assert phrase in runbook
+
+
+def test_bomc_config_failure_host_cases_have_distinct_entry_points():
+    guide = read("docs/15-bomc-readonly.md")
+    missing = next(line for line in guide.splitlines() if line.startswith("| BRC-8 "))
+    invalid = next(line for line in guide.splitlines() if line.startswith("| BRC-8b "))
+    for phrase in ("会话外", "精确 bomc.json", "读取配置失败即停止", "未取得证据", "守卫 0 次",
+                   "不搜索替代配置", "不使用同目录其他文件", "不直调真实技能", "不改用其他取数", "恢复原名"):
+        assert phrase in missing
+    for phrase in ("会话外", "独立的合成 bomc.json", "其余字段有效", "不存在的合成绝对路径",
+                   "守卫退出 3", "未取得可用证据", "本轮总调用 ≤2", "失败最多重试 1 次",
+                   "不读取或探查 skill_config 路径", "不改参数绕过", "恢复原配置"):
+        assert phrase in invalid
 
 
 def test_runbook_preconfiguration_shape_gate_is_read_only_and_does_not_echo_errors():
