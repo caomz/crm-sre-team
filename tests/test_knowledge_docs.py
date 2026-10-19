@@ -109,8 +109,16 @@ class KnowledgeDocumentationTests(unittest.TestCase):
         # runtime-contract：取值锁定 + production 红线不动
         self.assertEqual(rc["read_only_boundary"]["public_read_execution"],
                          "AUTHORIZED_PUBLIC_READ_AND_SEARCH_NO_USER_DATA_EGRESS")
+        # rc6 approved A': exactly one lead-only read exception; no generic
+        # production access and no production writes are granted by this change.
         self.assertEqual(rc["read_only_boundary"]["production_read_execution"],
-                         "NOT_IMPLEMENTED_NO_REAL_CHANNEL")
+                         "BOMC_GUARDED_LEAD_ONLY_CURRENT_ROUND")
+        channels = rc["read_only_boundary"]["production_read_channels"]
+        self.assertEqual(len(channels), 1)
+        self.assertEqual(channels[0]["id"], "bomc-alarm-readonly")
+        self.assertEqual(channels[0]["executor"], "telecom-crm-sre-team-lead")
+        self.assertFalse(channels[0]["member_execution"])
+        self.assertEqual(channels[0]["other_production_read"], "NOT_IMPLEMENTED_NO_REAL_CHANNEL")
         self.assertEqual(rc["read_only_boundary"]["production_write"],
                          "SEPARATE_CHANGE_APPROVAL_REQUIRED")
         # docs/11：删除旧"留待"句；统一短语；新用例就位

@@ -1,10 +1,10 @@
 {
-  "version": "2.8.0-rc5",
+  "version": "2.8.0-rc6",
   "implementation_status": "NOT_IMPLEMENTED",
-  "mode": "USER_PROVIDED_EVIDENCE_NO_PRODUCTION_ACCESS",
+  "mode": "AUTHORIZED_EVIDENCE_WITH_SCOPED_BOMC_READ",
   "production_executor": false,
   "production_tools": [],
-  "note": "项目运行契约，不是 WorkBuddy 官方配置；提示词和离线测试不能实现权限隔离或证明模型行为。",
+  "note": "项目运行契约，不是 WorkBuddy 官方配置；提示词和离线测试不能实现权限隔离或证明模型行为。 production_executor/production_tools 保留为托管生产执行未实现的旧字段；BOMC 例外只登记在 read_only_boundary，不开放生产写。",
   "implementation_status_scope": "CUSTOM_MANAGED_HARNESS_ONLY",
   "managed_mode": {
     "raw_model_stream_to_user": false,
@@ -128,10 +128,44 @@
     "command_generation": "READ_ONLY_QUERY_COMMANDS_ALLOWED_WITH_SCOPE_AND_PLACEHOLDERS",
     "public_read_execution": "AUTHORIZED_PUBLIC_READ_AND_SEARCH_NO_USER_DATA_EGRESS",
     "local_result_write": "AUTHORIZED_WORKING_DIRECTORY_ONLY",
-    "production_read_execution": "NOT_IMPLEMENTED_NO_REAL_CHANNEL",
+    "production_read_execution": "BOMC_GUARDED_LEAD_ONLY_CURRENT_ROUND",
     "production_write": "SEPARATE_CHANGE_APPROVAL_REQUIRED",
     "http_method_is_not_the_decision": true,
-    "note": "只读命令生成不等于执行；本包没有生产只读执行通道，提示词不构成权限隔离。"
+    "note": "唯一 BOMC 团长只读通道需本轮用户直接授权、有效插件外配置和真实宿主权限；守卫不识别会话身份或次数，提示词不构成权限隔离。生产写边界不变。",
+    "production_read_channels": [
+      {
+        "id": "bomc-alarm-readonly",
+        "executor": "telecom-crm-sre-team-lead",
+        "modes": [
+          "WORKBUDDY_NATIVE",
+          "WORKBUDDY_COMPAT"
+        ],
+        "authorization": "DIRECT_USER_CURRENT_ROUND_ONLY",
+        "authorization_inputs": [
+          "授权查询 BOMC",
+          "同意本轮查询卡"
+        ],
+        "read_only": true,
+        "max_records": 50,
+        "max_calls_per_round": 2,
+        "max_retries": 1,
+        "guard": "skills/bomc-alarm-readonly/scripts/bomc_readonly.py",
+        "config_schema": "crm-sre-bomc/v1",
+        "credential_source": "OPTIONAL_VALIDATED_SKILL_CONFIG_PATH_FORWARDED_UNREAD_OR_INHERITED_BOMC_ALARM_ENV",
+        "parameters": [
+          "--alarm-time",
+          "--top",
+          "--ip",
+          "--grade",
+          "--crm"
+        ],
+        "member_execution": false,
+        "credential_read_by_agent_or_guard": false,
+        "authorization_enforcement": "PROMPT_CONTRACT_NOT_HOST_ISOLATION",
+        "other_production_read": "NOT_IMPLEMENTED_NO_REAL_CHANNEL",
+        "local_output": "CONFIGURED_BOMC_OUTPUT_DIR_EXCLUSIVE_NEW_FILE_REDACTED"
+      }
+    ]
   },
   "legacy_alias_scope": {
     "trusted_context_fields": {

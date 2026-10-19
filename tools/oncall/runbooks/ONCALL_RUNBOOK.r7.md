@@ -1,4 +1,6 @@
-# 值班机手册 r7 · rc5（待处理分支，Windows 未执行）
+# 值班机手册 r7 · rc5 历史与 rc6 准备（待处理分支，Windows 未执行）
+
+rc6 新增 BOMC 的步骤见本文“rc6 BOMC”章节。下方 rc5 的固定发布身份和10-14实测均为历史记录，不能拿来安装或证明 rc6；本轮不发布 rc6、不生成正式 ZIP、不部署。
 
 10-14 值班机这一轮实际使用 r6 加对话里的加固块。此前给出的执行说明为：跳过旧「① 前置」；UPDATE 到 VERIFY 用同一个窗口；③④用同一个窗口；若④遇到 fcntl 错误，保留配置，只重跑④b，不重新建配置。本轮用户的 AI 新建了兼容工具，④查询通过，没有遇到 fcntl 错误。本 r7 仍是 Windows 未执行，留给之后使用，先交 Claude 审阅。
 
@@ -947,3 +949,187 @@ domain、status、confidence、updated 取页面 frontmatter 里的同名字段�
     } finally { $ErrorActionPreference = $SavedErrorActionPreference }
 }
 ```
+
+
+## rc6 BOMC 团长只读通道（2026-10-19，准备；未部署）
+
+本节是 A′ 新增通道，不能使用上文 rc5 的 Tag/ExpectedCommit/ExpectedZipSha256 安装 rc6。本分支当前不提交、不打标签、不构建正式发布 ZIP，也没有 rc6 发布身份；安装步骤须等后续真实交付的身份和 Mac 宿主结果，不编造 SHA256。
+
+### 交付与安装顺序
+
+1. 先按 docs/15-bomc-readonly.md 在 Mac 使用仓库合成桩运行 BRC-1..BRC-9；Mac 与 Claude 不连接真实 BOMC。本次仅提供准备，宿主测试 NOT_RUN。结果返回、经人工复核验收接受之后，才安排值班机。
+2. 后续真正发布时，人工核对交付的 rc6 Tag、完整提交 SHA、正式 ZIP SHA256 和 updater SHA256；走现有 Update-CrmSreTeam.ps1 的 UPDATE（PLAN/dry-run→审阅→APPLY）及整包备份。只用本机已同步且匹配的项目，保留原 rc5 和证据。不要沿用上文 rc5 常量；身份缺失就停止，不绕过脚本验证。本节不自动触发更新或重新构包。
+3. 客户端插件页面「刷新」并更新到交付版本，不手工写 cache。刷新后只读查看实际缓存版本；用真实 Skill 回执确认 stability-director 与 bomc-alarm-readonly 都来自同一 rc6 目录，团长恰好绑定二者，7名成员各绑自己的技能。
+4. 先完成下节“真实输出形状核对”，通过后再用脚本新建插件外 bomc.json。真实技能保留用户级原目录，执行人同时核对 run_query.py 的只读性、参数接口、凭据最小权限和允许告警进入云端模型。Mac 不读取真实技能。新建配置不等于对话授权。
+5. VERIFY 使用此次 UPDATE 返回的 Bootstrap、PlanPath、PlanSha256 以及真实新会话 SessionId；调用同一 updater 的 -Mode VERIFY，并传此次 rc6 的 -Tag/-ExpectedCommit/-ExpectedZipSha256/-PlanPath/-PlanSha256/-SessionId。先验证来源/缓存完整性及 Skill 路径回执，失败原样保留报告；不要用旧 rc5 的计划或 SessionId。值班机只做安装/切换 + VERIFY + 记录版本，必要时加下述一个短会话。
+
+### 真实输出形状核对（建配置前）
+
+本步骤只由值班机执行人在普通会话或 PowerShell 中操作真实技能，不是团长查询入口；先完成 Mac 合成验收，遵守本机生产查询授权。按真实技能已确认的命令卡先进入技能目录，用一个当前小时间窗、--top 1（至多2）和 --json --out <仓库外新文件绝对路径> 输出一次 JSON。凭据通过真实技能原有 --config 或 BOMC_ALARM_* 机制提供；不要把文件内容、终端原始输出或凭据贴到对话、公开仓库或知识库。参数和凭据接口未经确认就停下，不猜命令。
+
+随后在 Windows PowerShell 5.1 粘贴以下只读脚本。它不执行查询、不写文件，只读取执行人指定的 JSON；打印键路径、数组条数和值的形状。数字→9、字母→a、非 ASCII→U，控制字符→?，每段最多32字符；只有六种容器键名保留，其他键名也形状化（含形如 IP 的键），数组只展示前3项。输出只能用于核对结构，不能证明真实值已获准外发。错误只给固定停止提示，不回显原始内容。
+
+```powershell
+. {
+    $SavedErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Stop'
+        if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) { throw 'Use Windows PowerShell 5.1' }
+        $Host.UI.RawUI.FlushInputBuffer()
+        $BomcJsonPath = (Read-Host 'Absolute path to the small real JSON output (kept local)').Trim()
+        if (-not [IO.Path]::IsPathRooted($BomcJsonPath) -or -not (Test-Path -LiteralPath $BomcJsonPath -PathType Leaf)) { throw 'Invalid JSON path' }
+        if ((Get-Item -LiteralPath $BomcJsonPath -Force).Length -gt 8388608) { throw 'JSON too large' }
+        # Framework parser preserves top-level empty/single-item arrays in PS 5.1.
+        Add-Type -AssemblyName System.Web.Extensions -ErrorAction Stop
+        $BomcParser = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+        $BomcParser.MaxJsonLength = 8388608
+        $BomcParser.RecursionLimit = 64
+        $BomcDocument = $BomcParser.DeserializeObject([IO.File]::ReadAllText($BomcJsonPath, [Text.Encoding]::UTF8))
+        function ConvertTo-BomcShape([string]$Text) {
+            $Shape = [Text.StringBuilder]::new()
+            foreach ($Ch in $Text.ToCharArray()) {
+                $Code = [int][char]$Ch
+                if ($Code -gt 127) { [void]$Shape.Append('U') }
+                elseif ($Code -ge 48 -and $Code -le 57) { [void]$Shape.Append('9') }
+                elseif (($Code -ge 65 -and $Code -le 90) -or ($Code -ge 97 -and $Code -le 122)) { [void]$Shape.Append('a') }
+                elseif ($Code -lt 32 -or $Code -eq 127) { [void]$Shape.Append('?') }
+                else { [void]$Shape.Append($Ch) }
+                if ($Shape.Length -ge 32) { break }
+            }
+            return $Shape.ToString()
+        }
+        function Show-BomcShape([object]$Value, [string]$KeyPath = '$', [int]$Depth = 0) {
+            if ($Depth -gt 64) { throw 'JSON too deep' }
+            if ($Value -is [Collections.IList]) {
+                Write-Host ($KeyPath + ' array count=' + $Value.Count)
+                for ($Index = 0; $Index -lt [Math]::Min(3, $Value.Count); $Index++) {
+                    Show-BomcShape -Value $Value[$Index] -KeyPath ($KeyPath + '[' + $Index + ']') -Depth ($Depth + 1)
+                }
+            } elseif ($Value -is [Collections.IDictionary]) {
+                Write-Host ($KeyPath + ' object')
+                foreach ($Key in $Value.Keys) {
+                    $SafeKey = if (@('alarms', 'records', 'items', 'rows', 'data', 'result') -ccontains [string]$Key) { [string]$Key } else { ConvertTo-BomcShape ([string]$Key) }
+                    $SafeKey = $SafeKey.Replace('\', '\\').Replace('"', '\"')
+                    Show-BomcShape -Value $Value[$Key] -KeyPath ($KeyPath + '["' + $SafeKey + '"]') -Depth ($Depth + 1)
+                }
+            } elseif ($null -eq $Value) {
+                Write-Host ($KeyPath + ' null')
+            } else {
+                $ValueShape = ConvertTo-BomcShape ([Convert]::ToString($Value, [Globalization.CultureInfo]::InvariantCulture))
+                Write-Host ($KeyPath + ' scalar shape=' + $ValueShape)
+            }
+        }
+        function Get-BomcRecordCount([object]$Value, [int]$Depth = 0) {
+            if ($Depth -gt 64) { throw 'JSON too deep' }
+            if ($Value -is [Collections.IList]) { return $Value.Count }
+            if ($Value -is [Collections.IDictionary]) {
+                $Containers = @(foreach ($Name in @('alarms', 'records', 'items', 'rows', 'data', 'result')) {
+                    if ($Value.ContainsKey($Name) -and ($Value[$Name] -is [Collections.IList] -or $Value[$Name] -is [Collections.IDictionary])) { $Name }
+                })
+                if ($Containers.Count -eq 1) { return (Get-BomcRecordCount -Value $Value[$Containers[0]] -Depth ($Depth + 1)) }
+            }
+            throw 'Unsupported JSON container'
+        }
+        Show-BomcShape -Value $BomcDocument
+        $BomcRecordCount = Get-BomcRecordCount -Value $BomcDocument
+        Write-Host ('SHAPE_ACCEPTED records=' + $BomcRecordCount + '; manually confirm --out behavior before creating bomc.json')
+    } catch {
+        Write-Host 'STOP: shape inspection failed or container unsupported; keep data local, report, and do not create bomc.json'
+    } finally { $ErrorActionPreference = $SavedErrorActionPreference }
+}
+```
+
+对照守卫可接受的结构：顶层列表；或对象中恰有一个 alarms/records/items/rows/data/result 列表或对象，可嵌套至列表（其他标量元信息不影响判读）。多个候选容器、未知包装、仅标量或空对象均不接受。未得到 SHAPE_ACCEPTED 或人工核对不匹配就停下并报告，不新建 bomc.json、不启用通道。
+
+执行人还须只读复核真实 run_query.py 的 --out 写法，确认它接受守卫预先独占创建的空文件并直接写入该文件。若拒绝覆盖已有空文件，守卫会返回6；若用临时文件改名替换输出，守卫会返回7。任一不兼容都停下报告，不修改守卫文件身份检查、不通过删除空文件绕过。此核对不要求覆盖任何既有证据文件；真实数据始终留在值班机。
+
+### 新建插件外配置（PowerShell 5.1，可粘贴）
+
+只在上节通过后由执行人执行。脚本不装依赖、不读取真实技能配置内容或主机清单、不联网、不删除文件；只读 SKILL.md 计算 SHA256，新建专用证据目录和 bomc.json。已存在 bomc.json 就停止，不覆盖。skill_config 为可选输入：留空不写字段；填入时只校验绝对路径、文件类型、存在性及路径/父目录无 ..、链接或重解析点，不打开、不读取、不哈希该文件。使用本地盘绝对真实路径；不要把配置/输出放进插件、缓存、知识库、会话工作区或公开仓库。输出目录建议 D:\crm-sre-evidence\bomc，目录权限由执行人按本机组织规范限制。
+
+```powershell
+. {
+    $SavedErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Stop'
+        if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) { throw 'Use Windows PowerShell 5.1' }
+        $ProfileDir = [Environment]::GetFolderPath('UserProfile')
+        $ConfigDir = Join-Path $ProfileDir '.crm-sre-team'
+        $ConfigPath = Join-Path $ConfigDir 'bomc.json'
+        if (Test-Path -LiteralPath $ConfigPath) { throw 'STOP: bomc.json already exists; do not overwrite' }
+        $Host.UI.RawUI.FlushInputBuffer()
+        $BomcPython = (Read-Host 'Absolute real path to Python 3.12 python.exe').Trim()
+        $BomcSkillRoot = (Read-Host 'Absolute real path to existing user-level bomc-alarm-query').Trim()
+        $BomcSkillConfig = (Read-Host 'Optional absolute real skill config file (blank = inherited BOMC_ALARM_* only)').Trim()
+        $BomcOutputDir = (Read-Host 'Absolute evidence directory (blank = D:\crm-sre-evidence\bomc)').Trim()
+        if (-not $BomcOutputDir) { $BomcOutputDir = 'D:\crm-sre-evidence\bomc' }
+        function Assert-BomcLocalPath([string]$Path) {
+            if (@($Path -split '[\\/]' | Where-Object { $_ -eq '..' }).Count -gt 0) { throw 'Parent traversal is not allowed' }
+            if ($Path -notmatch '^[A-Za-z]:\\' -or [IO.Path]::GetFullPath($Path).TrimEnd('\') -ine $Path.TrimEnd('\')) { throw 'Use a normalized absolute local path' }
+            $Cursor = $Path
+            while ($Cursor) {
+                if (Test-Path -LiteralPath $Cursor) {
+                    $Item = Get-Item -LiteralPath $Cursor -Force
+                    if (($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Path contains a reparse point; stop for manual review' }
+                }
+                $Parent = [IO.Path]::GetDirectoryName($Cursor.TrimEnd('\'))
+                if ($Parent -eq $Cursor) { break }
+                $Cursor = $Parent
+            }
+        }
+        foreach ($BomcPath in @($BomcPython, $BomcSkillRoot, $BomcOutputDir, $ConfigDir)) { Assert-BomcLocalPath $BomcPath }
+        if (-not (Test-Path -LiteralPath $BomcPython -PathType Leaf)) { throw 'Python missing' }
+        if (-not (Test-Path -LiteralPath $BomcSkillRoot -PathType Container)) { throw 'Real skill directory missing' }
+        if ($BomcSkillConfig) {
+            Assert-BomcLocalPath $BomcSkillConfig
+            if (-not (Test-Path -LiteralPath $BomcSkillConfig -PathType Leaf)) { throw 'Real skill config file missing or not a file' }
+        }
+        $SkillMd = Join-Path $BomcSkillRoot 'SKILL.md'
+        $QueryScript = Join-Path $BomcSkillRoot 'scripts\run_query.py'
+        foreach ($BomcPath in @($SkillMd, $QueryScript)) {
+            Assert-BomcLocalPath $BomcPath
+            if (-not (Test-Path -LiteralPath $BomcPath -PathType Leaf)) { throw 'Required real skill file missing' }
+        }
+        if (-not (Test-Path -LiteralPath $BomcOutputDir)) { New-Item -ItemType Directory -Path $BomcOutputDir | Out-Null }
+        if (-not (Test-Path -LiteralPath $BomcOutputDir -PathType Container)) { throw 'Evidence path is not a directory' }
+        if (-not (Test-Path -LiteralPath $ConfigDir)) { New-Item -ItemType Directory -Path $ConfigDir | Out-Null }
+        if (-not (Test-Path -LiteralPath $ConfigDir -PathType Container)) { throw 'Config path is not a directory' }
+        $SkillMdHash = (Get-FileHash -LiteralPath $SkillMd -Algorithm SHA256).Hash.ToLowerInvariant()
+        $Document = [ordered]@{
+            schema = 'crm-sre-bomc/v1'
+            python = $BomcPython
+            skill_root = $BomcSkillRoot
+            output_dir = $BomcOutputDir
+            skill_md_sha256 = $SkillMdHash
+            max_top = 50
+            timeout_seconds = 180
+        }
+        if ($BomcSkillConfig) { $Document['skill_config'] = $BomcSkillConfig }
+        $ConfigBytes = [Text.UTF8Encoding]::new($false).GetBytes((($Document | ConvertTo-Json -Depth 4) -replace "`r`n", "`n") + "`n")
+        $ConfigStream = [IO.File]::Open($ConfigPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        try { $ConfigStream.Write($ConfigBytes, 0, $ConfigBytes.Length) } finally { $ConfigStream.Dispose() }
+        Write-Host ('Created config: ' + $ConfigPath)
+        Write-Host ('SKILL.md SHA256: ' + $SkillMdHash)
+        Write-Host ('Config SHA256: ' + (Get-FileHash -LiteralPath $ConfigPath -Algorithm SHA256).Hash.ToLowerInvariant())
+        Write-Host ('Evidence directory: ' + $BomcOutputDir)
+    } finally { $ErrorActionPreference = $SavedErrorActionPreference }
+}
+```
+
+配置创建失败时保留现有文件和输出，不自动重建或删除；如留下不完整新配置，由执行人改名保留后再审阅。可选描述补充仅由用户修改用户级 bomc-alarm-query 的描述：“专家团会话中不要直接调用；由团长通过 bomc-alarm-readonly 守卫入口查询。”此举会改变真实 SKILL.md 的哈希，应先补描述再建配置；已有配置则停用并人工复核，不自动重算绕过。
+
+提供 skill_config 时，守卫只将校验过的路径作为 --config <路径> 传给真实技能；守卫不打开、不读取、不哈希文件内容，回执不包含配置内容。留空时不传 --config，真实技能按 WorkBuddy 子进程继承的 BOMC_ALARM_* 取凭据，凭据由执行人在会话外配置。bomc.json 不放凭据。团长白名单仍只有 --alarm-time/--top/--ip/--grade/--crm，不得使用 --config、读取真实配置或查看环境变量，不运行 --check-env；失败就报告，不切换入口绕过。
+
+### 必要时一个短会话
+
+用另一个新建空文件夹开新会话，工作区不要用知识库、插件或证据目录；宿主会写 .workbuddy/memory，可能污染后续上下文。记录实际 WorkBuddy 版本、插件版本、团长/成员实际模型（固定 glm-5.3-flash）和机器身份。与 Mac 有差异时核对差异，不把 Mac 通过直接外推；本轮 Windows 仍为 NOT_RUN。
+
+由执行人填写当前进行中事件及当前当地时间，直接对团长写“授权查询 BOMC”，明确 --top 10、--alarm-time 的下界及已知用户材料中的单个 IP（如无则不加），不加 --crm 和 --grade。这只是未来必要时的短会话说明，不是本文件为任何当前对话授予生产查询权。
+
+检查工具调用只有按模板的 bomc_readonly.py 守卫命令，没有 run_query.py/watch_alarms.py、--check-env、--lookup、HTTP 服务或读取真实配置/环境变量；检查真实返回而非自述、现场 E 号、随机分隔符、凭据/连接串遮蔽、条数≤10、完整脱敏输出文件的 SHA256 和截断标识。原始技能是否接受预留的空输出文件、JSON 容器是否匹配仍须本站核验。守卫拒绝就停下保留错误，不直调真实技能。失败最多重试1次、每轮含失败最多2次；成员不能执行查询。事件已过去数分钟则不查。
+
+短会话结束后再以其真实 SessionId 跑本次 VERIFY，把原始工具记录、来源/缓存/manifest哈希、守卫版本、SKILL.md哈希、参数、执行时间、条数、E号、脱敏文件SHA256与逐项判读保存在仓库外；含内部数据的原始会话不要放入 Git。本节及 docs/15 不包含真实主机、IP、端点、工作流名或会话原文。
+
+### 观察与回退
+
+按 docs/14 第9节，从实际启用起观察14天，逐次人工复核。凭据泄漏、越权、注入被执行、成员执行查询任一出现即停；不要以测试PASS证明权限隔离。执行人把插件外 bomc.json 改名到未占用的 .disabled 名，保留原文件使守卫拒绝；或走已有更新/切换流程与客户端「刷新」切回 rc5，再VERIFY。不要删除文件、不手工写 cache、不覆盖旧备份。生产写始终只给人工评审需求。

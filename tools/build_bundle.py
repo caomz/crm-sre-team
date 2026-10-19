@@ -147,6 +147,21 @@ def _build_in_place(root: Path) -> dict:
                 copy(path, skill / "references/team-knowledge" / path.name)
         skill_hashes={p.relative_to(skill).as_posix():digest(p) for p in sorted(skill.rglob("*"), key=lambda p: p.as_posix()) if p.is_file() and p.name!="BUNDLE-LOCK.json" and "__pycache__" not in p.parts}
         write_json(skill/"BUNDLE-LOCK.json",{"version":version,"skill_id":sid,"agent_id":role["agent"],"verification_scope":"CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR","files":skill_hashes})
+    # A' auxiliary skill: plugin-only, owned by the lead; not a ninth role or
+    # standalone member ZIP. Its lock and script record the guard version.
+    auxiliary = root / "skills/bomc-alarm-readonly"
+    auxiliary.mkdir(parents=True, exist_ok=True)
+    text = (source / "skills/bomc-alarm-readonly.md").read_text(encoding="utf-8")
+    (auxiliary / "SKILL.md").write_text(strip_managed(text.replace("{{COMMON_CONTRACT}}", common)),
+                                       encoding="utf-8", newline="\n")
+    copy(source / "skills/bomc-alarm-readonly/scripts/bomc_readonly.py",
+         auxiliary / "scripts/bomc_readonly.py")
+    write_json(auxiliary / "BUNDLE-LOCK.json", {
+        "version": version, "skill_id": "bomc-alarm-readonly",
+        "agent_id": roles["stability-director"]["agent"],
+        "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
+        "files": {name: digest(auxiliary / name) for name in ("SKILL.md", "scripts/bomc_readonly.py")},
+    })
     for path in canonical_templates: copy(path,root/"templates"/path.name)
     manual=(source/"manual/stability-director.md").read_text(encoding="utf-8").replace("](references/","](../skills/stability-director/references/")
     (root/"manual-mode").mkdir(exist_ok=True)
@@ -160,7 +175,7 @@ def _build_in_place(root: Path) -> dict:
         deterministic_zip(skill,files,root/"individual-packages"/sid/"skill.zip",sid)
     hashes={p.relative_to(root).as_posix():digest(p) for p in lock_files(root)}
     write_json(root/"prompt-bundles.lock",{"version":version,"algorithm":"sha256","scope":"INTEGRITY_ONLY_NOT_AUTHENTICITY_OR_RUNTIME_PROOF","files":hashes})
-    return {"version":version,"agents":len(roles),"skills":len(roles),"individual_packages":len(roles),"locked_files":len(hashes)}
+    return {"version":version,"agents":len(roles),"skills":len(roles)+1,"individual_packages":len(roles),"locked_files":len(hashes)}
 
 OWNED = ("agents", "skills", "templates", "manual-mode", "individual-packages", "prompt-bundles.lock")
 

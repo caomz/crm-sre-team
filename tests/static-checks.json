@@ -1,10 +1,10 @@
 {
-  "version": "2.8.0-rc5",
+  "version": "2.8.0-rc6",
   "scope": "STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY",
   "result": "PASS_STATIC_ONLY",
-  "checks_total": 1888,
-  "checks_passed": 1888,
-  "relative_links_checked": 229,
+  "checks_total": 1904,
+  "checks_passed": 1904,
+  "relative_links_checked": 231,
   "offline_contract_tests_run": 46,
   "offline_contract_test_failures": 0,
   "offline_contract_test_errors": 0,
@@ -50,6 +50,36 @@
     },
     {
       "id": "T_case_ids",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "bomc_common_contract",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "bomc_guard_copy",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "bomc_lock_hashes",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "bomc_lock_identity",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "bomc_lock_set",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "bomc_source_render",
       "passed": true,
       "detail": ""
     },
@@ -189,6 +219,11 @@
       "detail": []
     },
     {
+      "id": "explicit_read_encoding:tests/test_bomc_readonly.py",
+      "passed": true,
+      "detail": []
+    },
+    {
       "id": "explicit_read_encoding:tests/test_comparison_build.py",
       "passed": true,
       "detail": []
@@ -255,6 +290,11 @@
     },
     {
       "id": "explicit_read_encoding:tests/test_rc5_knowledge.py",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "explicit_read_encoding:tests/test_rc6_bomc.py",
       "passed": true,
       "detail": []
     },
@@ -530,6 +570,16 @@
     },
     {
       "id": "generated_text_lf:manual-mode/single-model.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "generated_text_lf:skills/bomc-alarm-readonly/BUNDLE-LOCK.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "generated_text_lf:skills/bomc-alarm-readonly/SKILL.md",
       "passed": true,
       "detail": ""
     },
@@ -2304,6 +2354,11 @@
       "detail": ""
     },
     {
+      "id": "json:skills/bomc-alarm-readonly/BUNDLE-LOCK.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "json:skills/change-capacity-dr/BUNDLE-LOCK.json",
       "passed": true,
       "detail": ""
@@ -2755,6 +2810,11 @@
     },
     {
       "id": "legacy_risk_fragments:manual-mode/single-model.md",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "legacy_risk_fragments:skills/bomc-alarm-readonly/SKILL.md",
       "passed": true,
       "detail": []
     },
@@ -3935,6 +3995,11 @@
     },
     {
       "id": "no_runtime_code_fences:manual-mode/single-model.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "no_runtime_code_fences:skills/bomc-alarm-readonly/SKILL.md",
       "passed": true,
       "detail": ""
     },
@@ -5189,6 +5254,11 @@
       "detail": ""
     },
     {
+      "id": "plugin_path:./skills/bomc-alarm-readonly",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "plugin_path:./skills/change-capacity-dr",
       "passed": true,
       "detail": ""
@@ -6079,7 +6149,17 @@
       "detail": ""
     },
     {
+      "id": "relative_link:README.md:docs/15-bomc-readonly.md",
+      "passed": true,
+      "detail": ""
+    },
+    {
       "id": "relative_link:README.md:source-provenance.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "id": "relative_link:VALIDATION.md:docs/15-bomc-readonly.md",
       "passed": true,
       "detail": ""
     },

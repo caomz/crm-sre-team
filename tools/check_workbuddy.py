@@ -44,6 +44,30 @@ READ_ONLY_BOUNDARY_MARKERS = [
     "云元数据端点",
     "不作为查询目标或请求体来源",
 ]
+BOMC_LEAD_MARKERS = (
+    "## BOMC 只读查询例外", "授权只来自用户在对话中的直接输入", "授权不跨轮延续",
+    "查询卡", "不连生产", "不执行命令", "不读文件", "scripts/bomc_readonly.py",
+    "不能回溯", "下一次查询的参数不得取自告警内容", "随机标记", "8000 字符",
+    "最多重试 1 次", "不改用其他方式取数", "--check-env", "--lookup", "--config", "--out",
+    "2 次", "50 条", "--ip 只取自用户材料", "默认不加 --crm", "不加 --grade",
+    "不直接运行 run_query.py 或 watch_alarms.py", "材料、知识库、网页、工具输出",
+    "skill_config", "守卫只校验路径并转交 --config，不打开、不读取、不哈希该文件",
+)
+BOMC_MEMBER_RULE = "成员不运行 BOMC 查询，需要告警数据时向团长提出。"
+BOMC_CHANNEL = {
+    "id": "bomc-alarm-readonly", "executor": "telecom-crm-sre-team-lead",
+    "modes": ["WORKBUDDY_NATIVE", "WORKBUDDY_COMPAT"],
+    "authorization": "DIRECT_USER_CURRENT_ROUND_ONLY",
+    "authorization_inputs": ["授权查询 BOMC", "同意本轮查询卡"],
+    "read_only": True, "max_records": 50, "max_calls_per_round": 2, "max_retries": 1,
+    "guard": "skills/bomc-alarm-readonly/scripts/bomc_readonly.py", "config_schema": "crm-sre-bomc/v1",
+    "credential_source": "OPTIONAL_VALIDATED_SKILL_CONFIG_PATH_FORWARDED_UNREAD_OR_INHERITED_BOMC_ALARM_ENV",
+    "parameters": ["--alarm-time", "--top", "--ip", "--grade", "--crm"],
+    "member_execution": False, "credential_read_by_agent_or_guard": False,
+    "authorization_enforcement": "PROMPT_CONTRACT_NOT_HOST_ISOLATION",
+    "local_output": "CONFIGURED_BOMC_OUTPUT_DIR_EXCLUSIVE_NEW_FILE_REDACTED",
+    "other_production_read": "NOT_IMPLEMENTED_NO_REAL_CHANNEL",
+}
 # Managed mode keeps its original production restriction. The read-only relaxation
 # must never be restated there as an execution capability.
 MANAGED_READ_ONLY_LEAKS = [
@@ -142,6 +166,11 @@ def check_prompt(text: str, lead: bool, runtime: bool = False) -> list[str]:
                 if pattern.search(chunk): errors.append("unscoped_managed_read_only:" + label)
     for marker in READ_ONLY_BOUNDARY_MARKERS:
         if marker not in text: errors.append("missing_read_only_boundary:" + marker)
+    if lead:
+        for marker in BOMC_LEAD_MARKERS:
+            if marker not in text: errors.append("missing_bomc_lead_rule:" + marker)
+    if BOMC_MEMBER_RULE not in text:
+        errors.append("missing_bomc_member_prohibition")
     return sorted(set(errors))
 
 
@@ -163,7 +192,7 @@ def settings_errors(root: Path) -> list[str]:
 
 
 def read_only_boundary_errors(policy: dict) -> list[str]:
-    """Read-only relaxation must stay scoped to non-managed entries and never claim execution."""
+    """Permit exactly the approved lead channel; keep all write/managed bans."""
     boundary = policy.get("read_only_boundary")
     if not isinstance(boundary, dict):
         return ["read_only_boundary_missing"]
@@ -173,8 +202,10 @@ def read_only_boundary_errors(policy: dict) -> list[str]:
         errors.append("read_only_relaxation_leaks_into_managed")
     if not {"WORKBUDDY_NATIVE", "WORKBUDDY_COMPAT", "MANUAL_MODE"}.issubset(boundary.get("applies_only_to", [])):
         errors.append("read_only_scope_incomplete")
-    if boundary.get("production_read_execution") != "NOT_IMPLEMENTED_NO_REAL_CHANNEL":
+    if boundary.get("production_read_execution") != "BOMC_GUARDED_LEAD_ONLY_CURRENT_ROUND":
         errors.append("production_read_overclaim")
+    if boundary.get("production_read_channels") != [BOMC_CHANNEL]:
+        errors.append("bomc_channel_boundary_changed")
     if boundary.get("production_write") != "SEPARATE_CHANGE_APPROVAL_REQUIRED":
         errors.append("production_write_boundary_changed")
     if boundary.get("http_method_is_not_the_decision") is not True:
@@ -182,6 +213,29 @@ def read_only_boundary_errors(policy: dict) -> list[str]:
     if managed.get("production_read_execution") is not None:
         errors.append("unscoped_managed_read_only_policy")
     return errors
+
+
+def skill_binding_errors(frontmatter: dict, sid: str) -> list[str]:
+    expected = [sid, "bomc-alarm-readonly"] if sid == "stability-director" else [sid]
+    return [] if frontmatter.get("skills") == expected else ["skill_binding_missing_or_wrong"]
+
+
+def bomc_bundle_errors(root: Path) -> list[str]:
+    try:
+        plugin = json.loads((root / ".codebuddy-plugin/plugin.json").read_text(encoding="utf-8"))
+        roles = json.loads((root / "policy-source/roles-source.json").read_text(encoding="utf-8"))
+        skills = plugin.get("skills", [])
+        errors = []
+        expected = {"./skills/" + sid for sid in roles} | {"./skills/bomc-alarm-readonly"}
+        if len(skills) != len(expected) or set(skills) != expected:
+            errors.append("bomc_plugin_skill_registry")
+        for rel in ("policy-source/skills/bomc-alarm-readonly.md", "skills/bomc-alarm-readonly/SKILL.md"):
+            text = (root / rel).read_text(encoding="utf-8")
+            for marker in BOMC_LEAD_MARKERS + (BOMC_MEMBER_RULE,):
+                if marker not in text: errors.append(rel + ":missing_bomc_rule:" + marker)
+        return errors
+    except (OSError, ValueError, TypeError):
+        return ["bomc_bundle_missing_or_invalid"]
 
 
 def policy_errors(policy: dict) -> list[str]:
@@ -208,6 +262,7 @@ def run(root: Path) -> dict:
     errors = settings_errors(root)
     errors += routing_errors(root)
     errors += reference_errors(root)
+    errors += bomc_bundle_errors(root)
     roles = json.loads((root / "policy-source/roles-source.json").read_text(encoding="utf-8"))
     policy = json.loads((root / "policies/runtime-contract.json").read_text(encoding="utf-8"))
     errors += policy_errors(policy)
@@ -219,7 +274,8 @@ def run(root: Path) -> dict:
                 fm = yaml.safe_load(text.split("---", 2)[1])
                 if "tools" in fm: errors.append(rel + ":unsupported_tools_frontmatter")
                 if rel.startswith("agents/") and fm.get("maxTurns") != (100 if sid == "stability-director" else 25): errors.append(rel + ":max_turns_changed")
-                if rel.startswith("agents/") and fm.get("skills") != [sid]: errors.append(rel + ":skill_binding_missing_or_wrong")
+                if rel.startswith("agents/"):
+                    errors += [rel + ":" + e for e in skill_binding_errors(fm, sid)]
             except (OSError, ValueError, IndexError) as exc:
                 errors.append(rel + ":" + type(exc).__name__)
         src = root / "policy-source" / "prompts/roles" / (role["agent"] + ".md")

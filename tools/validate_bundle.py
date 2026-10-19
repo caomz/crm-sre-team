@@ -36,7 +36,8 @@ def run(root: Path) -> dict:
     check("plugin_version",plugin["version"]==version)
     check("canonical_lead",plugin["teamInfo"]["leadAgent"]=="telecom-crm-sre-team-lead")
     check("plugin_agents",set(plugin["agents"])=={"./agents/"+r["agent"]+".md" for r in roles.values()})
-    check("plugin_skills",set(plugin["skills"])=={"./skills/"+sid for sid in roles})
+    check("plugin_skills",len(plugin["skills"]) == len(roles) + 1 and
+          set(plugin["skills"])==({"./skills/"+sid for sid in roles} | {"./skills/bomc-alarm-readonly"}))
     spec=importlib.util.spec_from_file_location("wb_checker",root/"tools/check_workbuddy.py")
     wb=importlib.util.module_from_spec(spec);spec.loader.exec_module(wb)
     iv_spec=importlib.util.spec_from_file_location("individual_zip_validator",root/"tools/validate_individual_zip.py")
@@ -98,6 +99,23 @@ def run(root: Path) -> dict:
         for e in iv_report["errors"]:check("individual_zip_strict:"+sid+":"+e,False,e)
         runtime_md.extend(p for p in sorted(skill.rglob("*.md")) if "tests" not in p.relative_to(skill).parts)
         runtime_md.append(agent)
+    auxiliary = root / "skills/bomc-alarm-readonly"
+    auxiliary_text = (auxiliary / "SKILL.md").read_text(encoding="utf-8")
+    check("bomc_common_contract", common in auxiliary_text)
+    check("bomc_source_render", auxiliary_text == _bb.strip_managed(
+        (root / "policy-source/skills/bomc-alarm-readonly.md").read_text(encoding="utf-8").replace("{{COMMON_CONTRACT}}", common_full)))
+    check("bomc_guard_copy", (auxiliary / "scripts/bomc_readonly.py").read_bytes() ==
+          (root / "policy-source/skills/bomc-alarm-readonly/scripts/bomc_readonly.py").read_bytes())
+    auxiliary_lock = read(auxiliary / "BUNDLE-LOCK.json")
+    check("bomc_lock_identity", auxiliary_lock.get("version") == version and
+          auxiliary_lock.get("skill_id") == "bomc-alarm-readonly" and
+          auxiliary_lock.get("agent_id") == "telecom-crm-sre-team-lead")
+    auxiliary_files = {p.relative_to(auxiliary).as_posix(): p for p in sorted(auxiliary.rglob("*"))
+                       if p.is_file() and p.name != "BUNDLE-LOCK.json" and "__pycache__" not in p.parts}
+    check("bomc_lock_set", set(auxiliary_lock["files"]) == set(auxiliary_files) == {"SKILL.md", "scripts/bomc_readonly.py"})
+    check("bomc_lock_hashes", all(name in auxiliary_files and digest(auxiliary_files[name]) == h
+                                  for name, h in auxiliary_lock["files"].items()))
+    runtime_md.append(auxiliary / "SKILL.md")
     for p in sorted((root/"templates").glob("*.md")):
         check("root_template_copy:"+p.name,p.read_bytes()==(root/"policy-source/templates"/p.name).read_bytes())
         runtime_md.append(p)
