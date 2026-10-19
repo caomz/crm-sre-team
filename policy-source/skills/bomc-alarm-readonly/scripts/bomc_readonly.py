@@ -118,6 +118,42 @@ def checked_path(value, directory: bool) -> Path:
     return path.resolve(strict=True)
 
 
+def checked_config_path(value, directory: bool, field: str) -> Path:
+    """Preflight diagnostics name only a fixed field, never a configured value.
+
+    Keep query-stage checked_path errors and the main fallback unchanged.
+    """
+    if not isinstance(value, str) or not value or "\x00" in value:
+        raise GuardError(3, f"{field} 配置路径无效。")
+    path = Path(value)
+    if not path.is_absolute():
+        raise GuardError(3, f"{field} 路径不是绝对路径。")
+    if ".." in path.parts:
+        raise GuardError(3, f"{field} 路径含 ..。")
+    try:
+        # Inspect parents first so a missing child cannot hide a linked parent.
+        for part in (*reversed(path.parents), path):
+            metadata = part.lstat()
+            if (stat.S_ISLNK(metadata.st_mode)
+                    or getattr(metadata, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                raise GuardError(3, f"{field} 路径含链接或重解析点；请人工复核并配置真实路径。")
+            is_directory = directory if part == path else True
+            if not (stat.S_ISDIR(metadata.st_mode) if is_directory else stat.S_ISREG(metadata.st_mode)):
+                raise GuardError(3, f"{field} 路径不存在或类型不符。")
+        return path.resolve(strict=True)
+    except (FileNotFoundError, NotADirectoryError):
+        raise GuardError(3, f"{field} 路径不存在或类型不符。") from None
+    except (OSError, ValueError, RuntimeError):
+        raise GuardError(3, f"{field} 本地 IO 失败，无法检查路径。") from None
+
+
+def read_config_bytes(path: Path, field: str) -> bytes:
+    try:
+        return path.read_bytes()
+    except (OSError, ValueError):
+        raise GuardError(3, f"{field} 本地 IO 失败，无法读取文件。") from None
+
+
 def unique_object(pairs):
     obj = {}
     for key, value in pairs:
@@ -129,34 +165,47 @@ def unique_object(pairs):
 
 def load_config() -> dict:
     # Path.home locates only the standard external config; no credential env reads.
-    config_path = checked_path(str(Path.home() / ".crm-sre-team" / "bomc.json"), False)
-    raw = config_path.read_bytes()
+    try:
+        config_value = str(Path.home() / ".crm-sre-team" / "bomc.json")
+    except (OSError, ValueError, RuntimeError):
+        raise GuardError(3, "bomc.json 本地 IO 失败，无法定位配置。") from None
+    config_path = checked_config_path(config_value, False, "bomc.json")
+    raw = read_config_bytes(config_path, "bomc.json")
     if len(raw) > 16384:
-        raise GuardError(3, "BOMC 配置过大。")
+        raise GuardError(3, "bomc.json 配置过大。")
     try:
         config = json.loads(raw.decode("utf-8-sig"), object_pairs_hook=unique_object)
-    except (ValueError, UnicodeError):
-        raise GuardError(3, "BOMC 配置 JSON 无效。") from None
-    if (not isinstance(config, dict) or not FIELDS <= set(config)
-            or not set(config) <= FIELDS | OPTIONAL_FIELDS or config.get("schema") != SCHEMA):
-        raise GuardError(3, "BOMC 配置 schema/字段无效；配置不得放凭据。")
+    except (ValueError, UnicodeError, RecursionError):
+        raise GuardError(3, "bomc.json 配置 JSON 无效。") from None
+    if not isinstance(config, dict) or not set(config) <= FIELDS | OPTIONAL_FIELDS:
+        raise GuardError(3, "bomc.json 配置 schema/字段无效；配置不得放凭据。")
+    for field in sorted(FIELDS):
+        if field not in config:
+            raise GuardError(3, f"{field} 配置字段缺失。")
+    if config["schema"] != SCHEMA:
+        raise GuardError(3, "bomc.json 配置 schema/字段无效；配置不得放凭据。")
     for name, maximum in (("max_top", 50), ("timeout_seconds", 180)):
         if type(config[name]) is not int or not 1 <= config[name] <= maximum:
-            raise GuardError(3, "BOMC 配置数值越界。")
+            raise GuardError(3, f"{name} 配置数值越界或类型不符。")
     for key, directory in (("python", False), ("skill_root", True), ("output_dir", True)):
-        config[key] = checked_path(config[key], directory)
+        config[key] = checked_config_path(config[key], directory, key)
     if "skill_config" in config:
         # Validate metadata only; only the real skill opens credential contents.
-        config["skill_config"] = checked_path(config["skill_config"], False)
-    if os.name != "nt" and not os.access(config["python"], os.X_OK):
-        raise GuardError(3, "配置的 Python 不可执行。")
+        config["skill_config"] = checked_config_path(config["skill_config"], False, "skill_config")
+    if os.name != "nt":
+        try:
+            executable = os.access(config["python"], os.X_OK)
+        except OSError:
+            raise GuardError(3, "python 本地 IO 失败，无法检查执行权限。") from None
+        if not executable:
+            raise GuardError(3, "python 不可执行。")
     root = config["skill_root"]
-    skill_md = checked_path(str(root / "SKILL.md"), False)
-    config["entry"] = checked_path(str(root / "scripts" / "run_query.py"), False)
+    skill_md = checked_config_path(str(root / "SKILL.md"), False, "SKILL.md")
+    config["entry"] = checked_config_path(str(root / "scripts" / "run_query.py"), False, "scripts/run_query.py")
     expected = config["skill_md_sha256"]
     if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", expected):
-        raise GuardError(3, "SKILL.md 哈希配置无效。")
-    if hashlib.sha256(skill_md.read_bytes()).hexdigest() != expected.lower():
+        raise GuardError(3, "skill_md_sha256 配置无效；SKILL.md 哈希须为 64 位 hex。")
+    if hashlib.sha256(read_config_bytes(skill_md, "SKILL.md")).hexdigest() != expected.lower():
         raise GuardError(4, "SKILL.md 哈希不符；停止，交人工复核真实技能后更新配置。")
     return config
 

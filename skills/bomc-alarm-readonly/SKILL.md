@@ -71,7 +71,10 @@ Python 绝对路径只取 bomc.json 的 python；守卫路径从宿主给出的�
 - Windows PowerShell 5.1：`& '<python>' -X utf8 '<本技能目录>\scripts\bomc_readonly.py' --alarm-time '<YYYY-MM-DD HH:MM:SS>' --top <N> [--ip '<IPv4>'] [--grade '<级别>'] [--crm]`
 - macOS 合成测试：`'<python>' -X utf8 '<本技能目录>/scripts/bomc_readonly.py' --alarm-time '<YYYY-MM-DD HH:MM:SS>' --top <N> [--ip '<IPv4>'] [--grade '<级别>'] [--crm]`
 
-固定命令中 --alarm-time、--ip、--grade 的值一律放在单引号里，用户原文没加引号也要按模板加；--top 只写数字；Windows PowerShell 与 macOS 一致。
+固定命令中 --alarm-time、--ip、--grade 的值一律放在单引号里，用户原文没加引号也要按模板加；bomc.json 的 python 路径与守卫脚本路径同样放在单引号里；--top 只写数字；Windows PowerShell 与 macOS 一致。
+引号转换示例（用户原文 → 命令写法）：用户写 --grade 严重 或 --ip 192.0.2.10 时，命令里写成 --grade '严重'、--ip '192.0.2.10'。完整命令示例（macOS，仅说明引号写法）：`'<python>' -X utf8 '<本技能目录>/scripts/bomc_readonly.py' --alarm-time '2026-10-19 12:30:00' --top 10 --grade '严重' --ip '192.0.2.10'`。示例值不是默认参数；日期、条数和路径须替换成已确认值，不得据示例添加 --grade 或 --ip；默认仍不加 --grade，--ip 只取自用户材料。
+除固定守卫命令外，不为 BOMC 另跑终端命令或脚本；需要查看完整脱敏结果时，用宿主的 Read 工具读取守卫回执中的输出文件，仍受用户文件范围限制。
+守卫返回非 0 时，按其报错原文如实报告未取得可用证据；不自行列出、探查或读取配置中的任何路径（python、skill_root、output_dir、skill_config 及其所在目录），由执行人在会话外核对后重新授权。失败最多重试 1 次且每轮最多 2 次守卫调用，不改用其他方式取数。
 
 方括号表示可选项，调用时删除方括号；日期、N 和路径必须替换成已确认值。不得拼接命令、管道、重定向或 shell 元字符；含单引号的路径无法按模板安全表示时停下。只允许 --alarm-time、--top、--ip、--grade、--crm；--grade 为 1..32 个中文/英文字母/数字/下划线/点/短横线，首字符不得为 -。团长不直接运行 run_query.py 或 watch_alarms.py，不使用 --check-env、--lookup、--config、--out，不读取真实技能配置文件、环境变量和主机清单，不调用 HTTP 服务模式。只有守卫内部以参数列表启动真实 run_query.py，cwd 固定为 skill_root，强制添加 --json 与绝对的独占输出路径；可选 --config 仅来自已校验的插件外 skill_config，不接受团长传入。
 

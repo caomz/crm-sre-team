@@ -4,7 +4,7 @@
   "agent_id": "telecom-crm-sre-team-lead",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "SKILL.md": "72b0e57dc5223cb3e981ba6ae818f19c2c83ce785eab56527a8d8d576b9be5c7",
-    "scripts/bomc_readonly.py": "b3412f828d855f442bab03def1ef1177282c9d532f9ac5f110ceecbd726a0f50"
+    "SKILL.md": "49be5f731fd0cbf6c59ba22e748a31d0d98f8b4c848de133cf6e0ff5c7c42c4a",
+    "scripts/bomc_readonly.py": "7d85d6247e4e09ba9a7a03c02cbcc9fdb901b7d546a7262c3a0fbae36ff6d816"
   }
 }

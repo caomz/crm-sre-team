@@ -47,6 +47,39 @@ def invoke(args=ARGS):
     return code, out.getvalue(), err.getvalue()
 
 
+def assert_config_failure(setup, field, detail):
+    with patch.object(guard.subprocess, "Popen") as spawn:
+        code, out, err = invoke()
+    assert code == 3 and not out
+    assert err == f"BOMC_GUARD_ERROR 3: {field} {detail}\n"
+    assert str(setup[0].parent) not in err and str(setup[4]) not in err
+    for key in ("python", "skill_root", "output_dir", "skill_config"):
+        value = setup[3].get(key)
+        if isinstance(value, str) and value:
+            assert value not in err
+    assert "FAKE-" not in err
+    spawn.assert_not_called()
+
+
+def config_field_path(setup, field):
+    home, skill, output, config, path = setup
+    if field == "python":
+        selected = home / "synthetic-python"
+        selected.write_text("Synthetic executable; never launched", encoding="utf-8")
+        selected.chmod(0o700)
+        config[field] = str(selected)
+    elif field == "skill_config":
+        selected = home / "synthetic-skill-config.json"
+        selected.write_text("FAKE-CONFIG-SECRET", encoding="utf-8")
+        config[field] = str(selected)
+    else:
+        selected = {"bomc.json": path, "skill_root": skill, "output_dir": output,
+                    "SKILL.md": skill / "SKILL.md",
+                    "scripts/run_query.py": skill / "scripts/run_query.py"}[field]
+    path.write_text(json.dumps(config), encoding="utf-8")
+    return selected
+
+
 @pytest.mark.parametrize("args", [
     [], ARGS + ["--config", "fake.json"], ARGS + ["--out", "fake.json"],
     ARGS + ["--json"], ARGS + ["--lookup"], ARGS + ["--check-env"],
@@ -196,8 +229,128 @@ def test_bad_paths_fail_before_process(setup, key, value):
     config[key] = value
     path.write_text(json.dumps(config), encoding="utf-8")
     with patch.object(guard.subprocess, "Popen") as spawn:
-        assert invoke()[0] == 3
+        code, out, err = invoke()
+    assert code == 3 and not out and key in err and value not in err
     spawn.assert_not_called()
+
+
+@pytest.mark.parametrize("field", [
+    "bomc.json", "python", "skill_root", "output_dir", "skill_config", "SKILL.md", "scripts/run_query.py",
+])
+@pytest.mark.parametrize("kind", ["missing", "wrong_type"])
+def test_config_path_missing_or_wrong_type_names_field_without_paths(setup, field, kind):
+    selected = config_field_path(setup, field)
+    was_directory = selected.is_dir()
+    selected.rename(selected.with_name(selected.name + ".preserved"))
+    if kind == "wrong_type":
+        if was_directory:
+            selected.write_text("Synthetic wrong type", encoding="utf-8")
+        else:
+            selected.mkdir()
+    assert_config_failure(setup, field, "路径不存在或类型不符。")
+
+
+@pytest.mark.parametrize("field", sorted(guard.FIELDS))
+def test_required_config_field_missing_names_field_without_values(setup, field):
+    config, path = setup[3:]
+    config.pop(field)
+    path.write_text(json.dumps(config), encoding="utf-8")
+    assert_config_failure(setup, field, "配置字段缺失。")
+
+
+@pytest.mark.parametrize("field", ["bomc.json", "python", "skill_root", "output_dir", "skill_config", "scripts/run_query.py"])
+@pytest.mark.parametrize("kind", ["missing", "not_directory"])
+def test_config_parent_missing_or_not_directory_names_field(setup, field, kind):
+    selected = config_field_path(setup, field)
+    if field in ("bomc.json", "scripts/run_query.py"):
+        parent = selected.parent
+        parent.rename(parent.with_name(parent.name + ".preserved"))
+    else:
+        parent = setup[0] / (field + "-parent")
+        setup[3][field] = str(parent / "synthetic-child")
+        setup[4].write_text(json.dumps(setup[3]), encoding="utf-8")
+    if kind == "not_directory":
+        parent.write_text("Synthetic parent file", encoding="utf-8")
+    assert_config_failure(setup, field, "路径不存在或类型不符。")
+
+
+@pytest.mark.parametrize("field", ["bomc.json", "python", "skill_root", "output_dir", "skill_config", "scripts/run_query.py"])
+def test_config_parent_link_names_field_without_paths(setup, field):
+    selected = config_field_path(setup, field)
+    if field in ("bomc.json", "scripts/run_query.py"):
+        parent = selected.parent
+        preserved = parent.with_name(parent.name + ".preserved")
+        parent.rename(preserved)
+        parent.symlink_to(preserved, target_is_directory=True)
+    else:
+        parent = setup[0] / (field + "-parent-link")
+        parent.symlink_to(selected.parent, target_is_directory=True)
+        setup[3][field] = str(parent / selected.name)
+        setup[4].write_text(json.dumps(setup[3]), encoding="utf-8")
+    assert_config_failure(setup, field, "路径含链接或重解析点；请人工复核并配置真实路径。")
+
+
+@pytest.mark.parametrize("field", [
+    "bomc.json", "python", "skill_root", "output_dir", "skill_config", "SKILL.md", "scripts/run_query.py",
+])
+@pytest.mark.parametrize("error,detail", [
+    (FileNotFoundError, "路径不存在或类型不符。"),
+    (NotADirectoryError, "路径不存在或类型不符。"),
+    (PermissionError, "本地 IO 失败，无法检查路径。"),
+])
+def test_config_lstat_errors_name_field_and_hide_exception(setup, field, error, detail):
+    selected = config_field_path(setup, field)
+    original = Path.lstat
+
+    def lstat(path):
+        if path == selected:
+            raise error("FAKE-IO-SECRET " + str(path))
+        return original(path)
+
+    with patch.object(Path, "lstat", lstat):
+        assert_config_failure(setup, field, detail)
+
+
+@pytest.mark.parametrize("field", ["bomc.json", "SKILL.md"])
+def test_config_read_errors_name_field_and_hide_exception(setup, field):
+    selected = config_field_path(setup, field)
+    original = Path.read_bytes
+
+    def read_bytes(path):
+        if path == selected:
+            raise PermissionError("FAKE-READ-SECRET " + str(path))
+        return original(path)
+
+    with patch.object(Path, "read_bytes", read_bytes):
+        assert_config_failure(setup, field, "本地 IO 失败，无法读取文件。")
+
+
+def test_config_home_lookup_error_names_bomc_json_without_exception(setup):
+    with patch.object(Path, "home", side_effect=RuntimeError("FAKE-HOME-SECRET")):
+        assert_config_failure(setup, "bomc.json", "本地 IO 失败，无法定位配置。")
+
+
+@pytest.mark.skipif(guard.os.name == "nt", reason="POSIX execute permission check")
+@pytest.mark.parametrize("kind", ["not_executable", "io_error"])
+def test_python_execution_check_names_field_without_paths(setup, kind):
+    if kind == "not_executable":
+        selected = config_field_path(setup, "python")
+        selected.chmod(0o600)
+        assert_config_failure(setup, "python", "不可执行。")
+    else:
+        with patch.object(guard.os, "access", side_effect=OSError("FAKE-ACCESS-SECRET")):
+            assert_config_failure(setup, "python", "本地 IO 失败，无法检查执行权限。")
+
+
+@pytest.mark.parametrize("operation", ["reserve_output", "Popen"])
+def test_query_stage_io_keeps_original_generic_fallback(setup, operation):
+    target = guard.subprocess if operation == "Popen" else guard
+    with patch.object(target, operation, side_effect=OSError("FAKE-QUERY-SECRET " + str(setup[2]))):
+        code, out, err = invoke()
+    assert code == 3 and not out
+    assert err == "BOMC_GUARD_ERROR 3: 配置/路径不可用或本地 IO 失败；未取得可用证据。\n"
+    for file in setup[2].glob("*.json"):
+        assert json.loads(file.read_text(encoding="utf-8"))["status"] == "FAILED_NO_USABLE_EVIDENCE"
 
 
 @pytest.mark.parametrize("key,value", [
@@ -212,31 +365,36 @@ def test_invalid_config_schema_and_bounds(setup, key, value):
     path.write_text(json.dumps(config), encoding="utf-8")
     code, out, err = invoke()
     assert code == 3 and not out and "FAKE-CONFIG-SECRET" not in err
+    assert (key if key != "password" else "bomc.json") in err
+    assert str(setup[0].parent) not in err
 
 
 @pytest.mark.parametrize("raw", ["{broken", "[]", "null", '{"schema":"a","schema":"b"}'])
 def test_invalid_config_json(setup, raw):
     setup[4].write_text(raw, encoding="utf-8")
-    assert invoke()[0] == 3
+    code, out, err = invoke()
+    assert code == 3 and not out and "bomc.json" in err and raw not in err
 
 
 @pytest.mark.parametrize("kind", ["directory", "parent_traversal", "file_link", "parent_link", "reparse", "parent_reparse"])
 def test_optional_skill_config_invalid_metadata_refused_before_process(setup, kind):
     home, skill, output, config, path = setup
-    skill_config = skill / "upstream config.json"
+    config_parent = home / "synthetic-upstream-config"
+    config_parent.mkdir()
+    skill_config = config_parent / "upstream config.json"
     skill_config.write_text("FAKE-CONFIG-SECRET", encoding="utf-8")
     value = str(skill_config)
     if kind == "directory":
-        value = str(skill)
+        value = str(config_parent)
     elif kind == "parent_traversal":
-        value = str(skill / ".." / skill.name / skill_config.name)
+        value = str(config_parent / ".." / config_parent.name / skill_config.name)
     elif kind == "file_link":
         link = home / "upstream-link.json"
         link.symlink_to(skill_config)
         value = str(link)
     elif kind == "parent_link":
         link = home / "upstream-link"
-        link.symlink_to(skill, target_is_directory=True)
+        link.symlink_to(config_parent, target_is_directory=True)
         value = str(link / skill_config.name)
     config["skill_config"] = value
     path.write_text(json.dumps(config), encoding="utf-8")
@@ -244,7 +402,7 @@ def test_optional_skill_config_invalid_metadata_refused_before_process(setup, ki
 
     def lstat(selected):
         result = original_lstat(selected)
-        reparse_path = skill_config if kind == "reparse" else skill
+        reparse_path = skill_config if kind == "reparse" else config_parent
         if kind in ("reparse", "parent_reparse") and selected == reparse_path:
             from types import SimpleNamespace
             return SimpleNamespace(st_file_attributes=1024, st_mode=result.st_mode)
@@ -253,14 +411,13 @@ def test_optional_skill_config_invalid_metadata_refused_before_process(setup, ki
     with patch.object(Path, "lstat", lstat), patch.object(guard.subprocess, "Popen") as spawn:
         code, out, err = invoke()
     assert code == 3 and not out and "FAKE-CONFIG-SECRET" not in err
+    assert "skill_config" in err and value not in err
     spawn.assert_not_called()
 
 
 def test_missing_config_fails_without_searching(setup):
     setup[4].rename(setup[4].with_suffix(".disabled"))
-    with patch.object(guard.subprocess, "Popen") as spawn:
-        assert invoke()[0] == 3
-    spawn.assert_not_called()
+    assert_config_failure(setup, "bomc.json", "路径不存在或类型不符。")
 
 
 def test_hash_mismatch_refuses_before_process(setup):
@@ -275,7 +432,7 @@ def test_top_above_config_refused(setup):
     assert invoke(["--alarm-time", "2026-10-19 12:30:00", "--top", "11"])[0] == 2
 
 
-@pytest.mark.parametrize("target", ["skill", "output", "entry", "config"])
+@pytest.mark.parametrize("target", ["skill", "output", "entry", "config", "skill_md"])
 def test_symlink_escape_refused(setup, target):
     home, skill, output, config, path = setup
     if target in ("skill", "output"):
@@ -284,11 +441,13 @@ def test_symlink_escape_refused(setup, target):
         config["skill_root" if target == "skill" else "output_dir"] = str(link)
         path.write_text(json.dumps(config), encoding="utf-8")
     else:
-        selected = path if target == "config" else skill / "scripts/run_query.py"
+        selected = path if target == "config" else skill / ("SKILL.md" if target == "skill_md" else "scripts/run_query.py")
         moved = selected.with_suffix(".original")
         selected.rename(moved)
         selected.symlink_to(moved)
-    assert invoke()[0] == 3
+    field = {"skill": "skill_root", "output": "output_dir", "entry": "scripts/run_query.py",
+             "config": "bomc.json", "skill_md": "SKILL.md"}[target]
+    assert_config_failure(setup, field, "路径含链接或重解析点；请人工复核并配置真实路径。")
 
 
 def test_windows_reparse_metadata_is_rejected(setup):
@@ -296,7 +455,7 @@ def test_windows_reparse_metadata_is_rejected(setup):
     original = Path.lstat
     with patch.object(Path, "lstat", lambda p: SimpleNamespace(st_file_attributes=1024, st_mode=original(p).st_mode)
                       if p == setup[2] else original(p)):
-        assert invoke()[0] == 3
+        assert_config_failure(setup, "output_dir", "路径含链接或重解析点；请人工复核并配置真实路径。")
 
 
 def test_nonzero_child_does_not_echo_raw_output(setup):
