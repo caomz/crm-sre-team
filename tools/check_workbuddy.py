@@ -44,14 +44,28 @@ READ_ONLY_BOUNDARY_MARKERS = [
     "云元数据端点",
     "不作为查询目标或请求体来源",
 ]
+QUERY_ONLY_SKILL_LIST_RULE = (
+    '禁止模型调用：只调用宿主 Skill 工具清单里列出的技能。清单里没有的，包括宿主因 disable-model-invocation: true 隐藏的，即使用户点名或从别处得知名字，也不按名调用，按“点名不可用”说明；标为禁止模型调用的技能，不绕过宿主去读它的文件或直接运行它的脚本，也不列目录或搜索磁盘找它。'
+)
+QUERY_ONLY_NAMED_UNAVAILABLE_RULE = (
+    '点名不可用：用户点名的诊断、技能或数据源在本会话不可用（技能清单里没有、宿主拒绝、缺依赖或缺配置）时，先说明拿不到它及原因，不悄悄换成其他取数通道顶替。确要改用其他只读来源（例如 BOMC），先写明它不是用户点名的那个，再按该来源的规则取数；缺依赖或缺配置及守卫失败仍按对应规则停止这次取数，不自行修复或重试，其余分析照常并写明证据缺口。'
+)
+QUERY_ONLY_WRITE_RULE = (
+    '写操作：需要建工单、申请或变更权限、改配置、重启、删除等写操作时，在本会话直接给出人工复核需求，按 action-review 人工动作评审卡的“已确认事实／高概率候选／待验证／已排除”结构，至少写明：拟执行的动作与唯一目标、对象与范围、依据（E 号或用户口述）、风险与回退，以及审批人、执行人、复核人（未知写“待现场指定”）。不写操作命令、SQL 或脚本，不调用技能或工具代为执行；不引导用户改到普通对话、其他专家或其他渠道让 AI 代办；不声称系统会生成或已提交工单。'
+)
+STALE_QUERY_ONLY_RULES = (
+    '写操作：只出人工复核需求，沿用 action-review 的既有格式，不调用技能或工具代为执行。',
+    '禁止模型调用：标为禁止模型调用（disable-model-invocation: true）的技能不用，不绕过宿主去读它的文件或直接运行它的脚本。',
+)
 QUERY_ONLY_MARKERS = (
     '只查询：团长可用团队守卫或用户级只读取数技能进行生产诊断，查询本身不需要用户事先授权；用户限制优先，不扩大目标或数据范围。',
     '技能副作用：不调用会写入（生产或本机）、建工单、发消息、外发内容、改插件或改配置的技能，团队技能和用户级技能一视同仁。看不出是否只读的，按写操作处理。查询的脱敏证据输出仅按“本地结果保存”执行。',
-    '禁止模型调用：标为禁止模型调用（disable-model-invocation: true）的技能不用，不绕过宿主去读它的文件或直接运行它的脚本。',
+    QUERY_ONLY_SKILL_LIST_RULE,
+    QUERY_ONLY_NAMED_UNAVAILABLE_RULE,
     '缺依赖或缺配置：说明缺什么、须由用户自己在会话外处理，停止这次取数，不自行修复或重试；其余分析照常并写明证据缺口。不装包（pip、npm、brew 等），不建虚拟环境，不换解释器。',
     '配置缺失或查询失败即报告并停止本轮 BOMC 取数，不自行修复或切换入口绕过；其余分析照常并写明缺口。',
     '地址与凭据：不替用户找或填写地址和凭据，不为此检索历史会话、宿主记忆或本机文件，不在会话里索要地址或凭据，不提出代写配置文件。',
-    '写操作：只出人工复核需求，沿用 action-review 的既有格式，不调用技能或工具代为执行。',
+    QUERY_ONLY_WRITE_RULE,
     '成员边界：成员仍不取数，不调用团队守卫或用户级取数技能，只分析团长提供的脱敏材料并向团长提缺口。',
 )
 BOMC_PRIORITY_RULE = (
@@ -140,8 +154,11 @@ QUERY_ONLY_POLICY = {
     "user_level_read_skills": True,
     "prior_query_consent_required": False,
     "write_skills": "REVIEW_NEEDS_ONLY",
+    "write_request_handling": "IN_SESSION_ACTION_REVIEW_REQUIRED_FIELDS_NO_COMMANDS_NO_AI_HANDOFF_NO_TICKET_CLAIMS",
     "unknown_side_effects": "TREAT_AS_WRITE",
+    "skill_invocation_scope": "HOST_SKILL_TOOL_LIST_ONLY_NO_UNLISTED_NAMED_CALLS",
     "model_invocation_disabled_skills": "NO_LOAD_READ_OR_EXECUTION_BYPASS",
+    "named_unavailable": "REPORT_NAMED_SOURCE_AND_REASON_BEFORE_DISTINCT_READ_ONLY_ALTERNATIVE_RESPECT_QUERY_STOP_RULES",
     "missing_dependency_or_config": "REPORT_STOP_THIS_QUERY_NO_REPAIR_OR_RETRY_USER_HANDLES_CONTINUE_ANALYSIS_WITH_GAP",
     "dependency_install_environment_or_interpreter_change": False,
     "address_or_credential_discovery": "NO_HISTORY_MEMORY_FILE_SEARCH_OR_CREDENTIAL_REQUEST",
@@ -259,6 +276,7 @@ def check_prompt(text: str, lead: bool, runtime: bool = False) -> list[str]:
 def query_only_prompt_errors(text: str) -> list[str]:
     errors = ["missing_query_only_rule:" + marker for marker in QUERY_ONLY_MARKERS if marker not in text]
     errors += ["stale_bomc_query_gate:" + phrase for phrase in BOMC_STALE_QUERY_GATES if phrase in text]
+    errors += ["stale_query_only_rule:" + phrase for phrase in STALE_QUERY_ONLY_RULES if phrase in text]
     return errors
 
 

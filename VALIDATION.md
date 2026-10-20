@@ -1,5 +1,7 @@
 ## 2.8.0-rc6 离线验证（2026-10-19，未发布候选）
 
+fix5 的检查范围为共用只查询规则及全部 Agent/Skill 产物：本会话人工复核需求的字段与交付方式、点名对象不可用的说明及替代来源声明、宿主 Skill 清单外技能不按名调用；同步 runtime-contract 并用静态标记和变异回归防止边界退化。版本保持 2.8.0-rc6；守卫脚本与 docs/15 附录四个合成技能代码块保持不变。Mac 复测准备为 QO-3、QO-4、QO-4b，回归 QO-2、BRC-1，其余用例沿用此前结果；本次不执行宿主测试。检查命令、实际结果与补丁保存在仓库外交接，不以离线验证代替宿主复测。
+
 本轮基线：指定 venv + 明确设置 TMPDIR 后，pytest 473 passed / 1 skipped / 1931 subtests；check_workbuddy PASS；validate_bundle 1888/1888。首轮执行器未采用指定 TMPDIR，/tmp 符号链接导致21 failed / 11 errors；显式设置后原样重跑通过，没有放宽路径断言。tracked tests/*-results 基线未发生平台差异改动。
 
 rc6 最终实际检查：pytest 596 passed / 1 skipped / 1931 subtests；新增守卫/契约专项 123 passed；check_workbuddy PASS；静态校验 1904/1904；oncall 76 passed / 216 subtests。唯一 skip 为 Windows junction 实机用例（POSIX: no junction concept），没有跳过三项必跑命令；Windows reparse 元数据拒绝的合成回归已通过。原有重复 ZIP entry 的负例警告仍为1条。首轮改后592 passed之后，自审补充长分隔符中和、被中断子进程回收、50条上界与限定输出目录回归，已在最终全量重验。tracked reasoning/judgment results 仅版本升至rc6；static-checks 因新增检查重生成，不是平台差异，没有手工编辑生成报告。新增守卫和契约测试只用合成桩；Mac/Windows 宿主、真实技能接口、真实 BOMC、部署、正式发布 ZIP 均 NOT_RUN。生产写仍仅产出人工评审需求；BOMC 只查询规则与次数限制不是宿主权限隔离。准备与风险见 [BOMC 集成说明](docs/15-bomc-readonly.md)。以下保留 rc5 历史结果，不能充当 rc6 宿主证据。
