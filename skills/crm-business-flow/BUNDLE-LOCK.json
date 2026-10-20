@@ -5,7 +5,7 @@
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
     "MANUAL-MODE.md": "dc7b19a8edc185a130a3a5a7451816203941e8424b2ce8a39a997cd5915e0cbb",
-    "SKILL.md": "4fc8cc8ca8aec4552798a1107313691d2dd60c2431a58df9bb12277c8997e402",
+    "SKILL.md": "b89c54b787b0d35f8a5891587aa3713b71364c2d5039229297be10be919b84e7",
     "VERSION": "f25cbc82c7fc4f8b0441bae6d80cc913d93b1f092abf0349152e0c100561be9b",
     "agents/openai.yaml": "423c6dc0d3ef560acaa42578ccc942f012b9222361bed09139489a640e25b5f8",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",
