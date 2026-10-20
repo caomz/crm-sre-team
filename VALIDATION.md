@@ -2,7 +2,7 @@
 
 本轮基线：指定 venv + 明确设置 TMPDIR 后，pytest 473 passed / 1 skipped / 1931 subtests；check_workbuddy PASS；validate_bundle 1888/1888。首轮执行器未采用指定 TMPDIR，/tmp 符号链接导致21 failed / 11 errors；显式设置后原样重跑通过，没有放宽路径断言。tracked tests/*-results 基线未发生平台差异改动。
 
-rc6 最终实际检查：pytest 596 passed / 1 skipped / 1931 subtests；新增守卫/契约专项 123 passed；check_workbuddy PASS；静态校验 1904/1904；oncall 76 passed / 216 subtests。唯一 skip 为 Windows junction 实机用例（POSIX: no junction concept），没有跳过三项必跑命令；Windows reparse 元数据拒绝的合成回归已通过。原有重复 ZIP entry 的负例警告仍为1条。首轮改后592 passed之后，自审补充长分隔符中和、被中断子进程回收、50条上界与限定输出目录回归，已在最终全量重验。tracked reasoning/judgment results 仅版本升至rc6；static-checks 因新增检查重生成，不是平台差异，没有手工编辑生成报告。新增守卫和契约测试只用合成桩；Mac/Windows 宿主、真实技能接口、真实 BOMC、部署、正式发布 ZIP 均 NOT_RUN。生产写仍仅产出人工评审需求；BOMC 本轮授权与次数限制不是宿主权限隔离。准备与风险见 [BOMC 集成说明](docs/15-bomc-readonly.md)。以下保留 rc5 历史结果，不能充当 rc6 宿主证据。
+rc6 最终实际检查：pytest 596 passed / 1 skipped / 1931 subtests；新增守卫/契约专项 123 passed；check_workbuddy PASS；静态校验 1904/1904；oncall 76 passed / 216 subtests。唯一 skip 为 Windows junction 实机用例（POSIX: no junction concept），没有跳过三项必跑命令；Windows reparse 元数据拒绝的合成回归已通过。原有重复 ZIP entry 的负例警告仍为1条。首轮改后592 passed之后，自审补充长分隔符中和、被中断子进程回收、50条上界与限定输出目录回归，已在最终全量重验。tracked reasoning/judgment results 仅版本升至rc6；static-checks 因新增检查重生成，不是平台差异，没有手工编辑生成报告。新增守卫和契约测试只用合成桩；Mac/Windows 宿主、真实技能接口、真实 BOMC、部署、正式发布 ZIP 均 NOT_RUN。生产写仍仅产出人工评审需求；BOMC 只查询规则与次数限制不是宿主权限隔离。准备与风险见 [BOMC 集成说明](docs/15-bomc-readonly.md)。以下保留 rc5 历史结果，不能充当 rc6 宿主证据。
 
 ## 2.8.0-rc5 验证（2026-10-14，候选发布）
 

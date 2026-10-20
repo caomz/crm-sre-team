@@ -109,16 +109,20 @@ class KnowledgeDocumentationTests(unittest.TestCase):
         # runtime-contract：取值锁定 + production 红线不动
         self.assertEqual(rc["read_only_boundary"]["public_read_execution"],
                          "AUTHORIZED_PUBLIC_READ_AND_SEARCH_NO_USER_DATA_EGRESS")
-        # rc6 approved A': exactly one lead-only read exception; no generic
-        # production access and no production writes are granted by this change.
+        # rc6 fix4: one registered preferred guard plus host user-level read-only
+        # skills for the lead; production writes remain closed.
         self.assertEqual(rc["read_only_boundary"]["production_read_execution"],
-                         "BOMC_GUARDED_LEAD_ONLY_CURRENT_ROUND")
+                         "LEAD_ONLY_READ_ONLY_DIAGNOSTIC_SKILLS")
         channels = rc["read_only_boundary"]["production_read_channels"]
         self.assertEqual(len(channels), 1)
         self.assertEqual(channels[0]["id"], "bomc-alarm-readonly")
         self.assertEqual(channels[0]["executor"], "telecom-crm-sre-team-lead")
         self.assertFalse(channels[0]["member_execution"])
-        self.assertEqual(channels[0]["other_production_read"], "NOT_IMPLEMENTED_NO_REAL_CHANNEL")
+        self.assertEqual(channels[0]["other_production_read"], "USER_LEVEL_READ_ONLY_SKILLS_LEAD_ONLY")
+        self.assertEqual(channels[0]["priority"], "PREFERRED")
+        self.assertEqual(channels[0]["query_consent"], "NOT_REQUIRED")
+        self.assertFalse(rc["read_only_boundary"]["query_only"]["member_data_collection"])
+        self.assertFalse(rc["read_only_boundary"]["query_only"]["config_write"])
         self.assertEqual(rc["read_only_boundary"]["production_write"],
                          "SEPARATE_CHANGE_APPROVAL_REQUIRED")
         # docs/11：删除旧"留待"句；统一短语；新用例就位

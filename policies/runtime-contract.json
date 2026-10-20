@@ -1,10 +1,10 @@
 {
   "version": "2.8.0-rc6",
   "implementation_status": "NOT_IMPLEMENTED",
-  "mode": "AUTHORIZED_EVIDENCE_WITH_SCOPED_BOMC_READ",
+  "mode": "EVIDENCE_WITH_LEAD_READ_ONLY_QUERIES",
   "production_executor": false,
   "production_tools": [],
-  "note": "项目运行契约，不是 WorkBuddy 官方配置；提示词和离线测试不能实现权限隔离或证明模型行为。 production_executor/production_tools 保留为托管生产执行未实现的旧字段；BOMC 例外只登记在 read_only_boundary，不开放生产写。",
+  "note": "项目运行契约，不是 WorkBuddy 官方配置；提示词和离线测试不能实现权限隔离或证明模型行为。production_executor/production_tools 仍表示托管生产执行未实现；团长只读诊断规则登记在 read_only_boundary，本插件不新增生产工具，不开放生产写。",
   "implementation_status_scope": "CUSTOM_MANAGED_HARNESS_ONLY",
   "managed_mode": {
     "raw_model_stream_to_user": false,
@@ -128,10 +128,10 @@
     "command_generation": "READ_ONLY_QUERY_COMMANDS_ALLOWED_WITH_SCOPE_AND_PLACEHOLDERS",
     "public_read_execution": "AUTHORIZED_PUBLIC_READ_AND_SEARCH_NO_USER_DATA_EGRESS",
     "local_result_write": "AUTHORIZED_WORKING_DIRECTORY_ONLY",
-    "production_read_execution": "BOMC_GUARDED_LEAD_ONLY_CURRENT_ROUND",
+    "production_read_execution": "LEAD_ONLY_READ_ONLY_DIAGNOSTIC_SKILLS",
     "production_write": "SEPARATE_CHANGE_APPROVAL_REQUIRED",
     "http_method_is_not_the_decision": true,
-    "note": "唯一 BOMC 团长只读通道需本轮用户直接授权、有效插件外配置和真实宿主权限；守卫不识别会话身份或次数，提示词不构成权限隔离。生产写边界不变。",
+    "note": "用户 2026-10-20 明确：可以调用生产环境，只是查询。仅原生/兼容团长可用优先的 BOMC 守卫或用户级只读技能，查询无需事先授权；仍受用户限制、真实宿主权限与既有配置约束。缺依赖或缺配置时说明缺什么，停止这次取数，不自行修复或重试，由用户自己在会话外处理；其余分析照常并写明证据缺口。写操作只出人工复核需求；成员不取数；提示词不构成权限隔离。",
     "production_read_channels": [
       {
         "id": "bomc-alarm-readonly",
@@ -139,11 +139,6 @@
         "modes": [
           "WORKBUDDY_NATIVE",
           "WORKBUDDY_COMPAT"
-        ],
-        "authorization": "DIRECT_USER_CURRENT_ROUND_ONLY",
-        "authorization_inputs": [
-          "授权查询 BOMC",
-          "同意本轮查询卡"
         ],
         "read_only": true,
         "max_records": 50,
@@ -161,11 +156,30 @@
         ],
         "member_execution": false,
         "credential_read_by_agent_or_guard": false,
-        "authorization_enforcement": "PROMPT_CONTRACT_NOT_HOST_ISOLATION",
-        "other_production_read": "NOT_IMPLEMENTED_NO_REAL_CHANNEL",
-        "local_output": "CONFIGURED_BOMC_OUTPUT_DIR_EXCLUSIVE_NEW_FILE_REDACTED"
+        "other_production_read": "USER_LEVEL_READ_ONLY_SKILLS_LEAD_ONLY",
+        "local_output": "CONFIGURED_BOMC_OUTPUT_DIR_EXCLUSIVE_NEW_FILE_REDACTED",
+        "priority": "PREFERRED",
+        "query_consent": "NOT_REQUIRED",
+        "boundary_enforcement": "PROMPT_CONTRACT_NOT_HOST_ISOLATION"
       }
-    ]
+    ],
+    "query_only": {
+      "executor": "telecom-crm-sre-team-lead",
+      "modes": [
+        "WORKBUDDY_NATIVE",
+        "WORKBUDDY_COMPAT"
+      ],
+      "user_level_read_skills": true,
+      "prior_query_consent_required": false,
+      "write_skills": "REVIEW_NEEDS_ONLY",
+      "unknown_side_effects": "TREAT_AS_WRITE",
+      "model_invocation_disabled_skills": "NO_LOAD_READ_OR_EXECUTION_BYPASS",
+      "missing_dependency_or_config": "REPORT_STOP_THIS_QUERY_NO_REPAIR_OR_RETRY_USER_HANDLES_CONTINUE_ANALYSIS_WITH_GAP",
+      "dependency_install_environment_or_interpreter_change": false,
+      "address_or_credential_discovery": "NO_HISTORY_MEMORY_FILE_SEARCH_OR_CREDENTIAL_REQUEST",
+      "config_write": false,
+      "member_data_collection": false
+    }
   },
   "legacy_alias_scope": {
     "trusted_context_fields": {
