@@ -54,9 +54,15 @@ QUERY_ONLY_NAMED_UNAVAILABLE_RULE = (
 QUERY_ONLY_WRITE_RULE = (
     '写操作：需要建工单、申请或变更权限、改配置、重启、删除等写操作时，在本会话直接给出人工复核需求，按 action-review 人工动作评审卡的“已确认事实／高概率候选／待验证／已排除”结构，至少写明：拟执行的动作与唯一目标、对象与范围、依据（E 号或用户口述）、风险与回退，以及审批人、执行人、复核人（未知写“待现场指定”）。不写操作命令、SQL 或脚本，不调用技能或工具代为执行；不引导用户改到普通对话、其他专家或其他渠道让 AI 代办；不声称系统会生成或已提交工单。'
 )
+QUERY_ONLY_ACQUISITION_RULE = (
+    '技能、插件与依赖获取：点名的诊断、技能或数据源不可用，或缺依赖、缺配置时，不提出、不询问，也不在 AskUserQuestion 等选项或候选清单里列出由 AI 去搜索、下载、安装、启用、更新或配置技能、插件或依赖包。通过宿主技能市场或技能管理类工具、pip/npm/brew 等获取或管理它们，同样按本机写操作处理。只说明缺什么，以及须由用户自己在会话外处理；用户在会话里要求代办，也不代办，按同样方式说明。'
+)
 STALE_QUERY_ONLY_RULES = (
     '写操作：只出人工复核需求，沿用 action-review 的既有格式，不调用技能或工具代为执行。',
     '禁止模型调用：标为禁止模型调用（disable-model-invocation: true）的技能不用，不绕过宿主去读它的文件或直接运行它的脚本。',
+)
+BOMC_STALE_EVIDENCE_RULES = (
+    'E 号登记、派单材料和工作日志都写完整原值',
 )
 HOST_TEST_ENVIRONMENT_BANS = (
     '合成桩', '测试桩', 'Mac 只测', 'Mac 只使用', 'macOS 合成测试',
@@ -78,6 +84,7 @@ QUERY_ONLY_MARKERS = (
     '技能副作用：不调用会写入（生产或本机）、建工单、发消息、外发内容、改插件或改配置的技能，团队技能和用户级技能一视同仁。看不出是否只读的，按写操作处理。查询的脱敏证据输出仅按“本地结果保存”执行。',
     QUERY_ONLY_SKILL_LIST_RULE,
     QUERY_ONLY_NAMED_UNAVAILABLE_RULE,
+    QUERY_ONLY_ACQUISITION_RULE,
     '缺依赖或缺配置：说明缺什么、须由用户自己在会话外处理，停止这次取数，不自行修复或重试；其余分析照常并写明证据缺口。不装包（pip、npm、brew 等），不建虚拟环境，不换解释器。',
     '配置缺失或查询失败即报告并停止本轮 BOMC 取数，不自行修复或切换入口绕过；其余分析照常并写明缺口。',
     '地址与凭据：不替用户找或填写地址和凭据，不为此检索历史会话、宿主记忆或本机文件，不在会话里索要地址或凭据，不提出代写配置文件。',
@@ -103,7 +110,7 @@ BOMC_EVIDENCE_RULE = (
     'BOMC 结果按现场证据 E 号登记，不用 E-K；记录技能与守卫版本、真实技能 SKILL.md 哈希、参数、执行时间、条数、脱敏输出文件路径和 SHA256。'
     '这些值从守卫回执第一行 JSON 照抄原值登记：skill、guard_version、upstream_skill_md_sha256、parameters（alarm_time、top、ip、grade、crm）、started_at、finished_at、count、output_file、sha256，以及 truncated（如有）。'
     'upstream_skill_md_sha256 与 sha256 两个哈希都写完整 64 位十六进制，不截断，不用“校验一致”“已核对”之类的话代替原值。'
-    'E 号登记、派单材料和工作日志都写完整原值；总结里引用哈希时也写完整值，或只引用 E 号。'
+    'E 号登记写全部字段；派单材料、工作日志和总结里出现的值都照抄原值，哈希写完整、不截断，也可只引用 E 号。'
 )
 BOMC_MAC_COMMAND_RULE = (
     "`'<python>' -X utf8 '<本技能目录>/scripts/bomc_readonly.py' --alarm-time '<YYYY-MM-DD HH:MM:SS>' --top <N> [--ip '<IPv4>'] [--grade '<级别>'] [--crm]`"
@@ -179,6 +186,7 @@ QUERY_ONLY_POLICY = {
     "model_invocation_disabled_skills": "NO_LOAD_READ_OR_EXECUTION_BYPASS",
     "named_unavailable": "MATCH_HOST_SKILL_NAMES_AND_DESCRIPTIONS_REPORT_UNAVAILABLE_AND_REASON_BEFORE_ANY_QUERY_NO_BOMC_ALIAS_UNLESS_NAMED_BOMC_OR_ALARMS_DISTINCT_READ_ONLY_ALTERNATIVE_RESPECT_QUERY_STOP_RULES",
     "missing_dependency_or_config": "REPORT_STOP_THIS_QUERY_NO_REPAIR_OR_RETRY_USER_HANDLES_CONTINUE_ANALYSIS_WITH_GAP",
+    "skill_plugin_dependency_acquisition": "NO_PROPOSALS_QUESTIONS_OPTIONS_OR_AI_SEARCH_DOWNLOAD_INSTALL_ENABLE_UPDATE_CONFIGURE_USER_HANDLES_OUTSIDE_SESSION_EVEN_IF_REQUESTED",
     "dependency_install_environment_or_interpreter_change": False,
     "address_or_credential_discovery": "NO_HISTORY_MEMORY_FILE_SEARCH_OR_CREDENTIAL_REQUEST",
     "config_write": False,
@@ -297,6 +305,7 @@ def query_only_prompt_errors(text: str) -> list[str]:
     errors += ["stale_bomc_query_gate:" + phrase for phrase in BOMC_STALE_QUERY_GATES if phrase in text]
     errors += ["stale_query_only_rule:" + phrase for phrase in STALE_QUERY_ONLY_RULES if phrase in text]
     errors += host_test_environment_errors(text)
+    errors += stale_bomc_evidence_errors(text)
     return errors
 
 
@@ -304,8 +313,12 @@ def host_test_environment_errors(text: str) -> list[str]:
     return ["host_test_environment:" + phrase for phrase in HOST_TEST_ENVIRONMENT_BANS if phrase in text]
 
 
+def stale_bomc_evidence_errors(text: str) -> list[str]:
+    return ["stale_bomc_evidence_rule:" + phrase for phrase in BOMC_STALE_EVIDENCE_RULES if phrase in text]
+
+
 def host_loaded_surface_errors(root: Path) -> list[str]:
-    """Reject test-environment prose in declared host inputs and ZIP contents."""
+    """Reject test-environment prose and stale evidence rules, including ZIPs."""
     manifest = json.loads((root / "release-manifest.json").read_text(encoding="utf-8"))
     errors = []
     for rel in manifest["files"]:
@@ -319,10 +332,10 @@ def host_loaded_surface_errors(root: Path) -> list[str]:
                         if not entry.is_dir():
                             text = entry.filename + "\n" + archive.read(entry).decode("utf-8", errors="replace")
                             errors += [rel + ":" + entry.filename + ":" + e
-                                       for e in host_test_environment_errors(text)]
+                                       for e in host_test_environment_errors(text) + stale_bomc_evidence_errors(text)]
             else:
                 text = path.read_bytes().decode("utf-8", errors="replace")
-                errors += [rel + ":" + e for e in host_test_environment_errors(text)]
+                errors += [rel + ":" + e for e in host_test_environment_errors(text) + stale_bomc_evidence_errors(text)]
         except (OSError, BadZipFile):
             errors.append(rel + ":host_surface_missing_or_invalid")
     return sorted(set(errors))
