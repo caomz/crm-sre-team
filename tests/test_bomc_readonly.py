@@ -6,7 +6,7 @@ import hashlib
 import importlib.util
 import io
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import shutil
 import subprocess
 import sys
@@ -33,6 +33,7 @@ def setup(tmp_path):
     config = {"schema": "crm-sre-bomc/v1", "python": str(Path(sys.executable).resolve()),
               "skill_root": str(skill), "output_dir": str(output),
               "skill_md_sha256": hashlib.sha256((skill / "SKILL.md").read_bytes()).hexdigest(),
+              "scripts_sha256": guard.scripts_sha256(skill),
               "max_top": 10, "timeout_seconds": 2}
     path = home / ".crm-sre-team/bomc.json"
     path.write_text(json.dumps(config), encoding="utf-8")
@@ -426,6 +427,204 @@ def test_hash_mismatch_refuses_before_process(setup):
         code, out, err = invoke()
     assert code == 4 and "人工复核" in err and not out
     spawn.assert_not_called()
+
+
+@pytest.mark.parametrize("value", [None, "", [], 1, True, "g" * 64, "0" * 63, "0" * 65, "0" * 64 + "\n"])
+def test_scripts_hash_format_names_only_fixed_field(setup, value):
+    setup[3]["scripts_sha256"] = value
+    setup[4].write_text(json.dumps(setup[3]), encoding="utf-8")
+    assert_config_failure(setup, "scripts_sha256", "配置无效；scripts/ 源文件清单哈希须为 64 位 hex。")
+
+
+@pytest.mark.parametrize("relative", ["run_query.py", "nested/helper.py"])
+@pytest.mark.parametrize("change", ["edit", "rename", "remove"])
+def test_python_source_changes_refuse_before_upstream(setup, relative, change):
+    source = setup[1] / "scripts" / relative
+    if not source.exists():
+        source.parent.mkdir(parents=True)
+        source.write_bytes(b"# Synthetic helper\r\n")
+    setup[3]["scripts_sha256"] = guard.scripts_sha256(setup[1])
+    setup[4].write_text(json.dumps(setup[3]), encoding="utf-8")
+    if change == "edit":
+        source.write_bytes(source.read_bytes() + b"# Harmless synthetic change\n")
+    else:
+        # Preserve the file; removal from the manifest is a move outside scripts/.
+        source.rename(source.with_name("renamed.py") if change == "rename" else setup[0] / "preserved.py")
+    with patch.object(guard.subprocess, "Popen") as spawn:
+        code, out, err = invoke()
+    assert not out
+    if relative == "run_query.py" and change != "edit":
+        assert code == 3 and "scripts/run_query.py 路径不存在或类型不符" in err
+    else:
+        assert code == 4
+        assert err == "BOMC_GUARD_ERROR 4: scripts/ 源文件清单哈希不符；停止，交人工复核真实技能后更新配置。\n"
+    spawn.assert_not_called()
+
+
+def test_added_python_source_and_mutation_after_config_preflight_are_detected(setup):
+    original = guard.reserve_output
+
+    def reserve(directory):
+        result = original(directory)
+        (setup[1] / "scripts/new.py").write_bytes(b"# Synthetic addition after load_config\n")
+        return result
+
+    with patch.object(guard, "reserve_output", reserve), patch.object(guard.subprocess, "Popen") as spawn:
+        code, out, err = invoke()
+    assert code == 4 and not out and "scripts/ 源文件清单哈希不符" in err
+    spawn.assert_not_called()
+
+
+def test_excluded_files_do_not_change_hash_and_are_never_opened(setup):
+    scripts = setup[1] / "scripts"
+    cache = scripts / "__pycache__"
+    cache.mkdir()
+    excluded = [scripts / "settings.json", scripts / "secret.pem", scripts / "ignored.pyc",
+                scripts / "ignored.PY", cache / "cached.py", setup[1] / "outside.py"]
+    for path in excluded:
+        path.write_bytes(b"FAKE-EXCLUDED-CONTENT")
+    allowed = {setup[4], setup[1] / "SKILL.md", scripts / "run_query.py"}
+
+    def check_opener(original):
+        def checked(file, *args, **kwargs):
+            if isinstance(file, (str, Path)):
+                assert Path(file) not in excluded, "Excluded content must never be opened"
+            return original(file, *args, **kwargs)
+        return checked
+
+    reads = []
+    original_read = Path.read_bytes
+
+    def read_bytes(path):
+        reads.append(path)
+        assert path in allowed
+        return original_read(path)
+
+    with patch.object(Path, "read_bytes", read_bytes), \
+         patch.object(Path, "open", check_opener(Path.open)), \
+         patch.object(builtins, "open", check_opener(builtins.open)), \
+         patch.object(guard.os, "open", check_opener(guard.os.open)):
+        assert guard.scripts_sha256(setup[1]) == setup[3]["scripts_sha256"]
+        code, out, err = invoke()
+    assert code == 0, err
+    assert set(reads) == allowed
+    for path in excluded:
+        path.write_bytes(b"CHANGED-EXCLUDED-CONTENT")
+    assert guard.scripts_sha256(setup[1]) == setup[3]["scripts_sha256"]
+
+
+@pytest.mark.parametrize("name,directory", [
+    ("linked.py", False), ("linked.json", False), ("linked.pyc", False),
+    ("nested", True), ("__pycache__", True),
+])
+def test_scripts_links_are_rejected_even_when_file_content_would_be_excluded(setup, name, directory):
+    outside = setup[0] if directory else setup[4]
+    (setup[1] / "scripts" / name).symlink_to(outside, target_is_directory=directory)
+    assert_config_failure(setup, "scripts_sha256", "路径含链接或重解析点；请人工复核并配置真实路径。")
+
+
+def test_scripts_nested_reparse_point_and_out_of_bounds_resolution_are_rejected(setup):
+    from types import SimpleNamespace
+    nested = setup[1] / "scripts/nested"
+    nested.mkdir()
+    original = Path.lstat
+    with patch.object(Path, "lstat", lambda p: SimpleNamespace(st_file_attributes=1024, st_mode=original(p).st_mode)
+                      if p == nested else original(p)):
+        assert_config_failure(setup, "scripts_sha256", "路径含链接或重解析点；请人工复核并配置真实路径。")
+    original_resolve = Path.resolve
+    with patch.object(Path, "resolve", lambda p, **kw: setup[0] if p == nested else original_resolve(p, **kw)):
+        assert_config_failure(setup, "scripts_sha256", "路径越界。")
+
+
+def test_scripts_read_error_is_field_only_and_never_starts_upstream(setup):
+    original = Path.read_bytes
+    def read_bytes(path):
+        if path == setup[1] / "scripts/run_query.py":
+            raise PermissionError("FAKE-SOURCE-READ-SECRET " + str(path))
+        return original(path)
+    with patch.object(Path, "read_bytes", read_bytes):
+        assert_config_failure(setup, "scripts_sha256", "本地 IO 失败，无法读取文件。")
+
+
+@pytest.mark.parametrize("relative", ["SKILL.md", "scripts/run_query.py", "scripts/nested/config.py"])
+def test_skill_config_overlapping_a_hash_input_is_rejected_without_reading_it(setup, relative):
+    selected = setup[1] / relative
+    if not selected.exists():
+        selected.parent.mkdir(parents=True)
+        selected.write_bytes(b"FAKE-CONFIG-CONTENT")
+    setup[3]["skill_config"] = str(selected)
+    setup[4].write_text(json.dumps(setup[3]), encoding="utf-8")
+    original = Path.read_bytes
+
+    def read_bytes(path):
+        assert path != selected, "Configured credential content must never be read"
+        return original(path)
+
+    with patch.object(Path, "read_bytes", read_bytes):
+        assert_config_failure(setup, "skill_config", "与完整性校验源文件重叠；请人工复核配置。")
+
+
+def test_manifest_is_sorted_posix_relative_utf8_with_raw_byte_hashes(tmp_path):
+    scripts = tmp_path / "scripts"
+    (scripts / "nested").mkdir(parents=True)
+    contents = {"z.py": b"# z\r\n", "run_query.py": b"# entry\n", "nested/合成.py": b"\xff\x00\r\n"}
+    for name, raw in contents.items():
+        (scripts / name).write_bytes(raw)
+    manifest = "".join(name + "\t" + hashlib.sha256(contents[name]).hexdigest() + "\n" for name in sorted(contents))
+    expected = hashlib.sha256(manifest.encode("utf-8")).hexdigest()
+    assert guard.scripts_sha256(tmp_path) == expected
+    for path_type in (PurePosixPath, PureWindowsPath):
+        entries = [(path_type(name), hashlib.sha256(raw).hexdigest()) for name, raw in reversed(list(contents.items()))]
+        assert guard.scripts_manifest_sha256(entries) == expected
+
+
+@pytest.mark.parametrize("name", ["bad\tname.py", "bad\nname.py", "bad\\name.py"])
+def test_manifest_rejects_ambiguous_posix_names(name):
+    with pytest.raises(guard.GuardError) as exc:
+        guard.scripts_manifest_sha256([(PurePosixPath(name), "0" * 64)])
+    assert exc.value.code == 3 and str(exc.value) == "scripts_sha256 源文件相对路径无效。"
+
+
+def test_receipt_keeps_all_fields_in_order_and_normalizes_both_pins(setup):
+    for name in ("skill_md_sha256", "scripts_sha256"):
+        setup[3][name] = setup[3][name].upper()
+    setup[4].write_text(json.dumps(setup[3]), encoding="utf-8")
+    code, out, err = invoke()
+    assert code == 0, err
+    meta = json.loads(out.splitlines()[0])
+    assert list(meta) == ["skill", "guard_version", "upstream_skill_md_sha256", "upstream_scripts_sha256",
+                          "parameters", "started_at", "finished_at", "count", "output_file", "sha256", "truncated"]
+    assert meta["upstream_scripts_sha256"] == setup[3]["scripts_sha256"].lower()
+    assert meta["upstream_skill_md_sha256"] == setup[3]["skill_md_sha256"].lower()
+    assert meta["truncated"] is False and meta["parameters"]["ip"] is None
+
+
+def test_operator_helper_matches_guard_and_does_not_write_or_read_configuration(setup):
+    helper = ROOT / "tools/oncall/bomc_hashes.py"
+    module_spec = importlib.util.spec_from_file_location("bomc_operator_helper", helper)
+    module = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(module)
+    original_read = Path.read_bytes
+    allowed = {SOURCE, setup[1] / "SKILL.md", setup[1] / "scripts/run_query.py"}
+
+    def read_bytes(path):
+        assert path in allowed, "Helper must never read configuration or credentials"
+        return original_read(path)
+
+    out = io.StringIO()
+    with patch.object(Path, "home", side_effect=AssertionError("No configuration lookup")), \
+         patch.object(Path, "read_bytes", read_bytes), \
+         patch.object(Path, "write_bytes", side_effect=AssertionError("No writes")), \
+         patch.object(Path, "write_text", side_effect=AssertionError("No writes")), \
+         patch.object(guard.subprocess, "Popen", side_effect=AssertionError("No subprocess")), redirect_stdout(out):
+        assert module.main([str(setup[1])]) == 0
+    expected = {name: setup[3][name] for name in ("skill_md_sha256", "scripts_sha256")}
+    assert json.loads(out.getvalue()) == expected
+    before = sorted(path.relative_to(setup[1]) for path in setup[1].rglob("*"))
+    result = subprocess.run([sys.executable, str(helper), str(setup[1])], capture_output=True, text=True)
+    assert result.returncode == 0 and not result.stderr
+    assert json.loads(result.stdout) == expected
+    assert before == sorted(path.relative_to(setup[1]) for path in setup[1].rglob("*"))
 
 
 def test_top_above_config_refused(setup):

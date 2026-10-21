@@ -24,7 +24,7 @@ VERSION = "2.8.0-rc6"
 SCHEMA = "crm-sre-bomc/v1"
 MAX_BYTES = 8 * 1024 * 1024
 PREVIEW_CHARS = 6000
-FIELDS = {"schema", "python", "skill_root", "output_dir", "skill_md_sha256",
+FIELDS = {"schema", "python", "skill_root", "output_dir", "skill_md_sha256", "scripts_sha256",
           "max_top", "timeout_seconds"}
 OPTIONAL_FIELDS = {"skill_config"}
 SENSITIVE = re.compile(r"appsecret|token|password|passwd|pwd|secret|authorization|cookie|credential|apikey|connectionstring|dsn", re.I)
@@ -154,6 +154,61 @@ def read_config_bytes(path: Path, field: str) -> bytes:
         raise GuardError(3, f"{field} 本地 IO 失败，无法读取文件。") from None
 
 
+def scripts_manifest_sha256(entries) -> str:
+    """Hash UTF-8 lines: scripts-relative POSIX path + TAB + file hex + LF.
+
+    Sort case-sensitively by the relative path; file contents are raw bytes.
+    PureWindowsPath.as_posix() gives the same manifest on Windows and macOS.
+    Reject ambiguous line separators and literal POSIX backslashes.
+    """
+    rows = []
+    for relative, digest in entries:
+        name = relative.as_posix()
+        if (relative.is_absolute() or ".." in relative.parts
+                or any(char in name for char in "\\\t\r\n\x00")):
+            raise GuardError(3, "scripts_sha256 源文件相对路径无效。")
+        rows.append((name, digest))
+    manifest = "".join(name + "\t" + digest + "\n" for name, digest in sorted(rows))
+    return hashlib.sha256(manifest.encode("utf-8")).hexdigest()
+
+
+def scripts_sha256(root: Path) -> str:
+    """Read only regular .py files under scripts/, without following links.
+
+    Inspect metadata even for excluded entries; skip __pycache__ subtrees.
+    This integrity check is not an atomic snapshot or a permission sandbox.
+    """
+    scripts = checked_config_path(str(root / "scripts"), True, "scripts_sha256")
+    checked_config_path(str(scripts / "run_query.py"), False, "scripts/run_query.py")
+    entries = []
+
+    def visit(directory):
+        for child in directory.iterdir():
+            metadata = child.lstat()
+            if (stat.S_ISLNK(metadata.st_mode)
+                    or getattr(metadata, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                raise GuardError(3, "scripts_sha256 路径含链接或重解析点；请人工复核并配置真实路径。")
+            if stat.S_ISDIR(metadata.st_mode):
+                if child.name != "__pycache__":
+                    visit(checked_source(child, True))
+            elif child.suffix == ".py":
+                source = checked_source(child, False)
+                entries.append((source.relative_to(scripts),
+                                hashlib.sha256(read_config_bytes(source, "scripts_sha256")).hexdigest()))
+
+    def checked_source(path, directory):
+        selected = checked_config_path(str(path), directory, "scripts_sha256")
+        if not selected.is_relative_to(scripts):
+            raise GuardError(3, "scripts_sha256 路径越界。")
+        return selected
+
+    try:
+        visit(scripts)
+        return scripts_manifest_sha256(entries)
+    except (OSError, ValueError, RuntimeError):
+        raise GuardError(3, "scripts_sha256 本地 IO 失败，无法检查源文件。") from None
+
+
 def unique_object(pairs):
     obj = {}
     for key, value in pairs:
@@ -205,6 +260,14 @@ def load_config() -> dict:
     expected = config["skill_md_sha256"]
     if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", expected):
         raise GuardError(3, "skill_md_sha256 配置无效；SKILL.md 哈希须为 64 位 hex。")
+    expected_scripts = config["scripts_sha256"]
+    if not isinstance(expected_scripts, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", expected_scripts):
+        raise GuardError(3, "scripts_sha256 配置无效；scripts/ 源文件清单哈希须为 64 位 hex。")
+    skill_config = config.get("skill_config")
+    if skill_config is not None and (skill_config == skill_md or (
+            skill_config.is_relative_to(root / "scripts") and skill_config.suffix == ".py")):
+        # A configured credential file must never become an integrity read.
+        raise GuardError(3, "skill_config 与完整性校验源文件重叠；请人工复核配置。")
     if hashlib.sha256(read_config_bytes(skill_md, "SKILL.md")).hexdigest() != expected.lower():
         raise GuardError(4, "SKILL.md 哈希不符；停止，交人工复核真实技能后更新配置。")
     return config
@@ -266,6 +329,11 @@ def query(config: dict, args: argparse.Namespace) -> dict:
     started = datetime.now().astimezone().isoformat(timespec="seconds")
     try:
         with tempfile.TemporaryFile() as err:
+            # Keep the code-integrity check immediately before starting upstream.
+            # Files can still change between this check and the interpreter read.
+            upstream_scripts = scripts_sha256(config["skill_root"])
+            if upstream_scripts != config["scripts_sha256"].lower():
+                raise GuardError(4, "scripts/ 源文件清单哈希不符；停止，交人工复核真实技能后更新配置。")
             # env is intentionally omitted: the real skill inherits credentials.
             # stdout is discarded, never sent to the model; no shell or services.
             process = subprocess.Popen(command, shell=False, cwd=config["skill_root"], stdin=subprocess.DEVNULL,
@@ -306,6 +374,7 @@ def query(config: dict, args: argparse.Namespace) -> dict:
         preview = stored.decode("utf-8").rstrip("\n")
         return {"skill": "bomc-alarm-readonly", "guard_version": VERSION,
                 "upstream_skill_md_sha256": config["skill_md_sha256"].lower(),
+                "upstream_scripts_sha256": upstream_scripts,
                 "parameters": vars(args), "started_at": started,
                 "finished_at": datetime.now().astimezone().isoformat(timespec="seconds"),
                 "count": count, "output_file": str(path),

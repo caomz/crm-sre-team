@@ -572,6 +572,7 @@
   "repository_only_files": [
     "tools/oncall/README.md",
     "tools/oncall/Update-CrmSreTeam.ps1",
+    "tools/oncall/bomc_hashes.py",
     "tools/oncall/runbooks/ONCALL_RUNBOOK.r6.md",
     "tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md",
     "tools/oncall/test_oncall_updater.py"
