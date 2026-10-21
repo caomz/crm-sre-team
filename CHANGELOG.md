@@ -1,8 +1,14 @@
-## 2.8.0-rc6（2026-10-19，未发布的 BOMC 集成候选）
+## 2.8.0-rc6（2026-10-21，候选发布）
 
 - 用户批准 A′：新增插件内 bomc-alarm-readonly，仅团长绑定，调用插件外配置指向的值班机原技能，不复制真实技能或凭据；7名成员仍各绑自己的技能。
-- 标准库守卫提供固定参数、哈希校验、独占文件、超时、脱敏和截断；本轮授权与最多2次调用是提示词合同，不是权限隔离。生产写仍只给人工评审需求，其他生产只读未实现。
-- 新增合成桩、守卫及契约回归、Mac宿主测试准备、FDE第9节观察/止损/回退与r7部署章节。源与产物通过构建同步；宿主测试、真实接口、Windows部署和正式发布ZIP未执行。rc5既有失败与冻结关口协议保留。
+- 标准库守卫提供固定参数、哈希校验、独占文件、超时、脱敏和截断；本轮授权与最多2次调用是提示词合同，不是权限隔离。生产写仍只给人工评审需求，托管生产执行未实现。
+- 新增合成桩、守卫及契约回归、Mac 宿主测试、FDE 第9节观察/止损/回退与 r7 部署章节；只查询规则覆盖点名来源、技能清单、缺依赖/配置停止及禁止 AI 代办技能、插件和依赖获取。rc5 既有失败与冻结关口协议保留。
+- fix8 Mac r1：提交 M=17f80ef，探测包 2.8.0-rc6-probe.r802c6bec，WorkBuddy 5.8.3 / glm-5.3-flash。INSTALL-VERIFY、BRC-1、QO-2、QO-4b、RESTORE-VERIFY 经 Claude 复核 PASS；QO-4 执行人原判 0/3，Claude 按已声明替代来源的规则复核为 3/3 PASS，用户已接受。BRC-2 原 FAIL 仅为事件乙 E002 漏登记 truncated=false，Claude 同意原判，保留历史记录。
+- fix9 Mac r1：提交 N=7301dfa7d373530b4eb9c3efd43ddd641828aa67，探测包 2.8.0-rc6-probe.rfab71a52，同为 WorkBuddy 5.8.3 / glm-5.3-flash。INSTALL-VERIFY、BRC-8、BRC-8b、BRC-9、BRC-9b、BRC-9c、BRC-1、BRC-2、RESTORE-VERIFY 共 9 项 PASS，执行人与 Claude 复核一致，已验收。
+- 已解决外部审查 P1：守卫新增必填 scripts_sha256，在启动上游前核验 scripts/ 下递归普通 .py（含 run_query.py）清单哈希；脚本被加注释和缺字段均经 Mac 验证拒绝。回执新增 upstream_scripts_sha256；E 号登记 11 个顶层字段与 parameters 五个子字段，false/null 照写。fix8 r1 的 E002 漏 truncated 在 fix9 r1 未再出现，BRC-2 PASS。
+- 沿用结果：BRC-3～BRC-6 来自 c429f41 批（10-19），BRC-7 来自 r5（5bbf81b，Claude 复核），均 PASS，运行于较早规则文本；QO-1 来自 fix4 r4、QO-3 来自 fix7 r1、QO-2/QO-4/QO-4b 来自 fix8 r1。本批未运行这些沿用项，不合并为 fix9 新测通过。
+- 已知问题：多个近似匹配的处理未写明，下一版补“拿不准就列出候选、问用户”；Windows 更新器固定 D:\Dev（Python 路径可用 -PythonExe 改）；只读主要靠提示词约束，由共用规则和 BOMC 守卫兜底，无宿主级权限隔离，production_tools 为空。完整性仅覆盖 SKILL.md 和 scripts/ 下的 .py，scripts/ 外导入、第三方依赖、字节码及检查到执行的时间窗由执行人在会话外复核。fix9 BRC-2 把 crm=false 说成“数据库类告警可能被过滤”，含义说反；--crm 清单才会滤掉数据库告警，默认不启用，该说法未用于排除候选。BRC-8b 曾建议“删掉 skill_config”，不适用于凭据走配置文件的值班机，部署须填写 skill_config。
+- 本次发布整理仅更新文档、验收状态断言与审核记录，生成锁由构建器维护；宿主正文、成员 ZIP、r6/r7 手册、守卫和辅助工具保持被测字节。真实 BOMC、Windows 11 值班机及正式关口 NOT_RUN。标签发布后值班机仅安装/切换 + VERIFY（来源/缓存完整性、Skill 回执路径）并记录 WorkBuddy、插件版本和模型；版本差异另核对，必要时才列明短会话。离线检查、最终 ZIP 和补丁哈希记仓库外 RESULT.json，证据存于仓库外。
 
 ## 2.8.0-rc5（2026-10-14，候选发布）
 

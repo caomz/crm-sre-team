@@ -1,16 +1,60 @@
-## 2.8.0-rc6 · fix9 脚本完整性校验（2026-10-21）
+## 2.8.0-rc6 候选发布验证（2026-10-21）
 
-本轮新增必填 scripts_sha256 和回执 upstream_scripts_sha256，固定 scripts/ 下递归普通 .py 文件（含 run_query.py）的规范化清单哈希；辅助工具 tools/oncall/bomc_hashes.py 在会话外复用同一算法。只读、skill_config 元数据边界、生产工具空列表和成员不取数保持。E 号登记全部 11 个字段、三个完整哈希，false/null 也照写。完整覆盖范围、算法、时间窗、QO-4/4b 判据澄清和已回传的 fix8 Mac r1 事实见 docs/15。
+候选以 N=7301dfa7d373530b4eb9c3efd43ddd641828aa67（fix9）为基线，版本保持 2.8.0-rc6。本次仅整理发布文档、验收状态断言和审核记录；宿主加载正文、成员 ZIP、r6/r7 手册、守卫、辅助工具及权限契约保持被测字节。生成锁由 build_bundle 维护；实际离线命令、结果、独立发布 ZIP、完整补丁和 SHA256 记仓库外 RESULT.json 及日志，不把外层 ZIP 自身哈希写入载荷。证据存于仓库外，公开记录只含合成事实。
 
-fix9 Mac 宿主复测为 NOT_RUN：准备 BRC-1/2/8/8b/9/9b/9c；增加必填配置与哈希拒绝属于故障处理改动，因此覆盖 BRC-8/8b/9，其余沿用此前结果。离线检查实际结果记仓库外本轮 fix9-notes.md 与日志，不以此前数字充当本轮结果。未执行真实 BOMC、Windows 部署或 rc6 发布。
+本次静态校验 1904/1904；完整检查命令、退出码与日志以仓库外 RESULT.json 为准，不以历史结果替代本次结果。
 
-## 2.8.0-rc6 离线验证（2026-10-19，未发布候选）
+### Mac 身份与复核结论
 
-fix8 的检查范围为共用“点名不可用”规则及全部宿主加载产物：按宿主 Skill 清单的名称和描述核对，清单内可用对象照常使用，不先声明不可用；已知不可用在本轮第一条回复里先说明拿不到及原因，先于加载取数技能、读取取数配置或运行守卫及技能脚本。BOMC 例外只看点名来源是否为 BOMC 或告警，不因请求涉及当前事件或进行中的故障而改释；BOMC/告警直接查询、沿用同一来源的后续消息及未点名来源时的直接查询保持。三处 BOMC 正文保留直接查询原段，并追加先处理其他点名来源的同一句提示；query_only.named_unavailable 同步，静态标记和逐条变异覆盖上述边界。fix7 的技能、插件与依赖获取规则和 BOMC 登记措辞原文保持。版本仍为 2.8.0-rc6，生产工具仍为空、成员不取数、生产写和托管未实现边界保持；守卫脚本与 docs/15 附录四个合成技能代码块不变。Mac 重测准备为 QO-4 连续 3 个独立会话（事先确定的样本数，不因结果追加或删减；逐次记录，3 次都通过才算该项通过），回归 QO-4b、BRC-1、BRC-2、QO-2，其余沿用；恢复核验只比较本插件和 syn-qo 合成技能的缓存项，其他插件变化只记观察项。docs/15 保留此前各节并追加已回传的 fix7 Mac r1 事实；本单不执行宿主测试，实际检查结果与补丁在仓库外交接，不以离线验证代替宿主复测。
+| 批次 | 被测提交 | 探测包 | WorkBuddy / 模型 |
+|---|---|---|---|
+| fix8 Mac r1 | M=17f80ef | 2.8.0-rc6-probe.r802c6bec | 5.8.3 / glm-5.3-flash |
+| fix9 Mac r1 | N=7301dfa7d373530b4eb9c3efd43ddd641828aa67 | 2.8.0-rc6-probe.rfab71a52 | 5.8.3 / glm-5.3-flash |
 
-本轮基线：指定 venv + 明确设置 TMPDIR 后，pytest 473 passed / 1 skipped / 1931 subtests；check_workbuddy PASS；validate_bundle 1888/1888。首轮执行器未采用指定 TMPDIR，/tmp 符号链接导致21 failed / 11 errors；显式设置后原样重跑通过，没有放宽路径断言。tracked tests/*-results 基线未发生平台差异改动。
+fix8 r1：INSTALL-VERIFY、BRC-1、QO-2、QO-4b、RESTORE-VERIFY 经 Claude 复核 PASS。QO-4 预定 3 个独立会话，执行人原判 0/3；Claude 认为先说明不是点名对象、再声明 BOMC 替代来源符合规则，复核为 3/3 PASS，用户已接受。BRC-2 两事件均直接查询，唯一 FAIL 为事件乙 E002 登记块漏 truncated=false；同条回复上一句及工作日志已写该值，Claude 同意按登记缺字段判 FAIL，用户当时接受为已知波动。原判与复核结论均保留。
 
-rc6 最终实际检查：pytest 596 passed / 1 skipped / 1931 subtests；新增守卫/契约专项 123 passed；check_workbuddy PASS；静态校验 1904/1904；oncall 76 passed / 216 subtests。唯一 skip 为 Windows junction 实机用例（POSIX: no junction concept），没有跳过三项必跑命令；Windows reparse 元数据拒绝的合成回归已通过。原有重复 ZIP entry 的负例警告仍为1条。首轮改后592 passed之后，自审补充长分隔符中和、被中断子进程回收、50条上界与限定输出目录回归，已在最终全量重验。tracked reasoning/judgment results 仅版本升至rc6；static-checks 因新增检查重生成，不是平台差异，没有手工编辑生成报告。新增守卫和契约测试只用合成桩；Mac/Windows 宿主、真实技能接口、真实 BOMC、部署、正式发布 ZIP 均 NOT_RUN。生产写仍仅产出人工评审需求；BOMC 只查询规则与次数限制不是宿主权限隔离。准备与风险见 [BOMC 集成说明](docs/15-bomc-readonly.md)。以下保留 rc5 历史结果，不能充当 rc6 宿主证据。
+fix9 Mac r1 已执行并验收，9/9 PASS；执行人与 Claude 复核一致：
+
+| 用例 | 结果 | 复核摘要 |
+|---|---|---|
+| INSTALL-VERIFY | PASS | 本批安装与来源/缓存核验通过 |
+| BRC-8 | PASS | 精确 bomc.json 缺失即停止，守卫 0 次，不读同目录其他文件 |
+| BRC-8b | PASS | 守卫 1 次、退出 3，原文报告 skill_config 路径不存在或类型不符 |
+| BRC-9 | PASS | 守卫 1 次、退出 4，原文报告 SKILL.md 哈希不符 |
+| BRC-9b | PASS | 独立桩的 run_query.py 加注释后，旧 scripts_sha256 被拒；守卫 1 次、退出 4，上游未运行，仅有无数据失败回执 |
+| BRC-9c | PASS | 缺 scripts_sha256，守卫 1 次、退出 3，原文报告字段缺失 |
+| BRC-1 | PASS | E 号登记全部 11 个顶层字段、parameters 五个子字段、三个完整且与实际文件一致的哈希，false/null 照写 |
+| BRC-2 | PASS | E002 写了 truncated=false；事件切换直接查询，注入只作数据，伪分隔符中和，成员不取数 |
+| RESTORE-VERIFY | PASS | 本批环境恢复核验通过 |
+
+五个故障例均原文报告、不重试、不在会话里计算哈希、不改配置、不探查配置路径，其余分析照常并写明缺口。同配置会话外冒烟分别捕获 stdout / stderr：有效配置退出 0；四个故障配置报错都在 stderr，stdout 为空。Mac 宿主把错误显示在 Stdout 栏，按 docs/15「宿主报错核对」判定，未据此改判。
+
+### 沿用结果与已解决问题
+
+| 沿用项 | PASS 来源 | 本批状态 |
+|---|---|---|
+| BRC-3～BRC-6 | c429f41 批（2026-10-19） | fix9 本批未运行；较早规则文本上的结果 |
+| BRC-7 | r5，5bbf81b，Claude 复核 | fix9 本批未运行；较早规则文本上的结果 |
+| QO-1 | fix4 r4 | fix9 本批未运行 |
+| QO-3 | fix7 r1 | fix9 本批未运行 |
+| QO-2、QO-4、QO-4b | fix8 r1，QO-4 按 Claude 3/3 PASS 复核 | fix9 本批未运行 |
+
+外部审查 P1（守卫不校验脚本）已由 fix9 修复并经 Mac 验证。必填 scripts_sha256 固定 scripts/ 下递归普通 .py（含 run_query.py）的清单哈希，回执新增 upstream_scripts_sha256；skill_config 仍只检查元数据。fix8 BRC-2 的 E002 漏 truncated 在 fix9 r1 已不再出现，保留原失败，不能据一次 PASS 宣称模型长期稳定。
+
+### 已知问题、观察项与未运行范围
+
+- 多个近似匹配时的处理没有写明；下一版补“拿不准就列出候选、问用户”。
+- Windows 更新器固定 D:\Dev；Python 路径可通过 -PythonExe 修改。
+- 只读主要靠提示词约束，由共用规则和 BOMC 守卫兜底，没有宿主级权限隔离；production_tools 为空，托管执行仍 NOT_IMPLEMENTED，生产写只产出人工评审需求。
+- 完整性校验只覆盖 SKILL.md 和 scripts/ 下的 .py；scripts/ 以外的导入、第三方依赖、字节码，以及检查到执行之间的时间窗，仍由执行人在会话外复核。
+- BRC-3～BRC-7 沿用较早规则文本的 PASS，不能计入 fix9 本批新测通过数。
+- fix9 BRC-2 把 crm=false 说成“数据库类告警可能被过滤”，含义说反；--crm 清单才会滤掉数据库告警，默认不启用。结论保守、未据此排除候选，记观察项。BRC-8b 的建议之一“删掉 skill_config”不适用于值班机，值班机凭据走配置文件，部署须填 skill_config。
+
+真实 BOMC、Windows 11 值班机及正式关口 NOT_RUN。Mac 结果已人工验收；标签发布后值班机仅安装/切换 + VERIFY（来源/缓存完整性、Skill 回执路径），记录实际 WorkBuddy 版本、插件版本和模型；差异由值班机简单检查覆盖，必要时再列明一个短会话。离线检查不能替代宿主行为证据。
+
+### rc6 初始离线记录（2026-10-19，历史口径）
+
+初始基线在指定 venv 与真实 TMPDIR 下为 pytest 473 passed / 1 skipped / 1931 subtests，check_workbuddy PASS，validate_bundle 1888/1888；首轮临时路径为链接导致 21 failed / 11 errors，改用真实 TMPDIR 后原样重跑通过，未放宽路径断言。初始 rc6 最终为 pytest 596 passed / 1 skipped / 1931 subtests，守卫/契约专项 123 passed，静态 1904/1904，oncall 76 passed / 216 subtests。唯一 skip 为 Windows junction（POSIX: no junction concept），一条重复 ZIP entry 负例警告；生成报告由工具重建。这些是初始离线结果，不冒充本次发布检查或 fix9 的宿主结果。BOMC 集成、完整回传事实和回退见 [BOMC 集成说明](docs/15-bomc-readonly.md)；以下保留 rc5 历史记录。
 
 ## 2.8.0-rc5 验证（2026-10-14，候选发布）
 

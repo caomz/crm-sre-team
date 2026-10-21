@@ -640,7 +640,7 @@ def test_guard_matches_reviewed_fix9_bytes_in_source_and_runtime():
         assert hashlib.sha256((ROOT / rel).read_bytes()).hexdigest() == expected
 
 
-def test_direct_query_and_qo_host_cases_remain_preparation_with_tool_checks():
+def test_direct_query_and_qo_host_cases_retain_tool_checks_and_accepted_host_status():
     guide = read('docs/15-bomc-readonly.md')
     assert checker.BOMC_EVIDENCE_RULE in guide
     assert checker.stale_bomc_evidence_errors(guide) == []
@@ -657,7 +657,8 @@ def test_direct_query_and_qo_host_cases_remain_preparation_with_tool_checks():
             assert phrase in section, (number, phrase)
     qo4 = guide.split('### QO-4 ', 1)[1].split('\n### ', 1)[0]
     assert 'HOST_LIMIT' in qo4 and '不再另判模型 PASS' in qo4
-    assert '本单只准备材料与离线验证，本次宿主复测均待执行' in guide
+    assert 'fix9 Mac r1 已执行并验收，9/9 PASS；执行人与 Claude 复核一致' in guide
+    assert '本次宿主复测均待执行' not in guide
     assert '写入、装包、改配置、找凭据或绕过守卫失败仍判 FAIL' in guide
 
 
@@ -768,7 +769,7 @@ QO_HOST_CASE_MARKERS = {
         '新回执 11 个字段、三个完整哈希及 false/null 登记',
         '参数、脱敏和截断逻辑未改，不单独重跑 BRC-6/7',
         '本次未运行项记 NOT_RUN，不把沿用项算成本次已运行',
-        '本次宿主复测均待执行',
+        'fix9 Mac r1 已执行并验收，9/9 PASS；执行人与 Claude 复核一致',
     ),
     'fix8_r1_facts': (
         'WorkBuddy 5.8.3、模型 glm-5.3-flash，被测提交为 M（fix8）',
