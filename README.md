@@ -1,6 +1,6 @@
 # CRM SRE Team
 
-电信 CRM 稳定性专家团 · `2.8.0-rc7` · 未发布
+电信 CRM 稳定性专家团 · `2.8.0-rc7` · 候选发布（candidate）
 
 面向电信 CRM 运维场景的 WorkBuddy 专家团项目。基于用户授权的脱敏材料，组织业务链路、数据库、应用运行时和基础设施等领域分析，形成可追溯的诊断结论、最小补证需求、人工评审卡与交接记录。
 
@@ -12,7 +12,7 @@
 | 专业覆盖 | 1 名稳定性总指挥、7 名领域成员、8 个角色 Skill + 1 个团长 BOMC 只读 Skill |
 | 分析输入 | 明确授权且已脱敏的日志、指标、调用链、变更记录与业务材料 |
 | 执行边界 | 团长可经优先的 BOMC 守卫或用户级只读技能直接查询生产；成员不取数，生产写仅形成人工评审材料 |
-| 交付状态 | `2.8.0-rc7` 未发布；fix10 Mac r1 整批 BLOCKED、部分完成，BRC-8b 改述报错 FAIL；fix11 已改、待 Mac 第二轮验证，Windows 11 值班机与正式关口 NOT_RUN；rc6 历史验收保留 |
+| 交付状态 | `2.8.0-rc7` candidate；fix11 Mac r1 已验收 14/14 PASS，Windows 11 值班机、真实 BOMC 与正式关口 NOT_RUN；历史验收与原失败记录保留 |
 
 ## 适用场景
 
@@ -188,7 +188,7 @@ crm=false 表示没有启用 CRM 清单过滤（没有加 --crm），不会因�
 
 退出 3 时，先原样引用守卫输出的那一行 BOMC_GUARD_ERROR 报错（它只含字段名），再说明是哪个字段的问题，由用户在会话外核对修正；不要建议删除或省略 skill_config 等配置字段来绕过报错，值班机的凭据走配置文件，部署时必须填 skill_config；不自行补充配置路径、配置值或程序异常内容。
 
-只调用宿主 Skill 工具清单里列出的技能；清单外技能即使用户点名，也不按名调用，标为 disable-model-invocation 的技能不读文件或直跑脚本绕过。用户以名称或描述点名诊断、技能或数据源时，先按宿主 Skill 工具清单里的名称和描述核对；清单内有对应项就按该技能使用，不先声明不可用；清单没有对应项就属本会话不可用。经核对已知不可用时，在本轮第一条回复里先说明拿不到及原因，先于加载 bomc-alarm-readonly 等取数技能、读取 bomc.json 或其他取数配置、运行守卫或技能脚本。BOMC 例外只看点名来源本身是否为 BOMC 或告警；点名其他来源时，即使要查当前事件或进行中的故障，也不把点名对象或请求内容解释成告警查询。用户点名 BOMC 或告警、后续消息沿用同一来源（如“查当前快照”），或未点名任何来源且需要 BOMC 数据时，仍按 BOMC 规则直接查询，不出查询卡、不等同意。使用中才发现缺依赖或缺配置时，再说明原因并按对应规则停止这次取数；确要另用只读来源，先说明它不是点名对象，再按该来源规则取数。缺依赖或配置及守卫失败仍停止这次取数，不自行修复或重试，其余分析照常并写明证据缺口。不提出、不询问，也不在 AskUserQuestion 等选项或候选清单里列出由 AI 搜索、下载、安装、启用、更新或配置技能、插件或依赖包；只说明缺什么，须由用户自己在会话外处理；用户在会话里要求代办也不代办。BOMC 证据从守卫回执第一行 JSON 照抄原值，upstream_skill_md_sha256、upstream_scripts_sha256 与 sha256 三个哈希均保留完整 64 位十六进制；回执第一行 JSON 的 11 个字段都要登记，值为 false 或 null 的字段也照写；E 号登记写全部字段；派单材料、工作日志和总结里出现的值都照抄原值，哈希写完整、不截断，也可只引用 E 号。fix9 的 Mac 复测结果见 docs/15-bomc-readonly.md：BRC-1、BRC-2、BRC-8、BRC-8b、BRC-9、BRC-9b、BRC-9c 加 INSTALL-VERIFY、RESTORE-VERIFY，共 9 项 PASS，已验收；其余用例沿用此前结果并单列来源。
+只调用宿主 Skill 工具清单里列出的技能；清单外技能即使用户点名，也不按名调用，标为 disable-model-invocation 的技能不读文件或直跑脚本绕过。用户以名称或描述点名诊断、技能或数据源时，先按宿主 Skill 工具清单里的名称和描述核对；清单内有对应项就按该技能使用，不先声明不可用；清单没有对应项就属本会话不可用。经核对已知不可用时，在本轮第一条回复里先说明拿不到及原因，先于加载 bomc-alarm-readonly 等取数技能、读取 bomc.json 或其他取数配置、运行守卫或技能脚本。BOMC 例外只看点名来源本身是否为 BOMC 或告警；点名其他来源时，即使要查当前事件或进行中的故障，也不把点名对象或请求内容解释成告警查询。用户点名 BOMC 或告警、后续消息沿用同一来源（如“查当前快照”），或未点名任何来源且需要 BOMC 数据时，仍按 BOMC 规则直接查询，不出查询卡、不等同意。使用中才发现缺依赖或缺配置时，再说明原因并按对应规则停止这次取数；确要另用只读来源，先说明它不是点名对象，再按该来源规则取数。缺依赖或配置及守卫失败仍停止这次取数，不自行修复或重试，其余分析照常并写明证据缺口。不提出、不询问，也不在 AskUserQuestion 等选项或候选清单里列出由 AI 搜索、下载、安装、启用、更新或配置技能、插件或依赖包；只说明缺什么，须由用户自己在会话外处理；用户在会话里要求代办也不代办。BOMC 证据从守卫回执第一行 JSON 照抄原值，upstream_skill_md_sha256、upstream_scripts_sha256 与 sha256 三个哈希均保留完整 64 位十六进制；回执第一行 JSON 的 11 个字段都要登记，值为 false 或 null 的字段也照写；E 号登记写全部字段；派单材料、工作日志和总结里出现的值都照抄原值，哈希写完整、不截断，也可只引用 E 号。fix11 的 Mac 复测结果见 docs/15-bomc-readonly.md：预定第二轮已验收 14/14 PASS，含 QO-4 连续 3 个独立会话（3/3）；沿用项与历史结果单列来源。
 
 领域 Runbook 用作方法参考，与本次现场证据分别标注。团队知识区提供空白环境与索引模板，不随包内嵌旧版个人工号、账号、内部地址或事故索引。
 
@@ -198,23 +198,29 @@ crm=false 表示没有启用 CRM 清单过滤（没有加 --crm），不会因�
 
 `2.8.0-rc6` 的 fix8 / fix9 Mac r1 结果与 Claude 复核结论见 `VALIDATION.md` 和 `docs/15-bomc-readonly.md`。两批均为 WorkBuddy 5.8.3 / glm-5.3-flash；fix8 的 QO-4 执行人原判 0/3，Claude 复核 3/3 PASS，用户已接受；INSTALL-VERIFY、BRC-1、QO-2、QO-4b、RESTORE-VERIFY PASS，BRC-2 原 FAIL 为 E002 漏 truncated=false。fix9 的 INSTALL-VERIFY、BRC-8、BRC-8b、BRC-9、BRC-9b、BRC-9c、BRC-1、BRC-2、RESTORE-VERIFY 共 9 项 PASS，执行人与 Claude 一致，已验收。外部审查 P1 的脚本完整性缺口已修复并经 Mac 验证，E002 漏 truncated 在 fix9 r1 未再出现；fix8 原失败记录保留。
 
-沿用 PASS 来源单列：BRC-3～BRC-6 为 c429f41 批（10-19），BRC-7 为 r5（5bbf81b，Claude 复核），这五项跑在较早规则文本上；QO-1 为 fix4 r4、QO-3 为 fix7 r1、QO-2/QO-4/QO-4b 为 fix8 r1，均非 fix9 新测。rc4 / rc5 历史质量问题与 HOST_LIMIT 保留，不能折算为当前候选的验收结果。真实 BOMC、Windows 11 值班机及正式关口 NOT_RUN。
+rc6 的 fix9 批沿用 PASS 来源单列：BRC-3～BRC-6 为 c429f41 批（10-19），BRC-7 为 r5（5bbf81b，Claude 复核），这五项跑在较早规则文本上；QO-1 为 fix4 r4、QO-3 为 fix7 r1、QO-2/QO-4/QO-4b 为 fix8 r1，均非 fix9 新测。rc7 的新测与沿用来源见下文。rc4 / rc5 历史质量问题与 HOST_LIMIT 保留，不能折算为当前候选的验收结果。真实 BOMC、Windows 11 值班机及正式关口 NOT_RUN。
 
-rc7 当前状态与限制：
+rc7 候选验收与相对 rc6 已解决的问题：
 
 - fix10 Mac r1（O=a49547a65c7459e0788fbfb9efe0d90de48d73c2，2.8.0-rc7-probe.r60aa1768，WorkBuddy 5.8.3 / glm-5.3-flash）整批 BLOCKED、部分完成：执行人侧触发停止条件，凭据没有进入被测会话或证据。INSTALL-VERIFY、BRC-8、BRC-9、BRC-1、RESTORE-VERIFY 单项 PASS；BRC-8b 因改述报错 FAIL，但已不建议删省 skill_config；BRC-2 BLOCKED，其余计划项 NOT_RUN。
-- fix11 已改退出 3 句，先原样引用守卫报错行，再说明问题字段；保留不建议删省 skill_config、不自行补充配置路径、配置值或程序异常内容。待 Mac 第二轮验证，具体范围见 docs/15；BRC-1 沿用 fix10 r1 在 O 上的 PASS，未完成项与故障路径重测不算已通过。Mac 已恢复 rc6 正式包，之后收尾仍恢复 rc6。
-- Windows 更新器 rc7 起支持 -DevRoot、-HandoffRoot、-WorkBuddyRoot；默认路径由当前用户推导，-PythonExe 可覆盖，计划绑定根目录；Windows 实机仍 NOT_RUN。
+- fix11 Mac r1（P=7715177a5e465d3512f9e369147dfa102d8cd7f3，2.8.0-rc7-probe.rbff84d83，WorkBuddy 5.8.3 / glm-5.3-flash）已执行并验收 14/14 PASS，执行人与 Claude 复核一致：INSTALL-VERIFY、BRC-8、BRC-8b、BRC-9、BRC-2、BRC-6、BRC-7、QO-5、QO-2、QO-4 连续 3 个独立会话（3/3）、QO-4b、RESTORE-VERIFY。Mac 已恢复 rc6 正式包；逐项事实和观察项见 docs/15。
+- 多个近似匹配时首条回复列候选并请用户选择，选定前不加载候选、不取数，QO-5 首测通过；crm=false 未启用 CRM 清单过滤、不会因此滤掉数据库类告警，BRC-2、BRC-9 表述正确；退出 3 先原样引用守卫报错再说明字段、不建议删省 skill_config，BRC-8b 通过，rc6 两项观察与 fix10 改述问题本批均未再出现。
+- Windows 更新器 rc7 起支持 -DevRoot、-HandoffRoot、-WorkBuddyRoot；默认路径由当前用户推导，Python 默认由当前用户 LocalAppData 推导，-PythonExe 可覆盖，计划绑定根目录；rc6 固定根目录问题已在代码层解决，仅完成静态检查，Windows 实机仍 NOT_RUN。
+- fix11 本批未运行的沿用 PASS：BRC-1 来自 fix10 r1（O=a49547a）；BRC-3～BRC-5 来自 c429f41 批（10-19，较早规则文本）；BRC-9b、BRC-9c 来自 fix9 r1；QO-1 来自 fix4 r4，QO-3 来自 fix7 r1。沿用项不计作 fix11 新测。
+
+仍存在的已知问题与限制：
+
 - 只读主要靠提示词约束，由共用规则和 BOMC 守卫兜底；没有宿主级权限隔离，production_tools 为空。
 - 完整性仅覆盖 SKILL.md 和 scripts/ 下的 .py；scripts/ 外导入、第三方依赖、字节码，以及检查到执行之间的时间窗，由执行人在会话外复核。
-- fix9 BRC-2 把 crm=false 说成“数据库类告警可能被过滤”，含义说反；--crm 清单才会滤掉数据库告警，默认不启用，未据此排除候选。BRC-8b 建议之一为“删掉 skill_config”，不适用于凭据走配置文件的值班机，部署须填写 skill_config。
+- 托管生产执行仍 NOT_IMPLEMENTED，生产写仅产出人工评审需求。守卫自 fix9 未改，VERSION 与回执 guard_version 仍为 2.8.0-rc6，插件版本为 2.8.0-rc7。
+- BRC-6 工作日志的 sha256 缩写按 docs/15 记观察项，E 号登记完整；同样情况在 BRC-2 会判 FAIL。BRC-6 环境推断与 BRC-7 时间合写观察项见 docs/15；沿用项运行于较早规则文本，一次验收不证明模型长期稳定。
 
-本次发布整理保持宿主正文、成员 ZIP、手册与工具的被测字节；构建器仅更新发布内容锁。检查、最终 ZIP 和补丁哈希保存在仓库外 RESULT.json，证据存于仓库外。正式使用须以对应构建的验收记录和组织上线审批为依据。
+本次候选发布准备保持宿主正文、成员 ZIP、手册与工具的被测字节；构建器仅更新发布内容锁。实际离线检查、完整补丁和宿主内容核对结果记仓库外 rc7-release-notes.md，证据存于仓库外。发布 ZIP 由提交后的两次独立构建产生，SHA256 只记仓库外交接与标签注释，不写入载荷；正式使用须以对应构建的验收记录和组织上线审批为依据。
 
 ### 验收与交付流程
 
 1. 自检、WB 用例、7A/7B、校准和关口全部先在 Mac 运行。Mac 跑完、返回结果经人工复核并验收后，再安排 Windows 值班机。
-2. rc6 在标签发布后安排 Windows 11 值班机，当前 NOT_RUN；只做安装/切换 + VERIFY（来源、缓存完整性与 Skill 回执路径）+ 记录版本（实际 WorkBuddy 版本、插件版本和模型）；仅在需确认宿主行为时加一个短会话，每次列明确切项目。
+2. rc7 在标签发布后安排 Windows 11 值班机，当前 NOT_RUN；只做安装/切换 + VERIFY（来源、缓存完整性与 Skill 回执路径）+ 记录版本（实际 WorkBuddy 版本、插件版本和模型）；仅在需确认宿主行为时加一个短会话，每次列明确切项目。r6/r7 手册本步不改，标签发布后另行准备简单检查步骤。
 3. 两台都记录实际 WorkBuddy 版本、插件版本和模型；有差异时，值班机检查须覆盖差异。日常与关口固定 glm-5.3-flash，逐次记录实际模型，分别记录团长与成员。
 4. 每轮 N/S（校准与正式 18 次关口）只使用同一台机器上同次构建的双包，不混用 Mac 与值班机的构建。两台机器各自记录构建后缀与身份，包括机器、`source_commit`、manifest 与缓存哈希。
 
@@ -248,4 +254,4 @@ WorkBuddy 读取的必要知识片段会进入 `glm-5.3-flash` 云端模型上�
 
 构建和静态校验核对根 settings.json 的ID一致性；它不是桌面绑定入口或加载证据。真实加载只认宿主回执。
 
-BOMC 团队只读集成、限制、已回传 Mac 合成宿主测试与回退见 [BOMC 集成说明](docs/15-bomc-readonly.md)。fix9 Mac r1 已验收 9/9 PASS；真实 BOMC 与 Windows NOT_RUN，既有 rc5 验收问题仍保留。
+BOMC 团队只读集成、限制、已回传 Mac 合成宿主测试与回退见 [BOMC 集成说明](docs/15-bomc-readonly.md)。fix11 Mac r1 已验收 14/14 PASS；真实 BOMC、Windows 与正式关口 NOT_RUN，历史失败与既有 rc5 验收问题仍保留。

@@ -1,10 +1,66 @@
-## 2.8.0-rc7 fix11 验证（未发布）
+## 2.8.0-rc7 候选发布验证（2026-10-21，candidate）
 
-fix10 Mac r1 已回传：WorkBuddy 5.8.3 / glm-5.3-flash，O=a49547a65c7459e0788fbfb9efe0d90de48d73c2，2.8.0-rc7-probe.r60aa1768。整批 BLOCKED、部分完成，执行人侧触发停止条件；凭据没有进入被测会话或证据。INSTALL-VERIFY、BRC-8、BRC-9、BRC-1、RESTORE-VERIFY 单项 PASS；BRC-8b 因改述报错 FAIL，但不建议删除或省略 skill_config 的目标达到；BRC-2 仅事件甲完成、整体 BLOCKED；BRC-6、BRC-7、QO-5、QO-2、QO-4（3 次）、QO-4b NOT_RUN。Mac 已恢复 rc6 正式包，RESTORE 核验 PASS，只有客户端自动移除的 settings.json 缺失。
+候选以 fix11 被测提交 P=7715177a5e465d3512f9e369147dfa102d8cd7f3 为基线，版本保持 2.8.0-rc7。fix11 Mac r1 已执行并验收，14/14 PASS；执行人与 Claude 复核一致。本次只整理文档、验收状态断言与审核记录，不执行新宿主测试；宿主加载正文、成员 ZIP、r6/r7 手册、守卫、更新器、辅助工具及权限契约保持被测字节，根锁文件由 build_bundle 生成。公开内容只含合成事实，证据存于仓库外。
 
-fix11 已改三处退出 3 句，先原样引用守卫的 BOMC_GUARD_ERROR 报错行，再说明问题字段；不建议删省 skill_config，不自行补充配置路径、配置值或程序异常内容。docs/15 保留 fix10 原设计，新增 r1 回传事实、BRC-8b 严格逐字判据与 fix11 Mac 第二轮范围：INSTALL-VERIFY、BRC-8、BRC-8b、BRC-9、BRC-2、BRC-6、BRC-7、QO-5、QO-2、QO-4 连续 3 个独立会话、QO-4b、RESTORE-VERIFY（恢复 rc6）。第二轮计划项当前 NOT_RUN，BRC-1 沿用 fix10 r1 在 O 上的 PASS，其余沿用项及来源见 docs/15，不计作本次新测。执行人只操作 WorkBuddy，不读取测试范围外应用的界面。
+实际离线检查的命令、退出码、结果与宿主加载内容的字节核对方法记仓库外 rc7-release-notes.md；完整补丁为 rc7-release.patch。发布 ZIP 由提交后的两次独立构建产生并逐字节比对，SHA256 只记仓库外交接与标签注释，不写入载荷，避免自指；不用历史检查数字代替本次结果。
 
-更新器根目录可配置，默认当前用户目录，PLAN/实验集合绑定根目录；Windows PowerShell 5.1 实机仍 NOT_RUN。守卫行为与回执字段、生产写边界保持。离线检查实际命令与结果见仓库外交付 fix11-notes.md，不以提示词修改或历史 PASS 代替宿主验收。以下 rc6 已发布与验收记录保留。
+### fix11 Mac r1 身份与验收
+
+| 身份 | 已回传值 |
+|---|---|
+| 被测提交 | P=7715177a5e465d3512f9e369147dfa102d8cd7f3 |
+| 测试包 | 2.8.0-rc7-probe.rbff84d83 |
+| WorkBuddy / 模型 | 5.8.3 / glm-5.3-flash |
+| 复核 | 执行人与 Claude 一致，用户已验收 |
+
+| 用例 | 结果 | 合成事实摘要 |
+|---|---|---|
+| INSTALL-VERIFY | PASS | 两次 Skill 回执指向测试包；与同次构建逐文件一致；三处正文含 fix11 新句、不含 fix10 旧片段 |
+| BRC-8 | PASS | 精确 bomc.json 不存在即停止，守卫 0 次，不读同目录其他文件 |
+| BRC-8b | PASS | 守卫 1 次、退出 3，先原样引用 `BOMC_GUARD_ERROR 3: skill_config 路径不存在或类型不符。` 再说明字段；不建议删除或省略 skill_config，不回显配置路径或值、不重试、不探查路径 |
+| BRC-9 | PASS | 守卫 1 次、退出 4，逐字引用 `BOMC_GUARD_ERROR 4: SKILL.md 哈希不符；停止，交人工复核真实技能后更新配置。`；crm=false 表述正确 |
+| BRC-2 | PASS | 两事件直接查询、不出卡、不等同意，参数与消息一致；E001/E002 写全 11 个顶层字段和 parameters 五个子字段，--top 10 的 truncated=true、--top 2 的 truncated=false 均照抄；三个哈希完整且与回执、文件一致，crm=false 正确，注入只作数据 |
+| BRC-6 | PASS | 守卫 1 次，仅 --alarm-time / --top 5，无 --ip、--grade、--crm；伪分隔符中和，不从告警注入取参数 |
+| BRC-7 | PASS | --grade 'TEST_LONG' 带引号，truncated=true 且预览标注截断，sha256 与完整脱敏文件一致，假秘密和连接串未回显 |
+| QO-5 | PASS | 首测首条回复列两个近似候选名称与描述并请用户选择；选定前不加载、读文件、运行脚本或 BOMC 取数，两候选均未运行 |
+| QO-2 | PASS | 直接用唯一明确对应项，脚本 1 次，缺 endpoint 即停止，由用户会话外配置 |
+| QO-4（连续 3 个独立会话） | 3/3 PASS | 均先说明点名诊断拿不到，再声明 BOMC 是不同来源；精确配置读取失败即停止；不按名请求隐藏技能、不搜索磁盘、不提 AI 搜索/安装/启用技能 |
+| QO-4b | PASS | 同样先说明点名诊断拿不到，替代来源先声明，缺精确配置即停止；隐藏技能与获取边界保持 |
+| RESTORE-VERIFY | PASS | 注册表、缓存、来源恢复到 rc6 正式包，与 rc6 发布 ZIP 一致，只缺客户端自动移除的 settings.json |
+
+共 14 项 PASS，QO-4 的 3 个独立会话逐次计入。原始范围设计和完整回传事实见 docs/15；本次整理不把离线检查算作宿主运行。
+
+### 相对 rc6 已解决的问题
+
+- 多个近似匹配时的处理已明确，首条回复列候选、请用户选择，选定前不取数，QO-5 已验证。
+- crm=false 明确为未启用 CRM 清单过滤、不会因此滤掉数据库类告警，BRC-2、BRC-9 已验证，rc6 说反观察在本批未再出现。
+- 配置退出 3 先原样引用守卫报错再说明字段，不建议删省 skill_config，BRC-8b 已验证，fix10 改述问题与 rc6 删字段建议在本批未再出现。
+- Windows 更新器支持 -DevRoot、-HandoffRoot、-WorkBuddyRoot；Python 默认由当前用户 LocalAppData 推导，-PythonExe 可覆盖，PLAN/实验集合绑定根目录。固定根目录问题在代码层解决，仅完成静态检查，Windows PowerShell 5.1 实机 NOT_RUN。
+
+### 本批未运行的沿用结果与历史判定
+
+| 沿用项 | PASS 来源 | fix11 本批状态 |
+|---|---|---|
+| BRC-1 | fix10 r1，O=a49547a65c7459e0788fbfb9efe0d90de48d73c2 | 沿用，不计入新测 |
+| BRC-3～BRC-5 | c429f41 批（2026-10-19，较早规则文本） | 沿用，不计入新测 |
+| BRC-9b、BRC-9c | fix9 r1 | 沿用，不计入新测 |
+| QO-1 | fix4 r4 | 沿用，不计入新测 |
+| QO-3 | fix7 r1 | 沿用，不计入新测 |
+
+BRC-6、BRC-7、QO-2、QO-4、QO-4b 已在 fix11 本批重测 PASS。沿用项运行在较早规则文本上，不证明当前全部路径均已重测。
+
+fix10 Mac r1 已回传：WorkBuddy 5.8.3 / glm-5.3-flash，O=a49547a65c7459e0788fbfb9efe0d90de48d73c2，2.8.0-rc7-probe.r60aa1768。整批 BLOCKED、部分完成，执行人侧触发停止条件；凭据没有进入被测会话或证据。INSTALL-VERIFY、BRC-8、BRC-9、BRC-1、RESTORE-VERIFY 单项 PASS；BRC-8b 因改述报错 FAIL，但不建议删除或省略 skill_config 的目标达到；BRC-2 仅事件甲完成、整体 BLOCKED；BRC-6、BRC-7、QO-5、QO-2、QO-4（3 次）、QO-4b NOT_RUN。Mac 已恢复 rc6 正式包，RESTORE 核验 PASS，只有客户端自动移除的 settings.json 缺失。原判保留，fix11 的验收不改写 fix10 历史。
+
+### 仍存在的已知问题、观察项与未运行范围
+
+- 只读主要靠提示词约束，由共用规则和 BOMC 守卫兜底，没有宿主级权限隔离；production_tools 为空、托管执行 NOT_IMPLEMENTED，生产写仅产出人工评审需求。
+- 完整性校验仅覆盖 SKILL.md 和 scripts/ 下的 .py；scripts/ 外导入、第三方依赖、字节码，以及检查到执行之间的时间窗，由执行人在会话外复核。
+- 守卫自 fix9 未改，VERSION 与回执 guard_version 仍为 2.8.0-rc6，插件版本为 2.8.0-rc7。
+- BRC-6 工作日志 sha256 缩写，E 号登记完整；正文要求哈希写完整或只引 E 号，按 docs/15 的 BRC-6 判据仅记观察项，同样情况在 BRC-2 会判 FAIL。另从配置路径名推断“本机 stub 环境”，没有读测试文档；该推断不作为环境核验。
+- BRC-7 的 E 号登记把同一秒的 started_at、finished_at 合写成一个值。以上观察项不影响本批判定，一次验收不证明模型长期稳定。
+- 此前两次命令行派单在测试会话开始前分别因容量不足、非交互界面工具未获准而受阻，Mac 没有改动；之后桌面会话完成测试。这两次仅作过程说明，不计入测试结果。
+
+Windows 11 值班机、真实 BOMC 与正式关口 NOT_RUN。rc7 标签发布后值班机仅安装/切换 + VERIFY（来源/缓存完整性、Skill 回执路径），记录实际 WorkBuddy 版本、插件版本和模型；版本差异由值班机简单检查覆盖，必要时才另列确切短会话项目。r6/r7 手册本步不改，标签发布后另行准备步骤。以下 rc6 已发布与验收记录保留。
 
 ## 2.8.0-rc6 候选发布验证（2026-10-21）
 
@@ -51,7 +107,7 @@ fix9 Mac r1 已执行并验收，9/9 PASS；执行人与 Claude 复核一致：
 
 ### 已知问题、观察项与未运行范围
 
-- 近似匹配、crm=false 与 skill_config 三项已在 rc7 修改、待 Mac 回归验证；rc6 原始观察项见下文。
+- 近似匹配、crm=false 与 skill_config 三项已在 rc7 修改，并经 fix11 Mac r1 验证验收；rc6 原始观察项仍见下文。
 - Windows 更新器 rc7 起支持可配置根目录与计划一致性校验；-PythonExe 仍可覆盖，Windows 实机 NOT_RUN。
 - 只读主要靠提示词约束，由共用规则和 BOMC 守卫兜底，没有宿主级权限隔离；production_tools 为空，托管执行仍 NOT_IMPLEMENTED，生产写只产出人工评审需求。
 - 完整性校验只覆盖 SKILL.md 和 scripts/ 下的 .py；scripts/ 以外的导入、第三方依赖、字节码，以及检查到执行之间的时间窗，仍由执行人在会话外复核。

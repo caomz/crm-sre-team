@@ -179,7 +179,7 @@
 | 模型 | 用户选模型；供应商控制服务和升级 | 每次记录主成员实际模型；本轮glm-5.3-flash | 不具备本地模型部署；可用性与模型内部更新不可由插件锁定 |
 | 数据 | 数据所有者控制本机知识库与分享范围；云端模型接收必要片段 | 插件外配置、允许目录/私密标记、输出遮蔽 | 实际组织授权、云端数据政策和保管期限无证据，待用户 |
 | 代码 | 用户持有规范源、精确白名单、构建工具和版本差异记录 | policy-source为唯一提示词真源；产物实际重建与哈希核对 | 站点更新脚本配置隔离和生产适配器未实现 |
-| 最终决策 | 人类事故负责人、数据所有者、上线审批人与用户 | 只读分析/评审卡；人工批准不扩大AI生产权限 | 实名责任表需用户登记；rc7 修改由 Claude 独立复核、Mac 回归验收后再安排后续发布；提交、合并、标签、推送分别授权 |
+| 最终决策 | 人类事故负责人、数据所有者、上线审批人与用户 | 只读分析/评审卡；人工批准不扩大AI生产权限 | 实名责任表需用户登记；rc7 的 fix11 Mac r1 已经 Claude 复核并验收，本步仅准备候选发布文档；提交、合并、标签、推送分别授权 |
 
 ## 9. 自主等级与放权规则
 
@@ -224,7 +224,15 @@
 
 2026-10-21 rc6 候选发布准备：版本保持 2.8.0-rc6，以 fix9 提交 N=7301dfa7d373530b4eb9c3efd43ddd641828aa67 为基线，整理已回传的 fix8 / fix9 Mac r1 事实与 Claude 复核，不改宿主正文、成员 ZIP、手册、守卫或辅助工具。fix8（M=17f80ef，2.8.0-rc6-probe.r802c6bec）QO-4 执行人原判 0/3，Claude 复核 3/3 PASS，用户接受；INSTALL-VERIFY、BRC-1、QO-2、QO-4b、RESTORE-VERIFY PASS，BRC-2 原 FAIL 为 E002 漏 truncated=false，Claude 同意原判。fix9（2.8.0-rc6-probe.rfab71a52）INSTALL-VERIFY、BRC-8、BRC-8b、BRC-9、BRC-9b、BRC-9c、BRC-1、BRC-2、RESTORE-VERIFY 共 9 项 PASS，执行人与 Claude 一致，已验收；两批均为 WorkBuddy 5.8.3 / glm-5.3-flash。外部审查 P1 的脚本完整性缺口已修复并经 Mac 验证，E002 漏 truncated 在 fix9 r1 未再出现，fix8 原失败保留。源与生成锁经工具核对，最终检查、提交、独立 ZIP 和完整补丁哈希记仓库外 RESULT.json；正式冻结后不再把新运行结果写回该载荷。
 
-rc7 当前状态与沿用限制：fix10 Mac r1（O=a49547a65c7459e0788fbfb9efe0d90de48d73c2，2.8.0-rc7-probe.r60aa1768，WorkBuddy 5.8.3 / glm-5.3-flash）整批 BLOCKED、部分完成，执行人侧触发停止条件，凭据没有进入被测会话或证据；INSTALL-VERIFY、BRC-8、BRC-9、BRC-1、RESTORE-VERIFY 单项 PASS，BRC-8b 因改述报错 FAIL，BRC-2 BLOCKED，其余计划项 NOT_RUN。fix11 已改退出 3 句，先原样引用守卫报错行，不建议删省 skill_config，不自行补充配置路径、配置值或程序异常内容，待 Mac 第二轮验证；近似匹配等未完成项仍待验证，具体设计、回传事实及沿用来源见 docs/15。BRC-1 沿用 fix10 r1 在 O 上的 PASS，不计作第二轮新测；Mac 已恢复 rc6 正式包，之后收尾仍恢复 rc6；更新器 rc7 起支持 -DevRoot、-HandoffRoot、-WorkBuddyRoot，当前用户目录推导默认值，-PythonExe 仍可覆盖，根目录绑定 PLAN/实验集合，Windows 实机 NOT_RUN；只读主要靠提示词约束，由共用规则和 BOMC 守卫兜底，无宿主级权限隔离，production_tools 为空。完整性仅覆盖 SKILL.md 与 scripts/ 下的 .py，scripts/ 外导入、第三方依赖、字节码及检查到执行之间的时间窗由执行人在会话外复核。BRC-3～BRC-6 沿用 c429f41 批（10-19）、BRC-7 沿用 r5（5bbf81b，Claude 复核）的 PASS，均跑在较早规则文本；QO-1 沿用 fix4 r4、QO-3 沿用 fix7 r1、QO-2/QO-4/QO-4b 沿用 fix8 r1，非本批新测。fix9 BRC-2 把 crm=false 说成“数据库类告警可能被过滤”，含义说反，但未据此排除候选；--crm 清单才会滤掉数据库告警，默认不启用。BRC-8b 曾建议“删掉 skill_config”，不适用于凭据走配置文件的值班机，部署须填写 skill_config。Windows 11 值班机与真实 BOMC NOT_RUN；Mac 第二轮通过并经人工验收后再安排发布与同步，值班机届时仅安装/切换 + VERIFY（来源/缓存完整性、Skill 回执路径），记录 WorkBuddy、插件版本与模型，版本差异另核对，必要时才列明短会话。证据存于仓库外，公开记录仅含合成事实；生产写只产人工评审需求。
+2026-10-21 rc7 候选发布准备：版本仍为 2.8.0-rc7 candidate，以 fix11 被测提交 P=7715177a5e465d3512f9e369147dfa102d8cd7f3 为基线。fix11 Mac r1 使用 2.8.0-rc7-probe.rbff84d83、WorkBuddy 5.8.3 / glm-5.3-flash，INSTALL-VERIFY、BRC-8、BRC-8b、BRC-9、BRC-2、BRC-6、BRC-7、QO-5、QO-2、QO-4 连续 3 个独立会话（3/3）、QO-4b、RESTORE-VERIFY 共 14 项 PASS，执行人与 Claude 复核一致，已验收；Mac 已恢复 rc6 正式包。fix10 Mac r1 整批 BLOCKED、BRC-8b 改述报错 FAIL、BRC-2 BLOCKED 及原 NOT_RUN 历史保留，具体设计与两批回传事实见 docs/15。
+
+相对 rc6 已解决：多个近似匹配时首条回复列候选并请用户选择（QO-5）；crm=false 未启用 CRM 清单过滤、不会因此滤掉数据库类告警（BRC-2、BRC-9）；退出 3 先原样引用守卫报错，不建议删省 skill_config（BRC-8b）。更新器根目录支持 -DevRoot、-HandoffRoot、-WorkBuddyRoot，Python 默认由当前用户 LocalAppData 推导、-PythonExe 可覆盖，根目录绑定 PLAN/实验集合；固定根目录问题在代码层解决，仅完成静态检查，Windows 实机 NOT_RUN。
+
+仍存在的已知问题与限制：只读主要靠提示词约束，由共用规则和 BOMC 守卫兜底，无宿主级权限隔离，production_tools 为空、托管执行 NOT_IMPLEMENTED，生产写只产人工评审需求。完整性仅覆盖 SKILL.md 与 scripts/ 下的 .py，scripts/ 外导入、第三方依赖、字节码及检查到执行的时间窗由执行人在会话外复核；守卫自 fix9 未改，VERSION / guard_version 仍为 2.8.0-rc6。BRC-6 工作日志 sha256 缩写按 docs/15 仅记观察项，E 号登记完整，同样情况在 BRC-2 会判 FAIL；BRC-6 环境推断与 BRC-7 时间合写观察项见 docs/15，一次验收不证明长期稳定。
+
+本批未运行的沿用 PASS：BRC-1 来自 fix10 r1（O=a49547a）；BRC-3～BRC-5 来自 c429f41 批（10-19，较早规则文本）；BRC-9b、BRC-9c 来自 fix9 r1；QO-1 来自 fix4 r4，QO-3 来自 fix7 r1。沿用项不计作 fix11 新测；BRC-6、BRC-7、QO-2、QO-4、QO-4b 已在 fix11 Mac r1 重测 PASS。
+
+本步只整理发布文档、验收状态断言与审核记录，由构建器更新根锁；不改宿主正文、成员 ZIP、r6/r7 手册、守卫、更新器与辅助工具；发布 ZIP 由提交后的两次独立构建产生，SHA256 只记仓库外交接与标签注释，不写入载荷。Windows 11 值班机、真实 BOMC 与正式关口 NOT_RUN；rc7 标签发布后值班机只做安装/切换 + VERIFY（来源/缓存完整性、Skill 回执路径），记录实际 WorkBuddy、插件版本与模型，版本差异由值班机简单检查覆盖，必要时才另列确切短会话项目；手册届时另行准备。实际离线检查、完整补丁与宿主字节核对结果记仓库外 rc7-release-notes.md，证据存于仓库外，公开记录仅含合成事实。
 
 ## 12. rc1–rc4 五步复盘与项目沉淀清单
 

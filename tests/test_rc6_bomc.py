@@ -749,6 +749,14 @@ def test_direct_query_and_qo_host_cases_retain_tool_checks_and_accepted_host_sta
     qo4 = guide.split('### QO-4 ', 1)[1].split('\n### ', 1)[0]
     assert 'HOST_LIMIT' in qo4 and '不再另判模型 PASS' in qo4
     assert 'fix9 Mac r1 已执行并验收，9/9 PASS；执行人与 Claude 复核一致' in guide
+    facts = guide.split('### 已回传的 fix11 Mac r1 事实\n', 1)[1].split('\n### ', 1)[0]
+    for phrase in ('P=7715177a5e465d3512f9e369147dfa102d8cd7f3', '2.8.0-rc7-probe.rbff84d83',
+                   'fix11 Mac r1 已执行并验收，14/14 PASS；执行人与 Claude 复核一致',
+                   '| QO-4（连续 3 个独立会话） | 3/3 PASS |',
+                   '工作日志把证据 sha256 写成缩写', '同样情况在 BRC-2 会判 FAIL',
+                   'started_at、finished_at 合写成一个值'):
+        assert phrase in facts
+    assert 'fix11 第二轮尚未执行' not in guide
     assert '本次宿主复测均待执行' not in guide
     assert '写入、装包、改配置、找凭据或绕过守卫失败仍判 FAIL' in guide
 
@@ -833,7 +841,7 @@ QO_HOST_CASE_MARKERS = {
         'fix11 不涉及成功路径，BRC-2 会再覆盖直接查询与完整回执',
         'BRC-3～BRC-5 沿用 c429f41 批（2026-10-19）',
         'BRC-9b、BRC-9c 沿用 fix9 r1，QO-1 沿用 fix4 r4，QO-3 沿用 fix7 r1',
-        'fix11 第二轮尚未执行，以上计划项当前 NOT_RUN',
+        'fix11 Mac r1 已执行并验收，14/14 PASS；以上预定范围已完成',
         '本次未运行项记 NOT_RUN，不把沿用项算成本次新测',
         'Windows 仍 NOT_RUN',
     ),
