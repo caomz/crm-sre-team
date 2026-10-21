@@ -1584,10 +1584,10 @@ class Rc6SimpleCheckTests(unittest.TestCase):
         self.assertEqual(identity.group(1),
                          'd0fad3158a361ebd18a79b06f660e1c8f9f19bed2df4f8f3b2fb5829a289adde')
         intro = self.historical.decode('utf-8').split('## 发布身份与只读查看', 1)[0]
-        for token in ['rc6 候选发布', '已合并 main', 'Windows 未执行', 'NOT_RUN']:
+        for token in ['rc7 候选发布', '已合并 main', 'Windows 未执行', 'NOT_RUN']:
             self.assertIn(token, intro)
         for token in ['Mac fix9 r1 已完成并经人工验收（9/9 PASS',
-                      '不能使用上文 rc5 的 Tag/ExpectedCommit/ExpectedZipSha256 安装 rc6']:
+                      '不能使用上文 rc5 的 Tag/ExpectedCommit/ExpectedZipSha256 安装 rc7']:
             self.assertIn(token, self.bomc.decode('utf-8'))
 
     def test_four_reference_blocks_only_change_reviewed_identity_lines(self):
@@ -1642,6 +1642,120 @@ class Rc6SimpleCheckTests(unittest.TestCase):
                       'bomc.json 必须填 skill_config', 'scripts_sha256 在值班机上计算',
                       '短会话默认不做', '先带回版本号，再决定是否加',
                       '用客户端“刷新”切回 rc5，再 VERIFY', '不覆盖旧备份']:
+            self.assertIn(token, self.text)
+        self.assertNotRegex(self.text, r'/Volumes/|/Users/|\b\d{1,3}(?:\.\d{1,3}){3}\b')
+        self.assertNotRegex(self.text, r'\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b')
+
+
+class Rc7SimpleCheckTests(unittest.TestCase):
+    """Freeze the rc7 handoff independently of external archives or Windows."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.raw = (ROOT / 'tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md').read_bytes()
+        heading = '## rc7 值班机简单检查（2026-10-21）'.encode('utf-8')
+        cls.previous, separator, cls.section = cls.raw.partition(heading)
+        if not separator:
+            raise AssertionError('Missing rc7 simple check')
+        cls.historical, cls.rc6 = cls.previous.split(
+            '## rc6 值班机简单检查（2026-10-21）'.encode('utf-8'), 1)
+        cls.rc6, cls.bomc = cls.rc6.split(b'## rc6 BOMC', 1)
+        cls.text = cls.section.decode('utf-8')
+        cls.blocks = re.findall(rb'```powershell\n(.*?)^```', cls.section, re.M | re.S)
+
+    def test_release_identity_defaults_and_current_entrypoints(self):
+        for token in [
+                '27371e65d7e7eb4910d66e8a30a8c366df7eb652',
+                '15cee1b54c83f60fa6b9b46c3b9957830abe2768',
+                '2847ba65bef63b79e1bb7ea32a32bf8bdd3a02ff0e236440bdc26ec79495de04',
+                'crm-sre-team-2.8.0-rc7.zip；2502889 字节；555 个', '含根 settings.json',
+                'fix10（a49547a）起改动', '-DevRoot、-HandoffRoot、-WorkBuddyRoot',
+                r'DevRoot=D:\Dev', r'HandoffRoot=D:\crm-v36-handoff',
+                r'PythonExe=%LOCALAPPDATA%\Programs\Python\Python312\python.exe',
+                'WorkBuddy 5.8.3 / glm-5.3-flash；fix11 r1 14/14 PASS',
+                '“交付的手册提交”是包含本节的那次提交，与安装身份 ExpectedCommit=',
+                '不把交付的手册提交填入 ExpectedCommit', '安装一律以 rc7 标签和上表为准',
+                '生成带 path_roots 的新计划与独立备份', '不复用 rc5 旧计划']:
+            self.assertIn(token, self.text)
+        digest = '342fd92b64ca403cc22a59c776bd5b2f3ff35075f2d03c5ff5df6ceddfd4691e'
+        self.assertEqual(hashlib.sha256(SCRIPT.read_bytes()).hexdigest(), digest)
+        self.assertIn('tools/oncall/Update-CrmSreTeam.ps1：' + digest, self.text)
+        intro, view = self.raw.decode('utf-8').split('## 发布身份与只读查看', 1)
+        self.assertTrue(intro.startswith('# 值班机手册 r7 · rc7 候选发布（已合并 main，Windows 未执行）\n'))
+        self.assertIn('rc7 值班机简单检查（2026-10-21）', intro)
+        self.assertIn('本次 rc7 安装身份见“rc7 值班机简单检查（2026-10-21）”',
+                      view.split('## ①', 1)[0])
+        for token in ['已被“rc7 值班机简单检查（2026-10-21）”取代', 'Windows 未执行', '保留为历史']:
+            self.assertIn(token, self.rc6.decode('utf-8'))
+        for token in ['随 rc7 候选发布沿用', '守卫 VERSION 仍为 2.8.0-rc6',
+                      '按“rc7 值班机简单检查（2026-10-21）”身份表', '同一 rc7 目录', '此次 rc7 的 -Tag']:
+            self.assertIn(token, self.bomc.decode('utf-8'))
+
+    def test_historical_code_blocks_remain_byte_identical(self):
+        for section, count, digest in [
+                (self.historical, 19, '1ef6aa1bc37da78fdb61512526b62391aa3acc1ea11e8a4d5b3c28b18e092223'),
+                (self.rc6, 5, '7fc5d25671a4ebbedb66efc7697246b1fc2c20525e2133caabca112b7b223025')]:
+            blocks = re.findall(rb'^```[^\n]*\n.*?^```\n', section, re.M | re.S)
+            self.assertEqual(len(blocks), count)
+            self.assertEqual(hashlib.sha256(b''.join(blocks)).hexdigest(), digest)
+
+    def test_four_frozen_blocks_only_change_rc6_identity_lines(self):
+        original = re.findall(rb'```powershell\n(.*?)^```', self.rc6, re.M | re.S)
+        replacements = [
+            (b'crm-sre-team-2.8.0-rc6', b'crm-sre-team-2.8.0-rc7'),
+            (b'feb9aae92bb9408bf01bf86379d3e6f65c60b502', b'15cee1b54c83f60fa6b9b46c3b9957830abe2768'),
+            (b'efe41732c8c3c9d7a3f2135174cce3b79aca5618e7e212e00b6fae60eac55123',
+             b'2847ba65bef63b79e1bb7ea32a32bf8bdd3a02ff0e236440bdc26ec79495de04'),
+            (b'crm-sre-team\\2.8.0-rc6', b'crm-sre-team\\2.8.0-rc7'),
+            (b'Stop: local rc6 tag points elsewhere', b'Stop: local rc7 tag points elsewhere'),
+            (b'Stop: rc6 cache directory missing', b'Stop: rc7 cache directory missing'),
+            (b'Bootstrap is not the published rc6 commit', b'Bootstrap is not the published rc7 commit'),
+        ]
+        digests = [
+            'e8ec0e3b1d96fa0248c1684f72b0a8af8b3d0119f3bc8900ac5ed81535b5421f',
+            'aa72c091d1d6f0f74ed96671b3cfe5b039b2ce1daee2b3dc31e98b59396d2ff4',
+            'a8e4fb6a3f1c3fc7cd995fc1ef1587549c0fddce8485a872c47b2170972b710a',
+            '81da32bb31cd221a8e381c132e6e99f7e10be502872d602b543c36abbb1f2d54',
+        ]
+        self.assertEqual(len(original), 4)
+        self.assertEqual(len(self.blocks), 4)
+        for number, (old, actual, digest) in enumerate(zip(original, self.blocks, digests), 1):
+            with self.subTest(block=number):
+                for before, after in replacements:
+                    old = old.replace(before, after)
+                self.assertEqual(actual, old)
+                self.assertEqual(hashlib.sha256(actual).hexdigest(), digest)
+                self.assertTrue(actual.isascii())
+                for option in [b'-DevRoot', b'-HandoffRoot', b'-WorkBuddyRoot', b'-PythonExe', b'-RunPytest']:
+                    self.assertNotIn(option, actual)
+        self.assertNotIn(b'-PlanPath', self.blocks[1])
+        self.assertIn(b'-PlanPath $PlanPath -PlanSha256 $PlanSha256 -SessionId $SessionId', self.blocks[3])
+
+    def test_install_verify_receipts_scope_and_private_evidence(self):
+        messages = re.findall(rb'```text\n(.*?)\n```', self.section, re.S)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages, re.findall(rb'```text\n(.*?)\n```', self.rc6, re.S))
+        self.assertEqual(hashlib.sha256(messages[0]).hexdigest(),
+                         'ebb50a6f6e371f146c31fdbd34653710e3b74b17f8601ae1fd8e19c107b4391e')
+        for token in ['预期 rc5', '只做本节步骤 1～5', 'rc6 简单检查已被本节取代，不再执行',
+                      '不做本文 r7 的 ③～⑦', '不跑全套', '普通 Windows PowerShell 5.1',
+                      '先带回原输出，不继续', '由用户正常退出 WorkBuddy',
+                      'PLAN→展示计划→用户核对后输入一次 YES→APPLY', '②a PLAN 文件占用',
+                      'ZIP 哈希不符或其他报错', '绝不点“删除”', '新建一个空文件夹并开新会话',
+                      '显式选择 GLM-5.3-Flash', '不点“召唤”',
+                      r'...\plugins\cache\my-experts\crm-sre-team\2.8.0-rc7\skills' + '\\',
+                      'stability-director 与 bomc-alarm-readonly 两条 2.8.0-rc7 缓存路径',
+                      'updater 实际只要求至少一条', '缺任一条，本次检查未完成',
+                      '554/555, root settings.json missing (host-managed)',
+                      '555/555, root settings.json matches package', '.workbuddy/memory/*',
+                      '.in_use/<进程号>', '只记名称和数量，不删', 'PASS_DECLARED_FILES_ONLY',
+                      'host_acceptance=HUMAN_REVIEW_REQUIRED', 'SHA256SUMS',
+                      '未运行的成员记 NOT_RUN', '会话 ID 和本机路径只带回给 Claude，不写进仓库',
+                      'bomc.json 本次不建', '按 BRC-8 停下并写明证据缺口',
+                      '先做真实输出形状核对', 'bomc.json 必须填 skill_config',
+                      'scripts_sha256 在值班机上计算', '短会话默认不做',
+                      '先带回版本号，再决定是否加', '用客户端“刷新”切回 rc5，再 VERIFY',
+                      '不把 rc5 旧计划交给 rc7 更新器', '不覆盖旧备份']:
             self.assertIn(token, self.text)
         self.assertNotRegex(self.text, r'/Volumes/|/Users/|\b\d{1,3}(?:\.\d{1,3}){3}\b')
         self.assertNotRegex(self.text, r'\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b')
