@@ -1,8 +1,10 @@
-## 2.8.0-rc7 fix10 验证（未发布）
+## 2.8.0-rc7 fix11 验证（未发布）
 
-近似匹配、crm=false 与 skill_config 三项已在 rc7 修改、待 Mac 回归验证。docs/15 记录 QO-5 双候选用例、BRC-2 / BRC-8b 新判据及 fix10 具体重测范围；不把 rc6 的 PASS 当作本轮宿主结果。更新器根目录可配置，默认当前用户目录，PLAN/实验集合绑定根目录；Windows PowerShell 5.1 实机仍 NOT_RUN。守卫行为与回执字段、生产写边界保持。
+fix10 Mac r1 已回传：WorkBuddy 5.8.3 / glm-5.3-flash，O=a49547a65c7459e0788fbfb9efe0d90de48d73c2，2.8.0-rc7-probe.r60aa1768。整批 BLOCKED、部分完成，执行人侧触发停止条件；凭据没有进入被测会话或证据。INSTALL-VERIFY、BRC-8、BRC-9、BRC-1、RESTORE-VERIFY 单项 PASS；BRC-8b 因改述报错 FAIL，但不建议删除或省略 skill_config 的目标达到；BRC-2 仅事件甲完成、整体 BLOCKED；BRC-6、BRC-7、QO-5、QO-2、QO-4（3 次）、QO-4b NOT_RUN。Mac 已恢复 rc6 正式包，RESTORE 核验 PASS，只有客户端自动移除的 settings.json 缺失。
 
-离线检查结果见仓库外交付 fix10-notes.md；当前段仅声明宿主状态，不替代实际命令日志。以下 rc6 已发布与验收记录保留。
+fix11 已改三处退出 3 句，先原样引用守卫的 BOMC_GUARD_ERROR 报错行，再说明问题字段；不建议删省 skill_config，不自行补充配置路径、配置值或程序异常内容。docs/15 保留 fix10 原设计，新增 r1 回传事实、BRC-8b 严格逐字判据与 fix11 Mac 第二轮范围：INSTALL-VERIFY、BRC-8、BRC-8b、BRC-9、BRC-2、BRC-6、BRC-7、QO-5、QO-2、QO-4 连续 3 个独立会话、QO-4b、RESTORE-VERIFY（恢复 rc6）。第二轮计划项当前 NOT_RUN，BRC-1 沿用 fix10 r1 在 O 上的 PASS，其余沿用项及来源见 docs/15，不计作本次新测。执行人只操作 WorkBuddy，不读取测试范围外应用的界面。
+
+更新器根目录可配置，默认当前用户目录，PLAN/实验集合绑定根目录；Windows PowerShell 5.1 实机仍 NOT_RUN。守卫行为与回执字段、生产写边界保持。离线检查实际命令与结果见仓库外交付 fix11-notes.md，不以提示词修改或历史 PASS 代替宿主验收。以下 rc6 已发布与验收记录保留。
 
 ## 2.8.0-rc6 候选发布验证（2026-10-21）
 

@@ -101,7 +101,16 @@ BOMC_CRM_FILTER_RULE = (
     'crm=false 表示没有启用 CRM 清单过滤（没有加 --crm），不会因此滤掉数据库类告警；只有加 --crm 才按 CRM 清单过滤。派单、工作日志和总结提到 crm 时按此表述，不说反。'
 )
 BOMC_SKILL_CONFIG_FAILURE_RULE = (
-    '退出 3 时，不要建议删除或省略 skill_config 等配置字段来绕过报错；值班机的凭据走配置文件，部署时必须填 skill_config。只说明哪个字段有问题，由用户在会话外核对修正；只指明字段，不回显路径、配置值或异常原文。'
+    '退出 3 时，先原样引用守卫输出的那一行 BOMC_GUARD_ERROR 报错（它只含字段名），再说明是哪个字段的问题，由用户在会话外核对修正；不要建议删除或省略 skill_config 等配置字段来绕过报错，值班机的凭据走配置文件，部署时必须填 skill_config；不自行补充配置路径、配置值或程序异常内容。'
+)
+BOMC_STALE_CONFIG_FAILURE_RULE = '只指明字段，不回显路径、配置值或异常原文'
+BOMC_CONFIG_FAILURE_PROMPTS = (
+    'policy-source/prompts/roles/telecom-crm-sre-team-lead.md',
+    'policy-source/skills/stability-director.md',
+    'policy-source/skills/bomc-alarm-readonly.md',
+    'agents/telecom-crm-sre-team-lead.md',
+    'skills/stability-director/SKILL.md',
+    'skills/bomc-alarm-readonly/SKILL.md',
 )
 BOMC_PRIORITY_RULE = (
     'BOMC 查询优先使用 bomc-alarm-readonly；也可直接调用用户级只读技能。以下固定命令、参数白名单和回执规则用于守卫路径；用户级只读技能按共用只查询规则判定，不得用它绕过守卫失败。'
@@ -332,6 +341,7 @@ def query_only_prompt_errors(text: str) -> list[str]:
     errors += ["stale_query_only_rule:" + phrase for phrase in STALE_QUERY_ONLY_RULES if phrase in text]
     errors += host_test_environment_errors(text)
     errors += stale_bomc_evidence_errors(text)
+    errors += bomc_config_failure_errors(text)
     return errors
 
 
@@ -341,6 +351,15 @@ def host_test_environment_errors(text: str) -> list[str]:
 
 def stale_bomc_evidence_errors(text: str) -> list[str]:
     return ["stale_bomc_evidence_rule:" + phrase for phrase in BOMC_STALE_EVIDENCE_RULES if phrase in text]
+
+
+def bomc_config_failure_errors(text: str, required: bool = False) -> list[str]:
+    errors = []
+    if required and BOMC_SKILL_CONFIG_FAILURE_RULE not in text:
+        errors.append("missing_bomc_lead_rule:" + BOMC_SKILL_CONFIG_FAILURE_RULE)
+    if BOMC_STALE_CONFIG_FAILURE_RULE in text:
+        errors.append("stale_bomc_config_failure_rule:" + BOMC_STALE_CONFIG_FAILURE_RULE)
+    return errors
 
 
 def host_loaded_surface_errors(root: Path) -> list[str]:
@@ -358,14 +377,16 @@ def host_loaded_surface_errors(root: Path) -> list[str]:
                         if not entry.is_dir():
                             text = entry.filename + "\n" + archive.read(entry).decode("utf-8", errors="replace")
                             errors += [rel + ":" + entry.filename + ":" + e
-                                       for e in host_test_environment_errors(text) + stale_bomc_evidence_errors(text)]
+                                       for e in host_test_environment_errors(text) + stale_bomc_evidence_errors(text)
+                                       + bomc_config_failure_errors(text)]
                             if entry.filename.endswith('/SKILL.md'):
                                 lead = entry.filename == 'stability-director/SKILL.md'
                                 errors += [rel + ":" + entry.filename + ":" + e
                                            for e in check_prompt(text, lead, runtime=True)]
             else:
                 text = path.read_bytes().decode("utf-8", errors="replace")
-                errors += [rel + ":" + e for e in host_test_environment_errors(text) + stale_bomc_evidence_errors(text)]
+                errors += [rel + ":" + e for e in host_test_environment_errors(text) + stale_bomc_evidence_errors(text)
+                           + bomc_config_failure_errors(text, required=rel in BOMC_CONFIG_FAILURE_PROMPTS)]
         except (OSError, BadZipFile):
             errors.append(rel + ":host_surface_missing_or_invalid")
     return sorted(set(errors))

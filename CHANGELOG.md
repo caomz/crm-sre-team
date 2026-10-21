@@ -3,7 +3,9 @@
 - fix10：宿主清单有多个近似对应项、无法确定时，第一条回复列出候选名称与描述并请用户选择；选定前不加载候选、不取数、不改走 BOMC。唯一明确匹配和点名不可用的既有流程保持。
 - 三处 BOMC 正文明确 crm=false 未启用 CRM 清单过滤；派单、工作日志与总结按此表述。退出 3 不建议删除或省略 skill_config 绕过报错；值班机部署必须填该字段，只由用户在会话外核对修正。
 - Windows PowerShell 5.1 更新器新增 -DevRoot、-HandoffRoot、-WorkBuddyRoot；当前用户目录推导 WorkBuddy 与 Python312 默认路径，-PythonExe 仍可覆盖。根目录规范化、本地盘与链接校验，PLAN/实验集合登记根目录，后续模式不一致即停止；删除、覆盖及确认边界保持。
-- docs/15 新增 QO-5 双候选合成技能与判据，补 BRC-2 / BRC-8b，设计 fix10 Mac 回归。以上提示词修改已在 rc7 修改、待 Mac 回归验证；Windows 实机仍 NOT_RUN。rc6 已发布身份、历史验收及 r7 的 rc6 安装段保持。
+- docs/15 新增 QO-5 双候选合成技能与判据，补 BRC-2 / BRC-8b，保留 fix10 Mac 回归设计。fix10 Mac r1 整批 BLOCKED、部分完成，BRC-8b 因改述报错 FAIL，但不建议删省 skill_config 的目标达到；BRC-2 BLOCKED，未运行项 NOT_RUN；完整合成事实见 docs/15。
+- fix11：三处 BOMC 正文的退出 3 句同步改为先原样引用守卫的 BOMC_GUARD_ERROR 报错行，再说明问题字段；保留禁止建议删除或省略 skill_config、不自行补充配置路径/配置值/程序异常内容。静态标记、缺句/回退旧句/追加旧句变异及 ZIP 检查同步，README 引用与审核说明更新，守卫和回执不改。
+- fix11 待 Mac 第二轮验证；重跑故障处理与 fix10 未完成项，BRC-1 沿用 fix10 r1 在 O 上的 PASS，不计作本次新测；收尾恢复 rc6 正式包。Windows 实机仍 NOT_RUN；rc6 已发布身份、历史验收及 r7 的 rc6 安装段保持。
 
 ## 2.8.0-rc6（2026-10-21，候选发布）
 
