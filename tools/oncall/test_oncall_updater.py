@@ -1171,12 +1171,13 @@ class PendingRunbookTests(unittest.TestCase):
         cls.r6 = ROOT / 'tools/oncall/runbooks/ONCALL_RUNBOOK.r6.md'
         cls.r7 = ROOT / 'tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md'
         cls.text = cls.r7.read_text(encoding='utf-8')
-        cls.blocks = re.findall(r'```powershell\n(.*?)\n```', cls.text, re.S)
+        cls.historical = cls.text.split('## rc6 值班机简单检查（2026-10-21）', 1)[0]
+        cls.blocks = re.findall(r'```powershell\n(.*?)\n```', cls.historical, re.S)
 
     def test_preserved_r6_and_three_registered_prompts(self):
         self.assertEqual(hashlib.sha256(self.r6.read_bytes()).hexdigest(),
                          '89e4af06f9601a42db672692bf37465eba06625b96bcf0c9a8cc447dbb5660e7')
-        blocks = re.findall(r'```text\n(.*?)\n```', self.text, re.S)
+        blocks = re.findall(r'```text\n(.*?)\n```', self.historical, re.S)
         self.assertEqual([hashlib.sha256(b.encode()).hexdigest() for b in blocks], [
             '49893af69b52e0b5eb3cf8b44935c12f31500e776af2c0a112a33d3bef6249c6',
             '88db28bff7dc040f2e4d04add9be6ca67a8d3c09221071465fb4bd4d96055b18',
@@ -1271,7 +1272,7 @@ class PendingRunbookTests(unittest.TestCase):
         for block in git_blocks:
             self.assertIn('$GitExe = ' + selector, block)
         view = self.blocks[0]
-        self.assertIn('rev-parse origin/codex/pending-oncall-runbook', view)
+        self.assertIn('rev-parse origin/main', view)
         self.assertIn('$DeliveredCommit = (Read-Host', view)
         self.assertIn('$RunbookCommit.Trim() -ine $DeliveredCommit', view)
         self.assertLess(view.index('$RunbookCommit.Trim() -ine $DeliveredCommit'), view.index('--no-pager show'))
@@ -1533,6 +1534,102 @@ class PendingRunbookTests(unittest.TestCase):
             'actual run used the compatible tool without fcntl failure':
                 '本轮用户的 AI 新建了兼容工具，④查询通过，没有遇到 fcntl 错误' in intro,
         })
+
+
+class Rc6SimpleCheckTests(unittest.TestCase):
+    """Freeze the reviewed handoff without running Windows or a host session."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.raw = (ROOT / 'tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md').read_bytes()
+        heading = '## rc6 值班机简单检查（2026-10-21）'.encode('utf-8')
+        cls.historical, separator, tail = cls.raw.partition(heading)
+        if not separator:
+            raise AssertionError('Missing rc6 simple check')
+        cls.section, separator, cls.bomc = tail.partition(b'## rc6 BOMC')
+        if not separator:
+            raise AssertionError('Missing subsequent rc6 BOMC section')
+        cls.text = cls.section.decode('utf-8')
+        cls.blocks = re.findall(rb'```powershell\n(.*?)^```', cls.section, re.M | re.S)
+
+    def test_published_identity_and_distinct_runbook_delivery(self):
+        for token in [
+                'crm-sre-team-2.8.0-rc6', '990b6b666bc484ddcc695976f2cb52f4000e1f15',
+                'feb9aae92bb9408bf01bf86379d3e6f65c60b502',
+                'efe41732c8c3c9d7a3f2135174cce3b79aca5618e7e212e00b6fae60eac55123',
+                'crm-sre-team-2.8.0-rc6.zip；2479908 字节；555 个', '含根 settings.json',
+                'd0fad3158a361ebd18a79b06f660e1c8f9f19bed2df4f8f3b2fb5829a289adde',
+                '自 58731a9 未改', 'WorkBuddy 5.8.3 / glm-5.3-flash', 'fix9 r1 9/9 PASS',
+                '“交付的手册提交”是包含本节的那次提交，与安装身份 ExpectedCommit=',
+                '不把交付的手册提交填入 ExpectedCommit', '安装一律以 rc6 标签和上表为准']:
+            self.assertIn(token, self.text)
+        manifest = json.loads((ROOT / 'release-manifest.json').read_text(encoding='utf-8'))
+        self.assertEqual(len(manifest['files']), 555)
+        self.assertIn('settings.json', manifest['files'])
+        self.assertEqual(hashlib.sha256(SCRIPT.read_bytes()).hexdigest(),
+                         'd0fad3158a361ebd18a79b06f660e1c8f9f19bed2df4f8f3b2fb5829a289adde')
+        intro = self.historical.decode('utf-8').split('## 发布身份与只读查看', 1)[0]
+        for token in ['rc6 候选发布', '已合并 main', 'Windows 未执行', 'NOT_RUN']:
+            self.assertIn(token, intro)
+        for token in ['Mac fix9 r1 已完成并经人工验收（9/9 PASS',
+                      '不能使用上文 rc5 的 Tag/ExpectedCommit/ExpectedZipSha256 安装 rc6']:
+            self.assertIn(token, self.bomc.decode('utf-8'))
+
+    def test_four_reference_blocks_only_change_reviewed_identity_lines(self):
+        original = re.findall(rb'```powershell\n(.*?)^```', self.historical, re.M | re.S)[1:5]
+        self.assertEqual(len(self.blocks), 4)
+        self.assertEqual(len(original), 4)
+        replacements = [
+            (b'crm-sre-team-2.8.0-rc5', b'crm-sre-team-2.8.0-rc6'),
+            (b'58682ff17dd9e3f9f6be0c681f2b110a758fad9a', b'feb9aae92bb9408bf01bf86379d3e6f65c60b502'),
+            (b'7d69c2ce5b70f9e86ec5d5f61164a69f4c8c4c2b7812366d6592ebff7629a74e',
+             b'efe41732c8c3c9d7a3f2135174cce3b79aca5618e7e212e00b6fae60eac55123'),
+            (b'crm-sre-team\\2.8.0-rc5', b'crm-sre-team\\2.8.0-rc6'),
+            (b'Stop: local rc5 tag points elsewhere', b'Stop: local rc6 tag points elsewhere'),
+            (b'Stop: rc5 cache directory missing', b'Stop: rc6 cache directory missing'),
+            (b'Bootstrap is not the published rc5 commit', b'Bootstrap is not the published rc6 commit'),
+        ]
+        digests = [
+            '56aef7304b9fb854d046e1e26d1795320f4a2ccee61fde57a5301961b38be265',
+            'caac9339af4f956c3e713d68c3a116df7ea653df1cce528577328de06cc6bc51',
+            '2a09ed2292357affe15e3407bb99d233b0c3e36ee80b313deb4e1f93f9ae578b',
+            '9c0d046f1371c9daa8a8b162fdd2b81b4d6919d21d2f54143e91eb6d46bfb2b4',
+        ]
+        for number, (old, actual, digest) in enumerate(zip(original, self.blocks, digests), 1):
+            with self.subTest(block=number):
+                for before, after in replacements:
+                    old = old.replace(before, after)
+                self.assertEqual(actual, old)
+                self.assertTrue(actual.isascii())
+                self.assertEqual(hashlib.sha256(actual).hexdigest(), digest)
+
+    def test_install_verify_message_bytes_and_target_receipts(self):
+        messages = re.findall(rb'```text\n(.*?)\n```', self.section, re.S)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(hashlib.sha256(messages[0]).hexdigest(),
+                         'ebb50a6f6e371f146c31fdbd34653710e3b74b17f8601ae1fd8e19c107b4391e')
+        for token in ['显式选择 GLM-5.3-Flash', '不点“召唤”', '不委派成员',
+                      'skill-receipts.json', 'stability-director 与 bomc-alarm-readonly 两条',
+                      'updater 实际只要求至少一条', '缺任一条，本次检查未完成',
+                      'PASS_DECLARED_FILES_ONLY', 'host_acceptance=HUMAN_REVIEW_REQUIRED',
+                      '554/555, root settings.json missing (host-managed)',
+                      '555/555, root settings.json matches package']:
+            self.assertIn(token, self.text)
+
+    def test_simple_scope_failure_handling_and_private_evidence(self):
+        for token in ['不做本文 r7 的 ③～⑦', '不跑全套', '普通 Windows PowerShell 5.1',
+                      '先带回原输出，不继续', '由用户正常退出 WorkBuddy',
+                      'PLAN→展示计划→用户核对后输入一次 YES→APPLY', '②a PLAN 文件占用',
+                      'ZIP 哈希不符或其他报错', '绝不点“删除”', '.workbuddy/memory/*',
+                      '.in_use/<进程号>', '只记名称和数量，不删', 'SHA256SUMS',
+                      '会话 ID 和本机路径只带回给 Claude，不写进仓库', 'bomc.json 本次不建',
+                      '按 BRC-8 停下并写明证据缺口', '先做真实输出形状核对',
+                      'bomc.json 必须填 skill_config', 'scripts_sha256 在值班机上计算',
+                      '短会话默认不做', '先带回版本号，再决定是否加',
+                      '用客户端“刷新”切回 rc5，再 VERIFY', '不覆盖旧备份']:
+            self.assertIn(token, self.text)
+        self.assertNotRegex(self.text, r'/Volumes/|/Users/|\b\d{1,3}(?:\.\d{1,3}){3}\b')
+        self.assertNotRegex(self.text, r'\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b')
 
 
 if __name__ == "__main__":

@@ -1,8 +1,8 @@
-# 值班机手册 r7 · rc5 历史与 rc6 准备（待处理分支，Windows 未执行）
+# 值班机手册 r7 · rc6 候选发布（已合并 main，Windows 未执行）
 
-rc6 新增 BOMC 的步骤见本文“rc6 BOMC”章节。下方 rc5 的固定发布身份和10-14实测均为历史记录，不能拿来安装或证明 rc6；本轮不发布 rc6、不生成正式 ZIP、不部署。
+rc6 已候选发布，发布内容已合并 main，真实身份与本次执行步骤见“rc6 值班机简单检查（2026-10-21）”。BOMC 通道已随 rc6 候选发布，插件外配置尚未部署，后续部署步骤见“rc6 BOMC”章节。下方 rc5 的固定发布身份和10-14实测均为历史记录，不能拿来安装或证明 rc6；Windows 11 值班机仍为 NOT_RUN。
 
-10-14 值班机这一轮实际使用 r6 加对话里的加固块。此前给出的执行说明为：跳过旧「① 前置」；UPDATE 到 VERIFY 用同一个窗口；③④用同一个窗口；若④遇到 fcntl 错误，保留配置，只重跑④b，不重新建配置。本轮用户的 AI 新建了兼容工具，④查询通过，没有遇到 fcntl 错误。本 r7 仍是 Windows 未执行，留给之后使用，先交 Claude 审阅。
+10-14 值班机这一轮实际使用 r6 加对话里的加固块。此前给出的执行说明为：跳过旧「① 前置」；UPDATE 到 VERIFY 用同一个窗口；③④用同一个窗口；若④遇到 fcntl 错误，保留配置，只重跑④b，不重新建配置。本轮用户的 AI 新建了兼容工具，④查询通过，没有遇到 fcntl 错误。本 r7 的 rc6 检查仍为 Windows 未执行，按本次简单检查范围交付。
 
 与 r6 的差异：直接 UPDATE 已发布 rc5；新增只读前置；三次 VERIFY 都能在新窗口独立运行；内嵌已测正式回执与冻结自检 2；③、④a、④b独立，建配置与试跑分开；说明 fcntl；知识库冒烟沿用原文并明确 K14/K15 口径；附可选工具调用摘要和带回清单。
 
@@ -14,27 +14,29 @@ rc6 新增 BOMC 的步骤见本文“rc6 BOMC”章节。下方 rc5 的固定发
 
 ## 发布身份与只读查看
 
-| 项目 | 固定值 |
+以下为 rc5 历史身份；本次 rc6 安装身份见“rc6 值班机简单检查（2026-10-21）”，不要使用此表安装 rc6。
+
+| 项目 | rc5 历史固定值 |
 |---|---|
 | Tag | crm-sre-team-2.8.0-rc5 |
 | ExpectedCommit | 58682ff17dd9e3f9f6be0c681f2b110a758fad9a |
 | ExpectedZipSha256 | 7d69c2ce5b70f9e86ec5d5f61164a69f4c8c4c2b7812366d6592ebff7629a74e |
 
-值班机不访问GitHub。本地项目须已含origin/codex/pending-oncall-runbook；先只读取得该引用的SHA，与交付时给出的提交SHA一致后，再按该SHA查看手册，不切分支、不修改工作区：
+值班机不访问GitHub。本地项目须已同步到含交付手册的 origin/main；先只读取得该引用的 SHA，与交付时给出的手册提交 SHA 一致后，再按该 SHA 查看手册，不切分支、不修改工作区：
 
 ```powershell
 . {
-    $RunbookCommit = git -C D:\python_code\github_my\crm-sre-team rev-parse origin/codex/pending-oncall-runbook
-    if ($LASTEXITCODE -ne 0) { throw 'Local pending branch is missing; ask the user to synchronize locally' }
+    $RunbookCommit = git -C D:\python_code\github_my\crm-sre-team rev-parse origin/main
+    if ($LASTEXITCODE -ne 0) { throw 'Local origin/main is missing; ask the user to synchronize locally' }
     $Host.UI.RawUI.FlushInputBuffer()
     $DeliveredCommit = (Read-Host 'Paste the delivered runbook commit SHA (40 hex)').Trim()
-    if ($DeliveredCommit -notmatch '^[0-9a-fA-F]{40}$' -or $RunbookCommit.Trim() -ine $DeliveredCommit) { throw 'Local pending branch does not match the delivered commit; stop' }
+    if ($DeliveredCommit -notmatch '^[0-9a-fA-F]{40}$' -or $RunbookCommit.Trim() -ine $DeliveredCommit) { throw 'Local origin/main does not match the delivered runbook commit; stop' }
     git -C D:\python_code\github_my\crm-sre-team --no-pager show ($DeliveredCommit + ':tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md')
     if ($LASTEXITCODE -ne 0) { throw 'Could not read the runbook from the delivered commit' }
 }
 ```
 
-本分支不在本轮合并到 main。其手册和 oncall 测试为 repository-only；从分支试构建的 ZIP 仅用于差异核对，不能替代上表已发布 rc5 ZIP。
+2026-10-21，rc6 候选发布内容已快进合并到 main。手册和 oncall 测试仍为 repository-only，不进入发布 ZIP；rc6 安装身份一律以 rc6 标签和本次简单检查的身份表为准。交付的手册提交与安装提交分别核对，不能互换。
 
 ## ① 只读前置检查
 
@@ -951,14 +953,203 @@ domain、status、confidence、updated 取页面 frontmatter 里的同名字段�
 ```
 
 
-## rc6 BOMC 团长只读通道（2026-10-19，准备；未部署）
+## rc6 值班机简单检查（2026-10-21）
 
-本节是 A′ 新增通道，不能使用上文 rc5 的 Tag/ExpectedCommit/ExpectedZipSha256 安装 rc6。本分支当前不提交、不打标签、不构建正式发布 ZIP，也没有 rc6 发布身份；安装步骤须等后续真实交付的身份和 Mac 宿主结果，不编造 SHA256。
+rc6 已候选发布，Mac fix9 r1 已人工验收（9/9 PASS）。Windows 11 值班机仍为 NOT_RUN；本次只做步骤 1～5 的安装/切换 + VERIFY（来源/缓存完整性、Skill 回执路径）+ 记录版本，不做本文 r7 的 ③～⑦及其附属步骤，不跑全套用例。
+
+### 发布身份
+
+| 项目 | 固定值 |
+|---|---|
+| Tag | crm-sre-team-2.8.0-rc6 |
+| 附注标签对象 | 990b6b666bc484ddcc695976f2cb52f4000e1f15 |
+| ExpectedCommit | feb9aae92bb9408bf01bf86379d3e6f65c60b502 |
+| ExpectedZipSha256 | efe41732c8c3c9d7a3f2135174cce3b79aca5618e7e212e00b6fae60eac55123 |
+| 发布 ZIP | crm-sre-team-2.8.0-rc6.zip；2479908 字节；555 个 release-manifest 申报文件，含根 settings.json |
+| 更新脚本 SHA256 | tools/oncall/Update-CrmSreTeam.ps1：d0fad3158a361ebd18a79b06f660e1c8f9f19bed2df4f8f3b2fb5829a289adde；自 58731a9 未改 |
+| Mac 对照 | WorkBuddy 5.8.3 / glm-5.3-flash；fix9 r1 9/9 PASS，已人工验收 |
+
+读手册时粘贴的“交付的手册提交”是包含本节的那次提交，与安装身份 ExpectedCommit=feb9aae92bb9408bf01bf86379d3e6f65c60b502 不同。按“发布身份与只读查看”核对交付提交 SHA 必须与本地 origin/main 相等，再从交付提交 git show 手册；安装一律以 rc6 标签和上表为准，不把交付的手册提交填入 ExpectedCommit。任一身份不符就停下，带回原输出。
+
+### 前提
+
+- 先由用户把本地项目 `D:\python_code\github_my\crm-sre-team` 同步到含上述 feb9aae 完整提交和 rc6 标签；值班机不访问 GitHub。
+- 仅用普通 Windows PowerShell 5.1；不删除文件、不结束进程、不手写 cache。上次 SWITCH/UPDATE 如果停在半途且提示不要启动客户端，先带回原输出，不继续本节。
+- 四个 PowerShell 块由 feb9aae 手册的 ①、②、②b 两个块派生，只替换 Tag、ExpectedCommit、ExpectedZipSha256、缓存路径版本和三处报错文字中的 rc5→rc6；原 rc5 块保留为历史。
+
+### 步骤 1：只读前置
+
+先在界面查看实际 WorkBuddy 版本与所选模型，固定 glm-5.3-flash，按提示记录。值班机版本不是 5.8.3 时，先带回版本号，再决定是否加一个短会话；不要按历史第⑥节自动扩展测试。
+
+```powershell
+. {
+    $SavedErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Stop'
+        if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) { throw 'Use Windows PowerShell 5.1' }
+        $Host.UI.RawUI.FlushInputBuffer()
+        $HostVersion = (Read-Host 'Actual WorkBuddy version from UI (x.y.z)').Trim()
+        $ActualModel = (Read-Host 'Actual selected model (glm-5.3-flash)').Trim()
+        $PreviousRunComplete = (Read-Host 'Previous SWITCH/UPDATE complete with no do-not-start warning? Type YES').Trim()
+        if ($HostVersion -notmatch '^[vV]?\d+\.\d+\.\d+$' -or $ActualModel -ine 'glm-5.3-flash' -or $PreviousRunComplete -ine 'YES') { throw 'Stop: verify host/model or report the incomplete previous run' }
+        $HostVersion = $HostVersion -replace '^[vV]', ''
+        $SourceRepo = 'D:\python_code\github_my\crm-sre-team'
+        $ExpectedCommit = 'feb9aae92bb9408bf01bf86379d3e6f65c60b502'
+        $Tag = 'crm-sre-team-2.8.0-rc6'
+        $ProfileRoot = [Environment]::GetFolderPath('UserProfile')
+        $InstalledVersionPath = Join-Path $ProfileRoot '.workbuddy\plugins\marketplaces\my-experts\plugins\crm-sre-team\VERSION'
+        if (-not (Test-Path -LiteralPath $InstalledVersionPath -PathType Leaf) -or -not (Test-Path -LiteralPath $SourceRepo -PathType Container)) { throw 'Stop: plugin VERSION or local project missing; user must synchronize locally' }
+        $InstalledVersion = (Get-Content -LiteralPath $InstalledVersionPath -Raw -Encoding UTF8).Trim()
+        if ([string]::IsNullOrWhiteSpace($InstalledVersion)) { throw 'Stop: current plugin VERSION is empty' }
+        git -C $SourceRepo -c core.hooksPath=NUL cat-file -e ($ExpectedCommit + '^{commit}')
+        if ($LASTEXITCODE -ne 0) { throw 'Stop: local project lacks the published commit; user must synchronize locally' }
+        git -C $SourceRepo -c core.hooksPath=NUL show-ref --verify --quiet ('refs/tags/' + $Tag)
+        $TagExit = $LASTEXITCODE
+        if ($TagExit -eq 0) {
+            $LocalTagCommit = git -C $SourceRepo -c core.hooksPath=NUL rev-parse ($Tag + '^{commit}')
+            if ($LASTEXITCODE -ne 0 -or $LocalTagCommit.Trim() -ine $ExpectedCommit) { throw 'Stop: local rc6 tag points elsewhere; report, do not rewrite it' }
+        } elseif ($TagExit -ne 1) { throw 'Stop: local tag lookup failed' }
+        [pscustomobject]@{WorkBuddy=$HostVersion; Model=$ActualModel; CurrentPlugin=$InstalledVersion; LocalCommit=$ExpectedCommit}
+    } finally { $ErrorActionPreference = $SavedErrorActionPreference }
+}
+```
+
+### 步骤 2：UPDATE
+
+由用户正常退出 WorkBuddy 后执行。按 PLAN→展示计划→用户核对后输入一次 YES→APPLY；如 updater 要求 DRILL，按原流程完成。记下开头打印的 Bootstrap、本次 PlanPath 和 PlanSha256，供步骤 5 使用。PLAN 报文件占用按本文“②a PLAN 文件占用时的处理”；ZIP 哈希不符或其他报错时，保留目录、计划、备份与原输出带回，不绕过校验，不启动脚本要求保持关闭的客户端。
+
+以下从本地项目创建新 bootstrap，不访问 GitHub；不改本地来源项目的标签或工作区：
+
+```powershell
+. {
+    $Tag = 'crm-sre-team-2.8.0-rc6'
+    $ExpectedCommit = 'feb9aae92bb9408bf01bf86379d3e6f65c60b502'
+    $ExpectedZipSha256 = 'efe41732c8c3c9d7a3f2135174cce3b79aca5618e7e212e00b6fae60eac55123'
+    $SourceRepo = 'D:\python_code\github_my\crm-sre-team'
+    $SavedErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Stop'
+        if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) { throw 'Use Windows PowerShell 5.1' }
+        if (-not (Test-Path -LiteralPath $SourceRepo -PathType Container)) { throw 'Local project missing; user must synchronize locally' }
+        git -C $SourceRepo -c core.hooksPath=NUL cat-file -e ($ExpectedCommit + '^{commit}')
+        if ($LASTEXITCODE -ne 0) { throw 'Published commit missing from local project; stop' }
+        $Bootstrap = 'D:\crm-v36-handoff\bootstrap-' + [guid]::NewGuid().ToString('N')
+        if (Test-Path -LiteralPath $Bootstrap) { throw 'New bootstrap path already exists' }
+        Write-Host "Local source=$SourceRepo; new bootstrap=$Bootstrap"
+        git -c core.hooksPath=NUL clone -q --no-local --no-checkout --config core.autocrlf=false --config core.hooksPath=NUL $SourceRepo $Bootstrap
+        if ($LASTEXITCODE -ne 0) { throw 'Local bootstrap clone failed' }
+        git -C $Bootstrap -c core.hooksPath=NUL fetch -q --no-tags $SourceRepo '+refs/remotes/*:refs/crm-source-remotes/*'
+        if ($LASTEXITCODE -ne 0) { throw 'Copying refs from the local project failed' }
+        git -C $Bootstrap -c core.hooksPath=NUL cat-file -e ($ExpectedCommit + '^{commit}')
+        if ($LASTEXITCODE -ne 0) { throw 'Published commit not reachable from local refs; stop' }
+        git -C $Bootstrap -c core.hooksPath=NUL show-ref --verify --quiet ('refs/tags/' + $Tag)
+        $TagLookupExit = $LASTEXITCODE
+        if ($TagLookupExit -eq 0) {
+            $LocalTagCommit = git -C $Bootstrap -c core.hooksPath=NUL rev-parse ($Tag + '^{commit}')
+            if ($LASTEXITCODE -ne 0 -or $LocalTagCommit.Trim() -ine $ExpectedCommit) { throw 'Local final tag points elsewhere; stop' }
+        } elseif ($TagLookupExit -eq 1) {
+            git -C $Bootstrap -c core.hooksPath=NUL tag $Tag $ExpectedCommit
+            if ($LASTEXITCODE -ne 0) { throw 'New bootstrap tag binding failed' }
+        } else { throw 'Tag lookup failed' }
+        git -C $Bootstrap -c core.hooksPath=NUL checkout -q --detach $Tag
+        if ($LASTEXITCODE -ne 0) { throw 'New bootstrap checkout failed' }
+        $Script = Join-Path $Bootstrap 'tools\oncall\Update-CrmSreTeam.ps1'
+        if (-not (Test-Path -LiteralPath $Script -PathType Leaf)) { throw 'Updater missing in published commit' }
+        $GitExe = @(Get-Command -Name git -CommandType Application -All -ErrorAction Stop)[0].Source
+        powershell -NoProfile -ExecutionPolicy Bypass -File $Script -Mode UPDATE -Tag $Tag -ExpectedCommit $ExpectedCommit -ExpectedZipSha256 $ExpectedZipSha256 -GitExe $GitExe
+        if ($LASTEXITCODE -ne 0) { throw 'UPDATE stopped; retain bootstrap, reports and backups' }
+    } finally { $ErrorActionPreference = $SavedErrorActionPreference }
+}
+```
+
+### 步骤 3：客户端刷新与缓存检查
+
+UPDATE 成功后打开 WorkBuddy，在「技能 → 套件 → my-experts ⋯ → 刷新」只点“刷新”，绝不点“删除”。先执行以下只读缓存存在性检查；不存在就停下，带回结果，不手写 cache。
+
+```powershell
+. {
+    $CachePath = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.workbuddy\plugins\cache\my-experts\crm-sre-team\2.8.0-rc6'
+    $CacheExists = Test-Path -LiteralPath $CachePath -PathType Container
+    Write-Host ('Cache directory exists: ' + $CacheExists)
+    if (-not $CacheExists) { throw 'Stop: rc6 cache directory missing after client refresh' }
+}
+```
+
+### 步骤 4：回执会话
+
+新建一个空文件夹并开新会话，不用插件目录、知识库目录或证据目录作为工作区；宿主会写 `<工作区>\.workbuddy\memory\`，可能注入后续会话。显式选择 GLM-5.3-Flash，从输入框的专家选择进入 crm-sre-team，不点“召唤”。逐字发送下面这条消息（Mac fix9 r1 INSTALL-VERIFY 原文）：
+
+```text
+仅通过宿主 Skill 工具加载 stability-director 与 bomc-alarm-readonly，返回两次真实 Skill 回执中的路径和版本。本次仅核验加载，不分析业务，不读取文件或环境变量，不执行终端命令、不联网、不委派成员，不创建或修改配置。
+```
+
+消息按 UTF-8、无末尾换行计算的 SHA256 为 `ebb50a6f6e371f146c31fdbd34653710e3b74b17f8601ae1fd8e19c107b4391e`。预期两次真实回执路径都在 `...\plugins\cache\my-experts\crm-sre-team\2.8.0-rc6\skills\` 下，分别对应 stability-director 与 bomc-alarm-readonly。记录本次新会话 SessionId，用于下一步，不写进仓库。
+
+### 步骤 5：VERIFY
+
+可在新开的普通 PowerShell 5.1 窗口独立执行；按提示粘贴本次 UPDATE 的 Bootstrap、PlanPath、PlanSha256 和步骤 4 的 SessionId，不使用历史计划或会话。
+
+```powershell
+. {
+    $Tag = 'crm-sre-team-2.8.0-rc6'
+    $ExpectedCommit = 'feb9aae92bb9408bf01bf86379d3e6f65c60b502'
+    $ExpectedZipSha256 = 'efe41732c8c3c9d7a3f2135174cce3b79aca5618e7e212e00b6fae60eac55123'
+    $Host.UI.RawUI.FlushInputBuffer()
+    $Bootstrap = (Read-Host 'Paste THIS UPDATE bootstrap path').Trim()
+    $PlanPath = (Read-Host 'Paste THIS UPDATE PlanPath').Trim()
+    $PlanSha256 = (Read-Host 'Paste THIS UPDATE PlanSha256').Trim()
+    $SessionId = (Read-Host 'Paste the NEW SESSION ID').Trim()
+
+    $SavedErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Stop'
+        if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) { throw 'Use Windows PowerShell 5.1' }
+        if ($Bootstrap -cnotmatch '^D:\\crm-v36-handoff\\bootstrap-[0-9a-f]{32}$') { throw 'Invalid THIS UPDATE bootstrap path' }
+        $Script = Join-Path $Bootstrap 'tools\oncall\Update-CrmSreTeam.ps1'
+        if (-not (Test-Path -LiteralPath $Script -PathType Leaf)) { throw 'Updater missing under the supplied bootstrap' }
+        if ($PlanPath -cnotmatch '^D:\\crm-v36-handoff\\update-[0-9a-f]{32}\\install-plan\.json$' -or $PlanSha256 -notmatch '^[0-9a-fA-F]{64}$' -or $SessionId -notmatch '^[A-Za-z0-9][A-Za-z0-9-]*$') { throw 'Invalid current plan, SHA256 or session ID' }
+
+        if (-not (Test-Path -LiteralPath $PlanPath -PathType Leaf) -or (Get-FileHash -LiteralPath $PlanPath -Algorithm SHA256).Hash -ine $PlanSha256) { throw 'Current plan missing or SHA256 mismatch' }
+        $GitExe = @(Get-Command -Name git -CommandType Application -All -ErrorAction Stop)[0].Source
+        $BootstrapCommit = & $GitExe -C $Bootstrap -c core.hooksPath=NUL rev-parse HEAD
+        if ($LASTEXITCODE -ne 0 -or $BootstrapCommit.Trim() -ine $ExpectedCommit) { throw 'Bootstrap is not the published rc6 commit' }
+        powershell -NoProfile -ExecutionPolicy Bypass -File $Script -Mode VERIFY -Tag $Tag -ExpectedCommit $ExpectedCommit -ExpectedZipSha256 $ExpectedZipSha256 -GitExe $GitExe -PlanPath $PlanPath -PlanSha256 $PlanSha256 -SessionId $SessionId
+        if ($LASTEXITCODE -ne 0) { throw 'VERIFY incomplete; retain evidence and report the original output' }
+    } finally { $ErrorActionPreference = $SavedErrorActionPreference }
+}
+```
+
+对照 updater 与本次 release-manifest 判读：
+
+- 来源目录和目标缓存分别核对完整性：客户端移除了根 settings.json 时应为 `554/555, root settings.json missing (host-managed)`；存在时须为 `555/555, root settings.json matches package`。其他申报文件缺失、不是普通文件或字节差异均判失败，存在的根 settings.json 字节也必须匹配。
+- 来源目录 `.workbuddy/memory/*` 和缓存 `.in_use/<进程号>` 只记名称和数量，不删；前者是宿主工作区记忆，后者是正常在用标记。其他 extra path 仍交人工复核，不自行删除或视为自动 PASS。
+- 人工确认 `skill-receipts.json` 的 paths 含 stability-director 与 bomc-alarm-readonly 两条 2.8.0-rc6 缓存路径，version 为 2.8.0-rc6。updater 实际只要求至少一条关联到真实 Skill 调用的目标版本回执，不自动保证这两条都在；缺任一条，本次检查未完成。
+- updater 的 `PASS_DECLARED_FILES_ONLY` 仅表示申报文件检查通过，`host_acceptance=HUMAN_REVIEW_REQUIRED`；缓存存在或路径回执不证明 Agent 正文加载。保留报告与会话证据，交人工复核。
+
+### 带回
+
+- WorkBuddy 版本、插件 VERSION（应为 2.8.0-rc6）、团长与成员实际模型、机器身份；本次不委派成员，未运行的成员记 NOT_RUN，不用所选模型代替实际运行记录。
+- 第 1～5 步原始输出；Bootstrap、PlanPath、PlanSha256、SessionId；VERIFY 的 evidence 目录，含 skill-receipts.json、SHA256SUMS。
+- 会话 ID 和本机路径只带回给 Claude，不写进仓库。
+
+### 不在本次
+
+BOMC 插件外配置 bomc.json 本次不建。没有它时团长查 BOMC 会按 BRC-8 停下并写明证据缺口，属预期。是否部署另定；部署时按后文“rc6 BOMC”一节，先做真实输出形状核对，bomc.json 必须填 skill_config，scripts_sha256 在值班机上计算。
+
+短会话默认不做。值班机 WorkBuddy 不是 5.8.3 时，先带回版本号，再决定是否加，不把 Mac 结果直接外推到不同宿主版本。
+
+### 回退
+
+走已有更新/切换流程恢复 rc5，用客户端“刷新”切回 rc5，再 VERIFY；使用回退对应的 rc5 身份与计划。不删除文件、不手写 cache、不覆盖旧备份。
+
+## rc6 BOMC 团长只读通道（2026-10-21，已随 rc6 候选发布；BOMC 配置未部署）
+
+本节是 A′ 新增通道，已随 rc6 候选发布，真实发布身份与 Mac 验收结果见“rc6 值班机简单检查（2026-10-21）”；插件外 BOMC 配置未部署。不能使用上文 rc5 的 Tag/ExpectedCommit/ExpectedZipSha256 安装 rc6；本次值班机只做前节的简单检查，以下配置与短会话步骤留待另行确定。
 
 ### 交付与安装顺序
 
-1. 先按 docs/15-bomc-readonly.md，fix9 在 Mac 运行 BRC-1、BRC-2、BRC-8、BRC-8b、BRC-9、BRC-9b、BRC-9c；新增必填字段与哈希拒绝属于故障处理改动，须回归 BRC-8/8b/9，其余用例沿用此前结果，不计作本次已运行。每例合成技能的发现与移出核对以当例会话输入框技能菜单为主，落盘缓存只作补充；QO-4、QO-4b 的 disableModelInvocation 在发消息前，或会话结束后、移出前，到落盘缓存里只读核对。恢复核验比较落盘技能缓存时，只比本插件和 syn-qo 合成技能相关的项；宿主因服务端配置变更增减其他插件，记观察项，不判恢复失败。Mac 与 Claude 不连接真实 BOMC。本次仅提供准备，宿主复测 NOT_RUN。结果返回、经人工复核验收接受之后，才安排值班机。
-2. 后续真正发布时，人工核对交付的 rc6 Tag、完整提交 SHA、正式 ZIP SHA256 和 updater SHA256；走现有 Update-CrmSreTeam.ps1 的 UPDATE（PLAN/dry-run→审阅→APPLY）及整包备份。只用本机已同步且匹配的项目，保留原 rc5 和证据。不要沿用上文 rc5 常量；身份缺失就停止，不绕过脚本验证。本节不自动触发更新或重新构包。
+1. Mac fix9 r1 已完成并经人工验收（9/9 PASS，WorkBuddy 5.8.3 / glm-5.3-flash）。按 docs/15-bomc-readonly.md，fix9 在 Mac 运行 BRC-1、BRC-2、BRC-8、BRC-8b、BRC-9、BRC-9b、BRC-9c；新增必填字段与哈希拒绝属于故障处理改动，须回归 BRC-8/8b/9，其余用例沿用此前结果，不计作本次已运行。每例合成技能的发现与移出核对以当例会话输入框技能菜单为主，落盘缓存只作补充；QO-4、QO-4b 的 disableModelInvocation 在发消息前，或会话结束后、移出前，到落盘缓存里只读核对。恢复核验比较落盘技能缓存时，只比本插件和 syn-qo 合成技能相关的项；宿主因服务端配置变更增减其他插件，记观察项，不判恢复失败。Mac 与 Claude 不连接真实 BOMC。Mac 结果已返回并经人工复核验收接受，Windows 仍为 NOT_RUN；值班机本次按前节简单检查执行。
+2. 按“rc6 值班机简单检查（2026-10-21）”身份表，人工核对 rc6 Tag、标签对象、完整提交 SHA、正式 ZIP SHA256 和 updater SHA256；走现有 Update-CrmSreTeam.ps1 的 UPDATE（PLAN/dry-run→审阅→APPLY）及整包备份。只用本机已同步且匹配的项目，保留原 rc5 和证据。不要沿用上文 rc5 常量；身份缺失就停止，不绕过脚本验证。本节不自动触发更新或重新构包。
 3. 客户端插件页面「刷新」并更新到交付版本，不手工写 cache。刷新后只读查看实际缓存版本；用真实 Skill 回执确认 stability-director 与 bomc-alarm-readonly 都来自同一 rc6 目录，团长恰好绑定二者，7名成员各绑自己的技能。
 4. 先完成下节“真实输出形状核对”，通过后再用脚本新建插件外 bomc.json。真实技能保留用户级原目录，执行人同时核对 run_query.py 的只读性、参数接口、凭据最小权限和允许告警进入云端模型。Mac 不读取真实技能。新建配置不等于对话授权。
 5. VERIFY 使用此次 UPDATE 返回的 Bootstrap、PlanPath、PlanSha256 以及真实新会话 SessionId；调用同一 updater 的 -Mode VERIFY，并传此次 rc6 的 -Tag/-ExpectedCommit/-ExpectedZipSha256/-PlanPath/-PlanSha256/-SessionId。先验证来源/缓存完整性及 Skill 路径回执，失败原样保留报告；不要用旧 rc5 的计划或 SessionId。值班机只做安装/切换 + VERIFY + 记录版本，必要时加下述一个短会话。
