@@ -1,12 +1,12 @@
 {
-  "version": "2.8.0-rc6",
+  "version": "2.8.0-rc7",
   "skill_id": "linux-infra",
   "agent_id": "telecom-crm-linux-infra",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "MANUAL-MODE.md": "876d8dcfc7f63b0075b4ae1e0bb8b9bbfcb36bc2432f8fb1801379fba151f2b3",
-    "SKILL.md": "4e75dbfa0d2251511aec93c25449b141d415d141f95b6fc3def92ac9aefcadbd",
-    "VERSION": "f25cbc82c7fc4f8b0441bae6d80cc913d93b1f092abf0349152e0c100561be9b",
+    "MANUAL-MODE.md": "f6c33e2f23351d8f0c20c3e842bd2f7182337bcdd69038871ee8ca584355fe81",
+    "SKILL.md": "27a3f51007f4dfe564b41ed88cda6c1d76f7852535062b38e0b132dc2e94f1f8",
+    "VERSION": "adc17bb55a687d8e0105de89015ac9f5127b7b6b01486a3f9662fa611773709f",
     "agents/openai.yaml": "c1d542a9a56cda7d6464c7dec19e78676bb32afab4147f82cef7a21bf5b1ade3",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",
     "assets/templates/environment-profile.md": "4e16258630a00ea674d096465470a2868714fc48bad37295e8fbf4b6568c6817",

@@ -1,5 +1,5 @@
 {
-  "version": "2.8.0-rc6",
+  "version": "2.8.0-rc7",
   "implementation_status": "NOT_IMPLEMENTED",
   "mode": "EVIDENCE_WITH_LEAD_READ_ONLY_QUERIES",
   "production_executor": false,
@@ -182,7 +182,8 @@
       "dependency_install_environment_or_interpreter_change": false,
       "address_or_credential_discovery": "NO_HISTORY_MEMORY_FILE_SEARCH_OR_CREDENTIAL_REQUEST",
       "config_write": false,
-      "member_data_collection": false
+      "member_data_collection": false,
+      "ambiguous_match": "FIRST_REPLY_LIST_HOST_CANDIDATE_NAMES_AND_DESCRIPTIONS_ASK_USER_NO_SELECTION_LOAD_QUERY_OR_ALTERNATIVE_BOMC_UNTIL_CHOSEN_SINGLE_CLEAR_MATCH_DIRECT_NO_MATCH_UNAVAILABLE"
     }
   },
   "legacy_alias_scope": {

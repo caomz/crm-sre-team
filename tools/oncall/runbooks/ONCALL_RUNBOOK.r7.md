@@ -953,6 +953,8 @@ domain、status、confidence、updated 取页面 frontmatter 里的同名字段�
 ```
 
 
+rc7 起更新器支持 -DevRoot、-HandoffRoot、-WorkBuddyRoot，并由当前用户目录推导默认 WorkBuddy/Python 路径；计划一致性要求见 tools/oncall/README.md。下面 rc6 简单检查始终使用 rc6 标签中的脚本及原身份。
+
 ## rc6 值班机简单检查（2026-10-21）
 
 rc6 已候选发布，Mac fix9 r1 已人工验收（9/9 PASS）。Windows 11 值班机仍为 NOT_RUN；本次只做步骤 1～5 的安装/切换 + VERIFY（来源/缓存完整性、Skill 回执路径）+ 记录版本，不做本文 r7 的 ③～⑦及其附属步骤，不跑全套用例。

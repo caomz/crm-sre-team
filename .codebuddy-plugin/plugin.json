@@ -1,6 +1,6 @@
 {
   "name": "crm-sre-team",
-  "version": "2.8.0-rc6",
+  "version": "2.8.0-rc7",
   "description": "CRM evidence analysis with native delegation when available. Lead-only read-only production queries use the preferred BOMC guard or user-level read-only skills without prior query consent. Managed Harness remains unimplemented.",
   "author": {
     "name": "哲哥"

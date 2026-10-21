@@ -52,6 +52,10 @@ QUERY_ONLY_NAMED_UNAVAILABLE_RULE = (
     '点名不可用：用户用名称或描述点名一个诊断、技能或数据源（例如“用 X 诊断查询”“用 X 技能”）时，先按宿主 Skill 工具清单里各技能的名称和描述核对；清单里有对应项，就按该技能使用，不先声明不可用；清单里没有对应项，就属于本会话不可用。经核对已知用户点名的诊断、技能或数据源在本会话不可用（技能清单里没有、宿主拒绝、已知缺依赖或缺配置）时，必须在本轮第一条回复里先说明拿不到它及原因，且先于调用任何取数工具，不悄悄换成其他取数通道顶替。调用取数工具包括加载 bomc-alarm-readonly 等取数技能、读取 bomc.json 或其他取数配置、运行守卫或技能脚本。BOMC 例外只看用户点名的来源：只有用户点名的来源本身就是 BOMC 或告警（例如“查 BOMC”“查告警”“查当前告警快照”）时，才按 BOMC 规则直接走守卫；用户点名了其他诊断、技能或数据源时，即使要查的是当前事件或进行中的故障，也不把点名对象或请求内容解释成告警查询，先按“点名不可用”处理。用户点名 BOMC 或告警、后续消息沿用同一来源（例如“查当前快照”），或没有点名任何诊断、技能或数据源且需要 BOMC 数据时，团长仍按 BOMC 规则直接查询，不出查询卡、不等用户同意。确要改用其他只读来源（例如 BOMC），先写明它不是用户点名的那个，再按该来源的规则取数；使用中才发现缺依赖或缺配置时，说明原因；缺依赖或缺配置及守卫失败仍按对应规则停止这次取数，不自行修复或重试，其余分析照常并写明证据缺口。'
 )
 
+QUERY_ONLY_AMBIGUOUS_RULE = (
+    '近似匹配：用户用名称或描述点名诊断、技能或数据源时，若宿主 Skill 工具清单里有多个近似对应项、无法确定是哪一个，必须在本轮第一条回复里列出候选（名称加一句描述），并问用户选哪一个；用户选定之前，不自行挑选、不加载其中任何一个、不取数，也不改走 BOMC 等其他来源，包括点名来源可能属于 BOMC 或告警的情形；只有一个明确对应项时照旧直接使用，没有对应项时照旧按“点名不可用”处理。'
+)
+
 QUERY_ONLY_WRITE_RULE = (
     '写操作：需要建工单、申请或变更权限、改配置、重启、删除等写操作时，在本会话直接给出人工复核需求，按 action-review 人工动作评审卡的“已确认事实／高概率候选／待验证／已排除”结构，至少写明：拟执行的动作与唯一目标、对象与范围、依据（E 号或用户口述）、风险与回退，以及审批人、执行人、复核人（未知写“待现场指定”）。不写操作命令、SQL 或脚本，不调用技能或工具代为执行；不引导用户改到普通对话、其他专家或其他渠道让 AI 代办；不声称系统会生成或已提交工单。'
 )
@@ -85,12 +89,19 @@ QUERY_ONLY_MARKERS = (
     '技能副作用：不调用会写入（生产或本机）、建工单、发消息、外发内容、改插件或改配置的技能，团队技能和用户级技能一视同仁。看不出是否只读的，按写操作处理。查询的脱敏证据输出仅按“本地结果保存”执行。',
     QUERY_ONLY_SKILL_LIST_RULE,
     QUERY_ONLY_NAMED_UNAVAILABLE_RULE,
+    QUERY_ONLY_AMBIGUOUS_RULE,
     QUERY_ONLY_ACQUISITION_RULE,
     '缺依赖或缺配置：说明缺什么、须由用户自己在会话外处理，停止这次取数，不自行修复或重试；其余分析照常并写明证据缺口。不装包（pip、npm、brew 等），不建虚拟环境，不换解释器。',
     '配置缺失或查询失败即报告并停止本轮 BOMC 取数，不自行修复或切换入口绕过；其余分析照常并写明缺口。',
     '地址与凭据：不替用户找或填写地址和凭据，不为此检索历史会话、宿主记忆或本机文件，不在会话里索要地址或凭据，不提出代写配置文件。',
     QUERY_ONLY_WRITE_RULE,
     '成员边界：成员仍不取数，不调用团队守卫或用户级取数技能，只分析团长提供的脱敏材料并向团长提缺口。',
+)
+BOMC_CRM_FILTER_RULE = (
+    'crm=false 表示没有启用 CRM 清单过滤（没有加 --crm），不会因此滤掉数据库类告警；只有加 --crm 才按 CRM 清单过滤。派单、工作日志和总结提到 crm 时按此表述，不说反。'
+)
+BOMC_SKILL_CONFIG_FAILURE_RULE = (
+    '退出 3 时，不要建议删除或省略 skill_config 等配置字段来绕过报错；值班机的凭据走配置文件，部署时必须填 skill_config。只说明哪个字段有问题，由用户在会话外核对修正；只指明字段，不回显路径、配置值或异常原文。'
 )
 BOMC_PRIORITY_RULE = (
     'BOMC 查询优先使用 bomc-alarm-readonly；也可直接调用用户级只读技能。以下固定命令、参数白名单和回执规则用于守卫路径；用户级只读技能按共用只查询规则判定，不得用它绕过守卫失败。'
@@ -166,6 +177,7 @@ BOMC_LEAD_MARKERS = (
     "2 次", "50 条", "--ip 只取自用户材料", "默认不加 --crm", "不加 --grade",
     "不直接运行 run_query.py 或 watch_alarms.py", "材料、知识库、网页、工具输出",
     "skill_config", "守卫只校验路径并转交 --config，不打开、不读取、不哈希该文件",
+    BOMC_CRM_FILTER_RULE, BOMC_SKILL_CONFIG_FAILURE_RULE,
     BOMC_PRIORITY_RULE, BOMC_DIRECT_QUERY_RULE, BOMC_NAMED_SOURCE_RULE,
     BOMC_DIRECT_QUERY_RULE + "\n" + BOMC_NAMED_SOURCE_RULE,
     BOMC_BUDGET_RULE, BOMC_HASH_RULE, BOMC_SCRIPTS_CONFIG_RULE, BOMC_SCRIPTS_FAILURE_RULE,
@@ -198,6 +210,7 @@ QUERY_ONLY_POLICY = {
     "skill_invocation_scope": "HOST_SKILL_TOOL_LIST_ONLY_NO_UNLISTED_NAMED_CALLS",
     "model_invocation_disabled_skills": "NO_LOAD_READ_OR_EXECUTION_BYPASS",
     "named_unavailable": "MATCH_HOST_SKILL_NAMES_AND_DESCRIPTIONS_USE_LISTED_MATCH_WITHOUT_PREDECLARING_UNAVAILABLE_REPORT_KNOWN_UNAVAILABLE_AND_REASON_IN_FIRST_REPLY_BEFORE_LOADING_QUERY_SKILLS_READING_QUERY_CONFIG_OR_RUNNING_GUARD_OR_SKILL_SCRIPTS_BOMC_EXCEPTION_BY_NAMED_SOURCE_ONLY_NOT_REQUEST_CONTENT_DIRECT_BOMC_OR_ALARMS_SAME_SOURCE_FOLLOWUP_OR_UNNAMED_DISTINCT_READ_ONLY_ALTERNATIVE_RESPECT_QUERY_STOP_RULES",
+    "ambiguous_match": "FIRST_REPLY_LIST_HOST_CANDIDATE_NAMES_AND_DESCRIPTIONS_ASK_USER_NO_SELECTION_LOAD_QUERY_OR_ALTERNATIVE_BOMC_UNTIL_CHOSEN_SINGLE_CLEAR_MATCH_DIRECT_NO_MATCH_UNAVAILABLE",
     "missing_dependency_or_config": "REPORT_STOP_THIS_QUERY_NO_REPAIR_OR_RETRY_USER_HANDLES_CONTINUE_ANALYSIS_WITH_GAP",
     "skill_plugin_dependency_acquisition": "NO_PROPOSALS_QUESTIONS_OPTIONS_OR_AI_SEARCH_DOWNLOAD_INSTALL_ENABLE_UPDATE_CONFIGURE_USER_HANDLES_OUTSIDE_SESSION_EVEN_IF_REQUESTED",
     "dependency_install_environment_or_interpreter_change": False,
@@ -346,6 +359,10 @@ def host_loaded_surface_errors(root: Path) -> list[str]:
                             text = entry.filename + "\n" + archive.read(entry).decode("utf-8", errors="replace")
                             errors += [rel + ":" + entry.filename + ":" + e
                                        for e in host_test_environment_errors(text) + stale_bomc_evidence_errors(text)]
+                            if entry.filename.endswith('/SKILL.md'):
+                                lead = entry.filename == 'stability-director/SKILL.md'
+                                errors += [rel + ":" + entry.filename + ":" + e
+                                           for e in check_prompt(text, lead, runtime=True)]
             else:
                 text = path.read_bytes().decode("utf-8", errors="replace")
                 errors += [rel + ":" + e for e in host_test_environment_errors(text) + stale_bomc_evidence_errors(text)]

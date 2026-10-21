@@ -16,18 +16,28 @@ WB07 的 HOST_LIMIT 前提按实际运行该测试的机器的 WorkBuddy 版本�
 
 - `Update-CrmSreTeam.ps1` 使用 **UTF-8 BOM + LF**。保留 runbook 中文代码原文，避免 PS 5.1 按 ANSI/GBK 错读；新增编排的提示使用英文。下载后保持原字节，不用编辑器另存编码或换行。
 - 现有 `tools/release_rules.py` 不接受 `.ps1`，构建/打包器只读取 `release-manifest.json.files`。现有 `repository_only_files` 已精确登记这三个开发文件（脚本、本文、静态测试），由专项测试约束其排序、唯一性、存在性与不进入 ZIP。该字段是登记信息，**不会让插件安装或执行脚本**。
-- 三个文件随 Git 同步，插件 ZIP 不含它们。插件的期望文件数一律读取 `files`，没有固定成 517。本次保持 manifest 和发布载荷字节不变。
+- 三个文件随 Git 同步，插件 ZIP 不含它们。插件的期望文件数一律读取 `files`，没有固定成 517。rc7 沿用精确 manifest 白名单；版本与正文修改由新候选构建及交接哈希绑定。
 - 脚本启动时若位于 Git 工作树内，先校验 `HEAD = ExpectedCommit`、工作树干净，以及该提交内脚本 blob 哈希与磁盘原字节哈希相同；任何不符立即停止。`PLAN` 仍比对目标标签内脚本 SHA256，后续模式绑定计划里的脚本哈希。`-ExpectedScriptSha256 <64-hex>` 是可选的额外交接核验，不要求手工传脚本或单独核对哈希。Mac 改完脚本后必须重新提交、验证并提供相应标签。
 
-## 前置条件与固定路径
+## rc7 起的可配置路径
+
+`-DevRoot` 默认 `D:\Dev`；`-HandoffRoot` 默认 `D:\crm-v36-handoff`；`-WorkBuddyRoot` 默认由 `[Environment]::GetFolderPath('UserProfile')` 加 `.workbuddy` 推导。`-PythonExe` 默认由 `[Environment]::GetFolderPath('LocalApplicationData')` 加 `Programs\Python\Python312\python.exe` 推导，仍可显式覆盖。在用户 AI、D 盘及标准 LocalAppData 布局下，全部解析值与 rc6 原路径逐一相等。以下固定路径示例均采用该默认布局；其他主机先填写经过核对的实际根目录。
+
+三个根均先规范化：仅盘符绝对路径、本地 Fixed/Removable 盘、盘根之下的目录；拒绝 UNC、相对路径、父目录穿越、ADS/通配符、链接/junction（含父目录）及已有非目录。DevRoot / HandoffRoot 还须与 WorkBuddyRoot 互不包含或重合，确保 PLAN / EXPBUILD 的新建文件位于宿主树外；随后才用于 Assert-Under 与既有八路径边界检查。DRILL 仅允许 HandoffRoot 下的 `drill-<唯一编号>`，仍排除真实 WorkBuddy 根，不放宽覆盖、备份或删除限制。
+
+PLAN 与 SWITCH 的 install-plan.json、EXPBUILD 的 experiment-set.json 均登记 `path_roots`（dev_root、handoff_root、workbuddy_root）。APPLY、VERIFY、ROLLBACK、DRILL 必须传入与 PLAN 相同的根，SWITCH 必须与实验集合相同；不一致或缺少登记即停止，不从文件中自行扩大根目录。打印的 VERIFY 命令携带三个实际根。示例：在既有命令后附加 `-DevRoot 'E:\Dev' -HandoffRoot 'E:\handoff' -WorkBuddyRoot 'C:\Users\Operator\.workbuddy' -PythonExe 'C:\Python312\python.exe'`，之后每个模式复用相同根参数。
+
+脚本只负责内部 clone、包、计划、缓存和证据路径；手动 bootstrap 示例的 SourceRepo / Bootstrap 路径也须由执行人按实际主机填写。rc6 标签里的更新器及 r7 的 rc6 简单检查保持冻结，不能把 rc7 脚本用于旧标签身份。Mac 只做静态与模型检查，Windows 实机 NOT_RUN，不安装 pwsh 或依赖。
+
+## 前置条件与默认路径
 
 - Windows PowerShell **5.1**、Git for Windows、实际可运行的 Python **3.10+**；该 Python 已具备仓库离线检查所需依赖。工具不安装或升级任何依赖。
-- 默认 `PythonExe` 是 runbook 在值班机核对过的 `C:\Users\AI\AppData\Local\Programs\Python\Python312\python.exe`。存在时直接使用；不存在就停止并要求显式传 `-PythonExe 'C:\<verified-python-dir>\python.exe'`。不回退到 `python3` 或 WindowsApps alias。
+- 在默认 AI 账户布局下，`PythonExe` 解析为 runbook 在值班机核对过的 `C:\Users\AI\AppData\Local\Programs\Python\Python312\python.exe`。存在时直接使用；不存在就停止并要求显式传 `-PythonExe 'C:\<verified-python-dir>\python.exe'`。不回退到 `python3` 或 WindowsApps alias。
 - 主获取路径只读值班机本地项目 `D:\python_code\github_my\crm-sre-team`，不访问网络。本地项目须由用户自行更新到包含 `ExpectedCommit`；没有目标提交就停止。来源仓库的分支、工作树、索引、标签和远程配置都不改。完整性依靠 `ExpectedCommit` 与插件 ZIP SHA256。
 - bootstrap：先在来源仓库用 `cat-file` 核对目标提交，再用 `--no-local --no-checkout` 本地 clone 到全新 `D:\crm-v36-handoff\bootstrap-<GUID>`；复制 `refs/remotes/*` 到 bootstrap 的独立引用空间，以覆盖只 fetch 过、提交仅在远程跟踪引用上的情况。只在新 bootstrap 内用 `tag -f` 把 `Tag` 绑定到 `ExpectedCommit`，再 detach checkout；不依赖来源仓库里的标签，它可能仍指向较早提交。直接运行 bootstrap 的 `tools\oncall\Update-CrmSreTeam.ps1`。`PLAN` 再从已通过启动身份校验的 bootstrap 工作树本地 clone；两次均使用 `--no-local`，不联网。每次更新用全新目录，保留旧目录供排错。没有本地项目的机器才使用下文 GitHub 直接 clone 备选；独立脚本找不到 Git 工作树时，`PLAN` 也保留原 GitHub clone。
 - 新 clone 工作区：`D:\Dev\crm-oncall-<GUID>\repo`。父工作区也全新，容纳仓库构建器在 `root.parent` 下的隔离暂存；任何同名已有路径均拒绝复用。
 - 新计划/ZIP/暂存/日志/测试临时目录：`D:\crm-v36-handoff\update-<GUID>`。PLAN 的写入只发生在这两个新工作区，WorkBuddy 只读。脚本所在 PowerShell 子进程的 `TEMP/TMP/TMPDIR/PYTHONUTF8/PYTHONDONTWRITEBYTECODE/GIT_CONFIG_*` 设置随子进程退出而失效；它继续隔离全局/系统 Git 配置并禁用 credential helper、交互和 hooks。主获取段在 `finally` 中恢复 `$ErrorActionPreference`。GitHub 备选仅在 clone 期间临时设置七个 Git 环境变量，并在 `finally` 中恢复进程原值；原值不存在时移除变量。禁止 Python 在已有依赖目录写入 bytecode cache。
-- REAL 路径沿用已验证的值班机账户：`C:\Users\AI\.workbuddy\plugins\marketplaces\my-experts`；来源是其 `plugins\crm-sre-team`，清单是其 `.codebuddy-plugin\marketplace.json`。cache 根为 `C:\Users\AI\.workbuddy\plugins\cache\my-experts\crm-sre-team`。账户/布局不同就停止并人工评审，不传参扩大边界。
+- 默认 AI 账户下 REAL 路径解析为：`C:\Users\AI\.workbuddy\plugins\marketplaces\my-experts`；来源是其 `plugins\crm-sre-team`，清单是其 `.codebuddy-plugin\marketplace.json`。cache 根为 `C:\Users\AI\.workbuddy\plugins\cache\my-experts\crm-sre-team`。rc7 起账户/布局不同须先核对配置的根目录，并保持后续模式与计划一致。
 - REAL marketplace 条目必须唯一，`name` 精确为 `crm-sre-team`，`source` 必须是字符串且解析到上述固定安装来源。`version` 字段可省略：PLAN 会提示，APPLY 不修改 `marketplace.json`，客户端读取包内 `.codebuddy-plugin/plugin.json` 的版本，与 10-11 rc2 实装一致；字段存在时必须为非空、非纯空白字符串，否则停止并人工评审。
 - 备份：marketplace 根下的 `backups\crm-v36-<GUID>-oncall`，包括 `install-source`、`marketplace.json`、`install-state.json`；计划列出全部准确路径。
 - 路径拒绝 junction/symlink/越界；递归复制前检查树内链接。工具没有删除操作，也不强杀进程，不修改系统执行策略。唯一执行策略选项在启动命令中：进程级 `-ExecutionPolicy Bypass`。

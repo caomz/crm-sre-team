@@ -3,7 +3,7 @@
 Run explicitly: python3 -m pytest tools/oncall/test_oncall_updater.py -q
 The tests live here to keep this change inside the approved tools/oncall scope.
 """
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import hashlib
 import os
 import shutil
@@ -56,6 +56,16 @@ def decode_script(raw):
 
 def fragments(text):
     return re.findall(r"^# R2-BEGIN ([\w-]+)\n(.*?)^# R2-END \1\n", text, re.M | re.S)
+
+
+def rc6_fragment_bytes(name, chunk):
+    if name == 'Assert-InstallPaths':
+        replacements = [('    $RealRoot = $WorkBuddyRoot', "    $RealRoot = 'C:\\Users\\AI\\.workbuddy'"), ("        if ((Split-Path -Path $BoundRoot -Parent) -ine $Handoff -or (Split-Path -Path $BoundRoot -Leaf) -notmatch '^drill-[A-Za-z0-9][A-Za-z0-9-]*$') { throw '演练根必须是 HandoffRoot 下的 drill-<唯一编号>' }", "        if ($BoundRoot -notmatch '^D:\\\\crm-v36-handoff\\\\drill-[A-Za-z0-9][A-Za-z0-9-]*$') { throw '演练根必须是 D:\\crm-v36-handoff\\drill-<唯一编号>' }")]
+        for current, original in replacements:
+            if chunk.count(current) != 1:
+                raise AssertionError('Unexpected rc7 root substitution')
+            chunk = chunk.replace(current, original)
+    return chunk
 
 
 def function_body(text, name):
@@ -265,8 +275,8 @@ class OncallUpdaterStaticTests(unittest.TestCase):
         self.assertLess(native.index("Write-Utf8Lf $Log $LogText"), native.index("if ($Code -ne 0)"))
 
     def test_default_python_is_verified_python312_without_alias_fallback(self):
-        default = r"C:\Users\AI\AppData\Local\Programs\Python\Python312\python.exe"
-        self.assertIn(f"[string]$PythonExe = '{default}'", self.text)
+        self.assertIn("[string]$PythonExe = (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Programs\\Python\\Python312\\python.exe')", self.text)
+        self.assertIn('$PythonExe -ieq $DefaultPythonExe', self.text)
         plan = self.text.split("function Invoke-OncallMode")[1].split("# R2-BEGIN stage-17")[0]
         self.assertIn("Test-Path -LiteralPath $PythonExe -PathType Leaf", plan)
         self.assertIn("pass -PythonExe with the verified real interpreter path", plan)
@@ -347,7 +357,7 @@ class OncallUpdaterStaticTests(unittest.TestCase):
             chunks = [body for key, body in found if key == name]
             self.assertEqual(len(chunks), 2 if name in {"block-20", "block-22"} else 1)
             for chunk in chunks:
-                self.assertEqual(hashlib.sha256(chunk.encode("utf-8")).hexdigest(), FRAGMENT_SHA[name], name)
+                self.assertEqual(hashlib.sha256(rc6_fragment_bytes(name, chunk).encode("utf-8")).hexdigest(), FRAGMENT_SHA[name], name)
         # On this Mac, also compare the authorized r2 source itself. On Windows,
         # the fixed fragment hashes above provide the same offline byte check.
         if RUNBOOK.is_file():
@@ -355,7 +365,7 @@ class OncallUpdaterStaticTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(source_raw).hexdigest(), RUNBOOK_SHA)
             source = source_raw.decode("utf-8")
             for name, chunk in found:
-                self.assertIn(chunk, source, name)
+                self.assertIn(rc6_fragment_bytes(name, chunk), source, name)
 
     def test_original_post_copy_verify_remains_before_market_write(self):
         for name, block in fragments(self.text):
@@ -393,8 +403,8 @@ class OncallUpdaterStaticTests(unittest.TestCase):
         self.assertIn("$Document.script_sha256 -ine", self.text)
         self.assertIn("Assert-InstallPaths -RequirePlan", self.text)
         self.assertIn("-cne 'YES'", self.text)
-        self.assertIn("$Handoff = 'D:\\crm-v36-handoff'", self.text)
-        self.assertIn("$DevRoot = 'D:\\Dev'", self.text)
+        self.assertIn("[string]$HandoffRoot = 'D:\\crm-v36-handoff'", self.text)
+        self.assertIn("[string]$DevRoot = 'D:\\Dev'", self.text)
         self.assertIn("$Repo = Join-Path $CloneRoot 'repo'", self.text)
         main = self.text.split("# Main orchestration.")[1]
         apply = main.split("$Mode -ceq 'APPLY'")[1].split("$Mode -ceq 'VERIFY'")[0]
@@ -925,7 +935,8 @@ class ExperimentFunctionalTests(unittest.TestCase):
     def call_build(cls, artifacts):
         return cls.run_command([sys.executable, str(cls.verifier), 'build', '--repo', str(cls.repo),
                         '--artifacts', str(artifacts), '--head', cls.head, '--tag', cls.tag,
-                        '--zip-sha', cls.zip_sha, '--script-sha', cls.script_sha, '--set-id', cls.set_id], check=False)
+                        '--zip-sha', cls.zip_sha, '--script-sha', cls.script_sha, '--set-id', cls.set_id, '--dev-root', str(cls.repo.parent.parent),
+                        '--handoff-root', str(artifacts.parent), '--workbuddy-root', str(cls.work / 'host')], check=False)
 
     @classmethod
     def call_select(cls, set_path, set_sha, package, head=None, tag=None, zip_sha=None, script_sha=None, output=None):
@@ -936,7 +947,8 @@ class ExperimentFunctionalTests(unittest.TestCase):
         result = cls.run_command([sys.executable, str(cls.verifier), 'select', '--set', str(set_path),
                         '--set-sha', set_sha, '--package', package, '--head', head or cls.head,
                         '--tag', tag or cls.tag, '--zip-sha', zip_sha or cls.zip_sha,
-                        '--script-sha', script_sha or cls.script_sha, '--output', str(output)], check=False)
+                        '--script-sha', script_sha or cls.script_sha, '--output', str(output), '--dev-root', str(cls.repo.parent.parent),
+                        '--handoff-root', str(Path(set_path).parent.parent), '--workbuddy-root', str(cls.work / 'host')], check=False)
         return result, output
 
     @classmethod
@@ -959,6 +971,7 @@ class ExperimentFunctionalTests(unittest.TestCase):
             digest.update(hashlib.sha256((self.repo / name).read_bytes()).digest())
         self.assertEqual(self.document['source_tree_sha256'], digest.hexdigest())
         self.assertEqual(self.document['source_version'], (self.repo / 'VERSION').read_text().strip())
+        self.assertEqual(self.document['path_roots'], dict(dev_root=str(self.repo.parent.parent), handoff_root=str(self.artifacts.parent), workbuddy_root=str(self.work / 'host')))
         self.assertEqual(self.before, {name: hashlib.sha256((self.repo / name).read_bytes()).hexdigest() for name in self.names})
         for package in self.document['packages']:
             root = Path(package['root'])
@@ -1566,7 +1579,9 @@ class Rc6SimpleCheckTests(unittest.TestCase):
         manifest = json.loads((ROOT / 'release-manifest.json').read_text(encoding='utf-8'))
         self.assertEqual(len(manifest['files']), 555)
         self.assertIn('settings.json', manifest['files'])
-        self.assertEqual(hashlib.sha256(SCRIPT.read_bytes()).hexdigest(),
+        identity = re.search(r'^\| 更新脚本 SHA256 \| tools/oncall/Update-CrmSreTeam.ps1：([0-9a-f]{64})；', self.text, re.M)
+        self.assertIsNotNone(identity)
+        self.assertEqual(identity.group(1),
                          'd0fad3158a361ebd18a79b06f660e1c8f9f19bed2df4f8f3b2fb5829a289adde')
         intro = self.historical.decode('utf-8').split('## 发布身份与只读查看', 1)[0]
         for token in ['rc6 候选发布', '已合并 main', 'Windows 未执行', 'NOT_RUN']:
@@ -1630,6 +1645,119 @@ class Rc6SimpleCheckTests(unittest.TestCase):
             self.assertIn(token, self.text)
         self.assertNotRegex(self.text, r'/Volumes/|/Users/|\b\d{1,3}(?:\.\d{1,3}){3}\b')
         self.assertNotRegex(self.text, r'\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b')
+
+
+class ConfigurableRootTests(unittest.TestCase):
+    """Static PS 5.1 contracts and executable embedded-verifier path checks."""
+    @classmethod
+    def setUpClass(cls):
+        cls.text = decode_script(SCRIPT.read_bytes())
+        cls.ns = {'__name__': 'root_validation_tests'}
+        exec(compile(extracted_verifier(cls.text), '<embedded-verifier>', 'exec'), cls.ns)
+
+    def test_ai_d_drive_defaults_equal_every_original_path(self):
+        header = self.text.split("$ErrorActionPreference = 'Stop'", 1)[0]
+        defaults = dict(re.findall(r"\[string\]\$(DevRoot|HandoffRoot) = '([^']+)'", header))
+        profile = PureWindowsPath(r'C:\Users\AI')
+        appdata = profile / 'AppData/Local'
+        self.assertIn("GetFolderPath('UserProfile')) '.workbuddy'", header)
+        self.assertIn(r"GetFolderPath('LocalApplicationData')) 'Programs\Python\Python312\python.exe'", header)
+        host = profile / '.workbuddy'
+        actual = {
+            'dev': PureWindowsPath(defaults['DevRoot']),
+            'handoff': PureWindowsPath(defaults['HandoffRoot']),
+            'host': host,
+            'market': host / 'plugins/marketplaces/my-experts',
+            'cache': host / 'plugins/cache/my-experts/crm-sre-team',
+            'projects': host / 'projects',
+            'python': appdata / 'Programs/Python/Python312/python.exe',
+        }
+        expected = {
+            'dev': r'D:\Dev', 'handoff': r'D:\crm-v36-handoff', 'host': r'C:\Users\AI\.workbuddy',
+            'market': r'C:\Users\AI\.workbuddy\plugins\marketplaces\my-experts',
+            'cache': r'C:\Users\AI\.workbuddy\plugins\cache\my-experts\crm-sre-team',
+            'projects': r'C:\Users\AI\.workbuddy\projects',
+            'python': r'C:\Users\AI\AppData\Local\Programs\Python\Python312\python.exe',
+        }
+        for name, value in expected.items():
+            with self.subTest(path=name):
+                self.assertEqual(str(actual[name]), value)
+        self.assertNotIn(r'C:\Users\AI', self.text)
+        for name in ('Prepare-InstallContext', 'Assert-PlanLayout', 'Show-RecentSessionMetadata', 'Collect-SessionEvidence'):
+            self.assertIn('$WorkBuddyRoot', function_body(self.text, name))
+        self.assertNotIn('D:/', extracted_verifier(self.text))
+
+    def test_custom_root_normalization_and_invalid_windows_paths(self):
+        normalize = self.ns['normalize_windows_root']
+        for value, expected in [(r'E:\Ops\Dev\\', r'E:\Ops\Dev'),
+                                (r'F:\handoff\stage', r'F:\handoff\stage'),
+                                (r'C:\Users\Operator\.workbuddy', r'C:\Users\Operator\.workbuddy')]:
+            with self.subTest(path=value):
+                self.assertEqual(normalize(value), expected)
+        for value in ['', 'relative', r'E:relative', r'\rooted', r'\\host\share',
+                      r'\\?\E:\Dev', 'E:\\', r'E:\a\..\Dev', r'E:\Dev:stream',
+                      r'E:\bad?root', r'E:\bad*root', r'E:\bad|root', 'E:\\bad.\\next', 'E:\\bad ']:
+            with self.subTest(invalid=value), self.assertRaises(ValueError):
+                normalize(value)
+
+    def test_ps_roots_validated_before_all_modes_and_plan_roots_checked(self):
+        validation = function_body(self.text, 'Get-ConfiguredRoot')
+        for token in ('Get-InstallFullPath $Value', '[IO.DriveInfo]::new',
+                      '[IO.DriveType]::Fixed', '[IO.DriveType]::Removable',
+                      'Assert-NoInstallReparse $Full', "-PathType Container", 'throw'):
+            self.assertIn(token, validation)
+        initialized = function_body(self.text, 'Initialize-PathRoots')
+        for name in ('DevRoot', 'HandoffRoot', 'WorkBuddyRoot'):
+            self.assertIn('Get-ConfiguredRoot $' + name, initialized)
+        self.assertIn('must not overlap WorkBuddyRoot', initialized)
+        dispatch = self.text.rsplit('\ntry {', 1)[1]
+        self.assertLess(dispatch.index('. Initialize-PathRoots'), dispatch.index('Get-NativeProgram'))
+        self.assertLess(dispatch.index('. Initialize-PathRoots'), dispatch.index('Assert-UpdaterIdentity'))
+        match = function_body(self.text, 'Assert-PathRootsMatch')
+        self.assertIn('Assert-PathSetEqual', match)
+        self.assertIn('Get-ConfiguredRoot $Recorded.$Key', match)
+        self.assertIn('-ine $PathRoots.$Key', match)
+        for name, field in [('Assert-PlanLayout', '$Document.path_roots'), ('Load-ExperimentSet', '$Set.path_roots')]:
+            self.assertIn('Assert-PathRootsMatch ' + field, function_body(self.text, name))
+        for name in ('Invoke-SwitchPlan', 'Invoke-OncallMode'):
+            self.assertIn('path_roots=$PathRoots', function_body(self.text, name))
+        command = function_body(self.text, 'Get-VerifyCommand')
+        for token in ("@('DevRoot',$DevRoot)", "@('HandoffRoot',$Handoff)", "@('WorkBuddyRoot',$WorkBuddyRoot)"):
+            self.assertIn(token, command)
+        drill = function_body(self.text, 'Assert-InstallPaths')
+        self.assertIn('-Parent) -ine $Handoff', drill)
+        self.assertIn("'^drill-[A-Za-z0-9][A-Za-z0-9-]*$'", drill)
+        self.assertIn('$Full.StartsWith($RealPrefix', drill)
+
+    def test_experiment_recorded_roots_and_mismatch_stop_before_package_reads(self):
+        with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR'], prefix='fix10-roots-') as directory:
+            root = Path(directory).resolve()
+            roots = dict(dev_root=str(root / 'dev'), handoff_root=str(root / 'handoff'),
+                         workbuddy_root=str(root / 'host'))
+            set_id = 'a' * 32
+            artifacts = Path(roots['handoff_root']) / ('experiment-' + set_id)
+            repo = Path(roots['dev_root']) / ('crm-oncall-' + set_id) / 'repo'
+            document = dict(set_id=set_id, artifacts=str(artifacts), repo=str(repo),
+                            zip=str(artifacts / 'release.zip'), path_roots=roots)
+            path = artifacts / 'experiment-set.json'
+            self.assertEqual(self.ns['set_layout'](document, path, roots)[:2], (artifacts, repo))
+            for key in roots:
+                with self.subTest(root=key):
+                    changed = dict(roots, **{key: str(root / 'different')})
+                    with self.assertRaisesRegex(ValueError, 'Roots differ'):
+                        self.ns['set_layout'](document, path, changed)
+                    tampered = dict(document, path_roots=changed)
+                    with self.assertRaisesRegex(ValueError, 'Roots differ'):
+                        self.ns['set_layout'](tampered, path, roots)
+            for bad in (None, {}, dict(roots, extra='x'), dict(roots, dev_root='relative'),
+                        dict(roots, handoff_root=str(root / '..' / 'escape'))):
+                with self.subTest(invalid_roots=bad), self.assertRaises(ValueError):
+                    self.ns['set_layout'](dict(document, path_roots=bad), path, roots)
+            for field, value in [('artifacts', str(root / ('experiment-' + set_id))),
+                                 ('repo', str(root / ('crm-oncall-' + set_id) / 'repo'))]:
+                changed = dict(document, **{field: value})
+                with self.subTest(layout=field), self.assertRaises(ValueError):
+                    self.ns['set_layout'](changed, path, roots)
 
 
 if __name__ == "__main__":

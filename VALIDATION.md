@@ -1,3 +1,9 @@
+## 2.8.0-rc7 fix10 验证（未发布）
+
+近似匹配、crm=false 与 skill_config 三项已在 rc7 修改、待 Mac 回归验证。docs/15 记录 QO-5 双候选用例、BRC-2 / BRC-8b 新判据及 fix10 具体重测范围；不把 rc6 的 PASS 当作本轮宿主结果。更新器根目录可配置，默认当前用户目录，PLAN/实验集合绑定根目录；Windows PowerShell 5.1 实机仍 NOT_RUN。守卫行为与回执字段、生产写边界保持。
+
+离线检查结果见仓库外交付 fix10-notes.md；当前段仅声明宿主状态，不替代实际命令日志。以下 rc6 已发布与验收记录保留。
+
 ## 2.8.0-rc6 候选发布验证（2026-10-21）
 
 候选以 N=7301dfa7d373530b4eb9c3efd43ddd641828aa67（fix9）为基线，版本保持 2.8.0-rc6。本次仅整理发布文档、验收状态断言和审核记录；宿主加载正文、成员 ZIP、r6/r7 手册、守卫、辅助工具及权限契约保持被测字节。生成锁由 build_bundle 维护；实际离线命令、结果、独立发布 ZIP、完整补丁和 SHA256 记仓库外 RESULT.json 及日志，不把外层 ZIP 自身哈希写入载荷。证据存于仓库外，公开记录只含合成事实。
@@ -43,8 +49,8 @@ fix9 Mac r1 已执行并验收，9/9 PASS；执行人与 Claude 复核一致：
 
 ### 已知问题、观察项与未运行范围
 
-- 多个近似匹配时的处理没有写明；下一版补“拿不准就列出候选、问用户”。
-- Windows 更新器固定 D:\Dev；Python 路径可通过 -PythonExe 修改。
+- 近似匹配、crm=false 与 skill_config 三项已在 rc7 修改、待 Mac 回归验证；rc6 原始观察项见下文。
+- Windows 更新器 rc7 起支持可配置根目录与计划一致性校验；-PythonExe 仍可覆盖，Windows 实机 NOT_RUN。
 - 只读主要靠提示词约束，由共用规则和 BOMC 守卫兜底，没有宿主级权限隔离；production_tools 为空，托管执行仍 NOT_IMPLEMENTED，生产写只产出人工评审需求。
 - 完整性校验只覆盖 SKILL.md 和 scripts/ 下的 .py；scripts/ 以外的导入、第三方依赖、字节码，以及检查到执行之间的时间窗，仍由执行人在会话外复核。
 - BRC-3～BRC-7 沿用较早规则文本的 PASS，不能计入 fix9 本批新测通过数。
