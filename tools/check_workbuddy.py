@@ -139,6 +139,9 @@ BOMC_SCRIPTS_FAILURE_RULE = (
 BOMC_FIXED_CONFIG_RULE = (
     '守卫只读固定插件外配置：macOS ~/.crm-sre-team/bomc.json；Windows %USERPROFILE%\\.crm-sre-team\\bomc.json；不搜索替代配置。'
 )
+BOMC_CONFIG_USE_RULE = (
+    '团长读取 bomc.json 只为取得其中的 python 路径来拼固定命令；回复里不复述 bomc.json 的任何字段值（路径、哈希、上限、schema 等），引用守卫命令时只写参数部分；不自行判断配置是否有效，不声称“配置校验通过”等，以守卫结果为准；守卫成功回执里的字段（含 output_file 与三个哈希）照 E 号规则登记，不受此限。'
+)
 BOMC_EVIDENCE_RULE = (
     'BOMC 结果按现场证据 E 号登记，不用 E-K；记录技能与守卫版本、真实技能 SKILL.md 哈希、scripts/ 源文件清单哈希、参数、执行时间、条数、脱敏输出文件路径和 SHA256。'
     '这些值从守卫回执第一行 JSON 照抄原值登记：skill、guard_version、upstream_skill_md_sha256、upstream_scripts_sha256、parameters（alarm_time、top、ip、grade、crm）、started_at、finished_at、count、output_file、sha256、truncated。'
@@ -149,9 +152,14 @@ BOMC_EVIDENCE_RULE = (
 BOMC_WORKLOG_HASH_RULE = (
     '写工作日志或宿主记忆文件时不抄哈希值，只写 E 号（例如“输出文件与哈希见 E001”）；确需写出哈希时，写完整 64 位十六进制原值，不写只留首尾几位的缩写。'
 )
+BOMC_EVIDENCE_FORMAT_RULE = (
+    '每个 E 号单独登记一段，按回执字段顺序逐项写“字段=原值”。示例：E001：skill=<原值>；guard_version=<原值>；upstream_skill_md_sha256=<原值>；upstream_scripts_sha256=<原值>；parameters：alarm_time=<原值>、top=<原值>、ip=<原值>、grade=<原值>、crm=<原值>；started_at=<原值>；finished_at=<原值>；count=<原值>；output_file=<原值>；sha256=<原值>；truncated=<原值>。多个 E 号不合并成表格，不用“同左”“同上”或省略号代替原值；null、false 照写，output_file 写回执里的完整路径。'
+)
 BOMC_REPORTING_RULES = (
     (BOMC_EVIDENCE_RULE, BOMC_WORKLOG_HASH_RULE, ''),
     (BOMC_SKILL_CONFIG_FAILURE_RULE, BOMC_STDERR_TAIL_RULE, '\n'),
+    (BOMC_WORKLOG_HASH_RULE, BOMC_EVIDENCE_FORMAT_RULE, ''),
+    (BOMC_FIXED_CONFIG_RULE, BOMC_CONFIG_USE_RULE, '\n'),
 )
 BOMC_MAC_COMMAND_RULE = (
     "`'<python>' -X utf8 '<本技能目录>/scripts/bomc_readonly.py' --alarm-time '<YYYY-MM-DD HH:MM:SS>' --top <N> [--ip '<IPv4>'] [--grade '<级别>'] [--crm]`"
@@ -200,7 +208,8 @@ BOMC_LEAD_MARKERS = (
     BOMC_PRIORITY_RULE, BOMC_DIRECT_QUERY_RULE, BOMC_NAMED_SOURCE_RULE,
     BOMC_DIRECT_QUERY_RULE + "\n" + BOMC_NAMED_SOURCE_RULE,
     BOMC_BUDGET_RULE, BOMC_HASH_RULE, BOMC_SCRIPTS_CONFIG_RULE, BOMC_SCRIPTS_FAILURE_RULE,
-    BOMC_FIXED_CONFIG_RULE, BOMC_EVIDENCE_RULE, BOMC_WORKLOG_HASH_RULE,
+    BOMC_FIXED_CONFIG_RULE, BOMC_CONFIG_USE_RULE,
+    BOMC_EVIDENCE_RULE, BOMC_WORKLOG_HASH_RULE, BOMC_EVIDENCE_FORMAT_RULE,
     BOMC_MAC_COMMAND_RULE, BOMC_WINDOWS_COMMAND_RULE,
     BOMC_COMMAND_QUOTING_RULE,
     BOMC_COMMAND_QUOTING_EXAMPLE, BOMC_GUARD_FAILURE_RULE, BOMC_TERMINAL_AND_READ_RULE,
@@ -382,6 +391,9 @@ def bomc_reporting_errors(text: str) -> list[str]:
             errors.append("bomc_reporting_rule_count:" + rule)
         if anchor + separator + rule not in text:
             errors.append("bomc_reporting_rule_position:" + rule)
+    for rule in (BOMC_FIXED_CONFIG_RULE, BOMC_CONFIG_USE_RULE):
+        if text.splitlines().count(rule) != 1:
+            errors.append("bomc_config_rule_standalone_line:" + rule)
     return errors
 
 

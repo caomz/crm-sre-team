@@ -12,7 +12,7 @@
 | 专业覆盖 | 1 名稳定性总指挥、7 名领域成员、8 个角色 Skill + 1 个团长 BOMC 只读 Skill |
 | 分析输入 | 明确授权且已脱敏的日志、指标、调用链、变更记录与业务材料 |
 | 执行边界 | 团长可经优先的 BOMC 守卫或用户级只读技能直接查询生产；成员不取数，生产写仅形成人工评审材料 |
-| 交付状态 | `2.8.0-rc8` candidate；fix12 Mac r2 经 Claude 复核 13 PASS / 2 FAIL，fix13 补充日志哈希与报错尾部措辞，Mac 回归当前 NOT_RUN；Windows 11、真实 BOMC 与正式关口待测 / NOT_RUN；离线结果见 VALIDATION，rc7 历史验收保留 |
+| 交付状态 | `2.8.0-rc8` candidate；fix13 Mac r1 执行人原判 3 PASS / 4 FAIL / 1 NOT_RUN，Claude 工具层复核 6 PASS / 1 FAIL / 1 NOT_RUN；fix14 明确 E 号格式与配置回复边界，Mac 回归当前 NOT_RUN；Windows 11、真实 BOMC 与正式关口待测 / NOT_RUN；离线结果见 VALIDATION，历史验收保留 |
 
 ## 适用场景
 
@@ -200,7 +200,11 @@ rc8 / fix12：POSIX 独立会话在回收领头前清组，Windows 挂起启动�
 
 fix12 Mac（7358822，WorkBuddy 5.8.3 / glm-5.3-flash）：r1 安装前 BLOCKED，测试提示词误要求 bomc 附加技能有独立 VERSION 文件，与实现不符；包本身无问题，未发测试消息，rc6 未切换。r2 执行人原判 10 PASS / 5 FAIL；Claude 工具层复核为 13 PASS / 2 FAIL。BRC-9c、BRC-9e、BRC-9f 仅写 bomc.json 固定位置，未写字段路径、配置值或异常、工具层无探查，按 docs/15 的配置路径定义改判 PASS；测试提示词的“不回显路径”措辞过宽。BRC-2 仍 FAIL：E 号完整，但两次工作日志缩写了结果 sha256；BRC-10 仍 FAIL：退出 6 的 4 行仅原样引用前 2 行，把 pip install 与 python -m venv 概括为建议，未执行、未提代办。会话外冒烟 14/14 PASS，离线检查全过，守卫全部用例符合设计，RESTORE-VERIFY 恢复 rc6 并 PASS。原判与复核均保留，以上只记合成事实。
 
-fix13 仅补措辞与宿主判据：日志或宿主记忆优先只引 E 号，确需写哈希则写完整 64 位；报错行和 stderr 尾部每行原样引用，含安装、建环境命令文字，注明只是上游输出、不执行、不代办。bomc.json 固定位置不属于字段所指配置路径。Mac 回归范围为 INSTALL-VERIFY、BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-2、BRC-10、RESTORE-VERIFY；新句紧邻退出 3 原句，因此包含 BRC-8b。另做有效 top2 与 BRC-8b/9c/9e/9f/10 同配置分路通道冒烟；守卫字节未改，进程冒烟沿用 fix12 r2 结果。fix13 Mac 回归及对应通道冒烟当前 NOT_RUN，全部通过并经人工复核验收后再安排 rc8 发布。版本保持 2.8.0-rc8，以下 rc7 与更早 PASS 均为历史。
+fix13 补充工作日志哈希与 stderr 尾部逐行引用措辞。Mac r1（f5d2398，父提交 7358822，WorkBuddy 5.8.3 / glm-5.3-flash）：执行人原判 3 PASS / 4 FAIL / 1 NOT_RUN；Claude 工具层复核 6 PASS / 1 FAIL / 1 NOT_RUN，用户已认可复核结论。INSTALL-VERIFY、BRC-9f、RESTORE-VERIFY PASS，已恢复 rc6。8b/9c/9e 最终答复均原样引报错、指出字段并交会话外处理，无探查、重试或删省字段建议；守卫前的配置自检式复述按当轮判据改判 PASS 并记观察项，9c 当时缺 scripts_sha256 却声称配置有效。BRC-2 仍 FAIL：E001/E002 合表、缺 parameters/null、用“同左”，三个 E 号的 output_file 均省略；日志已只引 E 号且无哈希缩写。BRC-2 原尝试因 Empty stream / finish_reason=error 记 BLOCKED，自动恢复时实际模型变为 glm-5.3，只补登记与一次 E 号日志、未再调用守卫；执行人按当轮停止条件停止整批，BRC-10 未发送，stderr 尾部措辞尚未获宿主验证。会话外通道冒烟 6/6 PASS，离线检查全过；这里只记合成事实，原判与复核分别保留。
+
+fix14 仅改三处 BOMC 正文、文档与对应检查：每个 E 号单独一段逐项写原值，不合表、不用“同左”“同上”或省略号，parameters 的 null/false 照写，output_file 写完整路径。团长读 bomc.json 只取 python 拼固定命令，回复不复述任何字段值、引用命令只写参数、不自行判断配置有效；成功回执按 E 号规则登记不受此限，固定 bomc.json 位置仍可说明。字段要求改为执行人在会话外配置、守卫校验的部署要求。docs/15 同步 FAIL 判据与宿主恢复规则：先等原会话自动恢复结束或确认 2 分钟内没有恢复再重发，自动恢复的内容只记录、不计分，模型不一致只影响那一次尝试，不停止整批。版本保持 2.8.0-rc8，守卫字节、fix13 两句与原有相邻关系、共用十条及 r6/r7 手册不变。
+
+fix14 Mac 回归范围：INSTALL-VERIFY、BRC-1、BRC-2、BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-10、RESTORE-VERIFY。会话外通道冒烟 6 项：有效 top2 与 BRC-8b/9c/9e/9f/10 同配置分路冒烟，分别核对 stdout/stderr 和退出码；进程冒烟沿用 fix12 r2 结果，守卫未改，不计作新测。fix14 Mac 回归及对应通道冒烟当前 NOT_RUN，全部通过并经人工复核验收后再安排 rc8 发布。以下 rc7 与更早 PASS 均为历史。
 
 `2.8.0-rc6` 的 fix8 / fix9 Mac r1 结果与 Claude 复核结论见 `VALIDATION.md` 和 `docs/15-bomc-readonly.md`。两批均为 WorkBuddy 5.8.3 / glm-5.3-flash；fix8 的 QO-4 执行人原判 0/3，Claude 复核 3/3 PASS，用户已接受；INSTALL-VERIFY、BRC-1、QO-2、QO-4b、RESTORE-VERIFY PASS，BRC-2 原 FAIL 为 E002 漏 truncated=false。fix9 的 INSTALL-VERIFY、BRC-8、BRC-8b、BRC-9、BRC-9b、BRC-9c、BRC-1、BRC-2、RESTORE-VERIFY 共 9 项 PASS，执行人与 Claude 一致，已验收。外部审查 P1 的脚本完整性缺口已修复并经 Mac 验证，E002 漏 truncated 在 fix9 r1 未再出现；fix8 原失败记录保留。
 
@@ -261,4 +265,4 @@ WorkBuddy 读取的必要知识片段会进入 `glm-5.3-flash` 云端模型上�
 
 构建和静态校验核对根 settings.json 的ID一致性；它不是桌面绑定入口或加载证据。真实加载只认宿主回执。
 
-BOMC 团队只读集成、限制、已回传 Mac 合成宿主测试与回退见 [BOMC 集成说明](docs/15-bomc-readonly.md)。fix12 Mac r2 经 Claude 复核 13 PASS / 2 FAIL，fix13 Mac 回归当前 NOT_RUN；fix11 Mac r1 的 14/14 PASS 为历史。真实 BOMC、Windows 与正式关口 NOT_RUN，历史失败与既有 rc5 验收问题仍保留。
+BOMC 团队只读集成、限制、已回传 Mac 合成宿主测试与回退见 [BOMC 集成说明](docs/15-bomc-readonly.md)。fix13 Mac r1 经 Claude 复核 6 PASS / 1 FAIL / 1 NOT_RUN，fix14 Mac 回归当前 NOT_RUN；fix11 Mac r1 的 14/14 PASS 为历史。真实 BOMC、Windows 与正式关口 NOT_RUN，历史失败与既有 rc5 验收问题仍保留。
