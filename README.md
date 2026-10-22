@@ -1,6 +1,6 @@
 # CRM SRE Team
 
-电信 CRM 稳定性专家团 · `2.8.0-rc7` · 候选发布（candidate）
+电信 CRM 稳定性专家团 · `2.8.0-rc8` · 候选发布（candidate）
 
 面向电信 CRM 运维场景的 WorkBuddy 专家团项目。基于用户授权的脱敏材料，组织业务链路、数据库、应用运行时和基础设施等领域分析，形成可追溯的诊断结论、最小补证需求、人工评审卡与交接记录。
 
@@ -12,7 +12,7 @@
 | 专业覆盖 | 1 名稳定性总指挥、7 名领域成员、8 个角色 Skill + 1 个团长 BOMC 只读 Skill |
 | 分析输入 | 明确授权且已脱敏的日志、指标、调用链、变更记录与业务材料 |
 | 执行边界 | 团长可经优先的 BOMC 守卫或用户级只读技能直接查询生产；成员不取数，生产写仅形成人工评审材料 |
-| 交付状态 | `2.8.0-rc7` candidate；fix11 Mac r1 已验收 14/14 PASS，Windows 11 值班机、真实 BOMC 与正式关口 NOT_RUN；历史验收与原失败记录保留 |
+| 交付状态 | `2.8.0-rc8` candidate；fix12 进程归属、运行期资源与代码完整性加固，离线结果见 VALIDATION；rc8 Mac 宿主、Windows 11、真实 BOMC 与正式关口待测 / NOT_RUN；rc7 历史验收保留 |
 
 ## 适用场景
 
@@ -178,7 +178,7 @@ python3 tools/validate_release.py --zip dist/crm-sre-team.zip
 | 只读查询 | 可生成注明范围与占位符的查询命令；团长可通过优先的 BOMC 守卫或用户级只读技能查询生产，无需事先授权；守卫需有效插件外配置和宿主权限，最多2次/每次50条，成员不取数；未执行时须明确说明 |
 | 生产写操作 | 在本会话直接给出 action-review 人工复核需求，写明动作与唯一目标、对象与范围、依据、风险与回退、审批人/执行人/复核人（未知写“待现场指定”）；不写操作命令、SQL 或脚本，不代为执行，不引导到其他对话或渠道让 AI 代办，不声称系统会生成或已提交工单 |
 
-bomc.json 现在必填 scripts_sha256，固定上游 scripts/ 下递归普通 .py 源文件的清单哈希，包含入口 run_query.py；执行人在会话外用 tools/oncall/bomc_hashes.py 计算。守卫哈希不符退出 4，缺字段或格式错误退出 3；团长原文报告并停止这次取数，不在会话里计算哈希、改配置或重试。算法、覆盖范围与时间窗见 docs/15-bomc-readonly.md。
+bomc.json 必填 scripts_sha256（scripts/ 普通 .py，含 run_query.py）及 rc8 新增 code_sha256（技能根普通 .py，排除缓存与虚拟环境树）；执行人在会话外用 tools/oncall/bomc_hashes.py 计算。守卫哈希不符退出 4，缺字段或格式错误退出 3；团长原文报告并停止这次取数，不在会话里计算哈希、改配置或重试。新配置只随 rc8 部署，rc7 拒绝未知 code_sha256。算法、覆盖范围与时间窗见 docs/15-bomc-readonly.md。
 
 `policies/runtime-contract.json` 保持 `production_executor: false`、`production_tools: []`，生产写边界为 `SEPARATE_CHANGE_APPROVAL_REQUIRED`。这些字段描述项目契约，不能证明宿主已实现权限隔离。
 
@@ -196,6 +196,8 @@ crm=false 表示没有启用 CRM 清单过滤（没有加 --crm），不会因�
 
 本地静态校验覆盖源与产物一致性、结构定义、内容哈希、引用路径及离线契约测试。WorkBuddy 导入、缓存、真实委派、工具限权和场景行为需要另外完成宿主验收。
 
+rc8 / fix12：POSIX 独立会话在回收领头前清组，Windows 挂起启动、先分配 Job 再恢复，超时、中断与领头结束均清理所属组或 Job 后再读取结果。POSIX 上游运行期间的 SIGTERM/SIGHUP 按中断清理并退出 3。结果与 stderr 每 0.1 秒检查各 8 MiB；回执写入失败保留原失败码。离线结果见 VALIDATION，rc8 Mac 宿主、Windows 实机、真实 BOMC 与正式关口待测 / NOT_RUN；下列 PASS 均为历史。
+
 `2.8.0-rc6` 的 fix8 / fix9 Mac r1 结果与 Claude 复核结论见 `VALIDATION.md` 和 `docs/15-bomc-readonly.md`。两批均为 WorkBuddy 5.8.3 / glm-5.3-flash；fix8 的 QO-4 执行人原判 0/3，Claude 复核 3/3 PASS，用户已接受；INSTALL-VERIFY、BRC-1、QO-2、QO-4b、RESTORE-VERIFY PASS，BRC-2 原 FAIL 为 E002 漏 truncated=false。fix9 的 INSTALL-VERIFY、BRC-8、BRC-8b、BRC-9、BRC-9b、BRC-9c、BRC-1、BRC-2、RESTORE-VERIFY 共 9 项 PASS，执行人与 Claude 一致，已验收。外部审查 P1 的脚本完整性缺口已修复并经 Mac 验证，E002 漏 truncated 在 fix9 r1 未再出现；fix8 原失败记录保留。
 
 rc6 的 fix9 批沿用 PASS 来源单列：BRC-3～BRC-6 为 c429f41 批（10-19），BRC-7 为 r5（5bbf81b，Claude 复核），这五项跑在较早规则文本上；QO-1 为 fix4 r4、QO-3 为 fix7 r1、QO-2/QO-4/QO-4b 为 fix8 r1，均非 fix9 新测。rc7 的新测与沿用来源见下文。rc4 / rc5 历史质量问题与 HOST_LIMIT 保留，不能折算为当前候选的验收结果。真实 BOMC、Windows 11 值班机及正式关口 NOT_RUN。
@@ -211,16 +213,17 @@ rc7 候选验收与相对 rc6 已解决的问题：
 仍存在的已知问题与限制：
 
 - 只读主要靠提示词约束，由共用规则和 BOMC 守卫兜底；没有宿主级权限隔离，production_tools 为空。
-- 完整性仅覆盖 SKILL.md 和 scripts/ 下的 .py；scripts/ 外导入、第三方依赖、字节码，以及检查到执行之间的时间窗，由执行人在会话外复核。
-- 托管生产执行仍 NOT_IMPLEMENTED，生产写仅产出人工评审需求。守卫自 fix9 未改，VERSION 与回执 guard_version 仍为 2.8.0-rc6，插件版本为 2.8.0-rc7。
+- rc8 的 code_sha256 覆盖技能根普通 .py；技能根外依赖、被排除虚拟环境、字节码及检查到执行之间的时间窗仍由执行人在会话外复核。
+- 托管生产执行仍 NOT_IMPLEMENTED，生产写仅产出人工评审需求。rc8 插件与守卫 VERSION 一致；真实只读身份和接口/数据范围须由 BOMC 管理员出具权限配置证明，不用生产写请求试探，未完成前不标生产安全可用。
+- POSIX setsid 可脱组，守卫被 SIGKILL 强杀时无法清理上游会话；运行期大小采样可有间隙超调，磁盘仍可能因并发占用耗尽。Windows KILL_ON_JOB_CLOSE、嵌套 Job 与 venv 转发器仅 mock，实机待测。
 - BRC-6 工作日志的 sha256 缩写按 docs/15 记观察项，E 号登记完整；同样情况在 BRC-2 会判 FAIL。BRC-6 环境推断与 BRC-7 时间合写观察项见 docs/15；沿用项运行于较早规则文本，一次验收不证明模型长期稳定。
 
-本次候选发布准备保持宿主正文、成员 ZIP、手册与工具的被测字节；构建器仅更新发布内容锁。实际离线检查、完整补丁和宿主内容核对结果记仓库外 rc7-release-notes.md，证据存于仓库外。发布 ZIP 由提交后的两次独立构建产生，SHA256 只记仓库外交接与标签注释，不写入载荷；正式使用须以对应构建的验收记录和组织上线审批为依据。
+rc8 守卫、哈希辅助工具、三处 BOMC 完整性规则与部署文档已修订，产物由构建器生成；11 字段登记合同保持。实际离线命令与结果见 VALIDATION 和仓库外交付记录。发布 ZIP 的 SHA256 只记仓库外交接与标签注释，不写入载荷；正式使用须以对应构建的验收记录和组织上线审批为依据。
 
 ### 验收与交付流程
 
 1. 自检、WB 用例、7A/7B、校准和关口全部先在 Mac 运行。Mac 跑完、返回结果经人工复核并验收后，再安排 Windows 值班机。
-2. rc7 在标签发布后安排 Windows 11 值班机，当前 NOT_RUN；只做安装/切换 + VERIFY（来源、缓存完整性与 Skill 回执路径）+ 记录版本（实际 WorkBuddy 版本、插件版本和模型）；仅在需确认宿主行为时加一个短会话，每次列明确切项目。r6/r7 手册本步不改，标签发布后另行准备简单检查步骤。
+2. rc8 在 Mac 回归经人工验收后安排 Windows 11 值班机，当前 NOT_RUN；安装/切换 + VERIFY（来源、缓存完整性与 Skill 回执路径）+ 记录版本（实际 WorkBuddy、插件版本和模型）；仅在需确认宿主行为时加一个短会话。本版涉及 Windows Job，须另列挂起分配失败、超时、取消、领头结束、后代与 venv/嵌套 Job 的实测项目；r7 手册的新建配置段只用于 rc8，历史 rc7 简单检查不部署新配置。
 3. 两台都记录实际 WorkBuddy 版本、插件版本和模型；有差异时，值班机检查须覆盖差异。日常与关口固定 glm-5.3-flash，逐次记录实际模型，分别记录团长与成员。
 4. 每轮 N/S（校准与正式 18 次关口）只使用同一台机器上同次构建的双包，不混用 Mac 与值班机的构建。两台机器各自记录构建后缀与身份，包括机器、`source_commit`、manifest 与缓存哈希。
 

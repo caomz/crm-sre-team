@@ -1,3 +1,28 @@
+## 2.8.0-rc8 候选离线验证（2026-10-22，candidate）
+
+fix12 覆盖 POSIX 本次进程组及 SIGTERM/SIGHUP 中断、Windows Job mock、运行期输出/回执 IO、技能根 code_sha256 与 venv 路径策略；技能根自身含 pyvenv.cfg 时固定退出 3。插件和守卫均为 rc8；无新增退出码，成功回执仍为 11 字段。tests/test_read_only_boundary.py 与生产写/不外发/不装包/不改配置边界保持。
+
+实际离线结果：静态校验 1905/1905，errors=[]，137 offline unit tests。全量与 oncall 使用既有 Python 3.12.14 环境；完整 argv、隔离构建身份、比对清单及 stdout/stderr 在仓库外交付 report.md 和对应日志中保存，下表不沿用历史数字。
+
+| rc8 检查 | 实际状态 |
+|---|---|
+| 原位 tools/build_bundle.py | FAILED_ENV，exit 1；仓库父目录临时路径被沙箱拒绝，原位待外部复核补跑 |
+| tools/build_bundle.py --root 隔离构建及比对 | exit 0；仅复制 release-manifest.json 的 556 个 files，8 agents / 9 skills / 8 ZIP / 547 锁定文件；构建器产物逐文件同步后 556/556 相同，差异 0 |
+| python -m pytest tests/ -q（含 -rs、无 cacheprovider、独立 basetemp） | 1768 passed / 1 skipped / 1931 subtests passed，exit 0；skip 为 POSIX 无 Windows junction 概念，非 BOMC/venv 用例 |
+| python -m pytest tools/oncall/test_oncall_updater.py -q | 88 passed / 256 subtests passed，exit 0 |
+| BOMC 三文件专项（含 bomc_hashes helper） | 1295 passed，exit 0；含技能根虚拟环境拒绝、POSIX 独立 worker 的 SIGTERM/SIGHUP 清理、处理函数恢复与 Windows 不安装 POSIX 信号处理回归 |
+| python tools/check_workbuddy.py | pass=true，errors=[]，exit 0 |
+| python tools/validate_bundle.py | PASS_STATIC_ONLY，1905/1905，errors=[]，exit 0 |
+| Mac WorkBuddy INSTALL-VERIFY、BRC 回归与会话外清理冒烟 | 待测 / NOT_RUN |
+| Windows Job、嵌套 Job、venv 转发器与 PowerShell 实机 | 待测 / NOT_RUN（仅 mock/静态） |
+| 真实 BOMC、管理员最小权限证明与正式关口 | 待测 / NOT_RUN |
+
+真实只读身份、接口/数据范围由 BOMC 管理员提供权限配置证明与审计，不用生产写请求试探；未完成前不标生产安全可用。残余风险：POSIX setsid 脱组、守卫被 SIGKILL 强杀时无法清理上游会话、0.1 秒采样间隙超调、磁盘并发占用、哈希到加载之间的时间窗，以及技能根外/排除环境内的依赖。Windows KILL_ON_JOB_CLOSE 退出清理仅 mock，实机 NOT_RUN；回执 IO 失败仅模拟，未真写满磁盘。脱敏格式化后的最终 JSON 也在写入前校验 8 MiB。
+
+初轮离线失败已修复并重跑：Darwin 僵尸/孤儿组短暂 EPERM、当前清单数量和版本固定值、旧守卫 pin、文档状态/计数。源与生成守卫、11 字段回执、生产只读边界及冻结验收材料均已自审。生成报告仅有 rc8 版本与新增测试登记的有效变化，没有仅平台/时间差异需要保留。
+
+以下 rc7 与更早结果为历史事实，均不计作 rc8 宿主通过。
+
 ## 2.8.0-rc7 候选发布验证（2026-10-21，candidate）
 
 候选以 fix11 被测提交 P=7715177a5e465d3512f9e369147dfa102d8cd7f3 为基线，版本保持 2.8.0-rc7。fix11 Mac r1 已执行并验收，14/14 PASS；执行人与 Claude 复核一致。本次只整理文档、验收状态断言与审核记录，不执行新宿主测试；宿主加载正文、成员 ZIP、r6/r7 手册、守卫、更新器、辅助工具及权限契约保持被测字节，根锁文件由 build_bundle 生成。公开内容只含合成事实，证据存于仓库外。

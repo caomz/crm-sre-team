@@ -1577,7 +1577,9 @@ class Rc6SimpleCheckTests(unittest.TestCase):
                 '不把交付的手册提交填入 ExpectedCommit', '安装一律以 rc6 标签和上表为准']:
             self.assertIn(token, self.text)
         manifest = json.loads((ROOT / 'release-manifest.json').read_text(encoding='utf-8'))
-        self.assertEqual(len(manifest['files']), 555)
+        # Historical rc6 stays 555 above; current rc8 adds its registered tests.
+        self.assertEqual(len(manifest['files']), 556)
+        self.assertIn('tests/test_rc8_bomc.py', manifest['files'])
         self.assertIn('settings.json', manifest['files'])
         identity = re.search(r'^\| 更新脚本 SHA256 \| tools/oncall/Update-CrmSreTeam.ps1：([0-9a-f]{64})；', self.text, re.M)
         self.assertIsNotNone(identity)

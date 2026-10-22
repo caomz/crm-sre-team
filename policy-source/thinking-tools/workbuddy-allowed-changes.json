@@ -1,5 +1,5 @@
 {
-  "version": "2.8.0-rc7",
+  "version": "2.8.0-rc8",
   "scope": "EXPLICIT_OFFLINE_CHANGE_REVIEW_NOT_SOURCE_AUTHENTICITY",
   "immutable_files": {
     "policy-source/roles-source.json": {

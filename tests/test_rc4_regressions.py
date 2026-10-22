@@ -209,8 +209,8 @@ class Rc4RegressionTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(ordinary[0].encode()).hexdigest(),
                          "fd8b3cba2006278f0efc2378e646393b95b29676f5e6f44f36f5555ba2b0f8dd")
 
-    def test_current_version_is_rc7_and_frozen_acceptance_version_is_explicit(self):
-        self.assertEqual(read("VERSION").strip(), "2.8.0-rc7")
+    def test_current_version_is_rc8_and_frozen_acceptance_version_is_explicit(self):
+        self.assertEqual(read("VERSION").strip(), "2.8.0-rc8")
         self.assertEqual(json.loads(read("policy-source/acceptance/oncall-cases.json"))["version"], "2.8.0-rc3")
         for rel in ("README.md", "docs/12-native-vs-single-comparison.md", "docs/13-oncall-gate-materials.md"):
             with self.subTest(rel=rel):

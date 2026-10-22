@@ -1244,6 +1244,8 @@ BOMC 插件外配置 bomc.json 本次不建。没有它时团长查 BOMC 会按 
 
 #### a. 进程与换解释器
 
+rc8 补充：守卫代码已做 POSIX 组与 Windows Job 清理，Windows 实测 NOT_RUN；以下 rc7 基线核查仍保留，须继续确认不会 setsid 脱组或进入服务/轮询，不能仅凭代码加固放行部署。
+
 在本机编辑器中静态检查真实入口 scripts/run_query.py 及其导入的技能自身代码，包括 scripts/ 外的包或模块目录；排除 __pycache__ 与虚拟环境目录，不读取配置或凭据文件。检查 subprocess、os.exec*、os.spawn*、multiprocessing、os.system，以及启动 HTTP 服务、持续轮询等派生进程或换解释器的写法；字符串搜索只是线索，还须读懂导入关系、别名和触发条件。命中记录只写相对路径、行号和命中类别，不打印代码行或配置内容。
 
 - 同步执行、有超时、不写证据文件且不常驻的探测类子进程，记观察项，可继续。
@@ -1262,11 +1264,15 @@ BOMC 插件外配置 bomc.json 本次不建。没有它时团长查 BOMC 会按 
 
 #### c. 哈希范围与目录写权限
 
+以下描述 rc7 基线范围；rc8 新增 code_sha256 覆盖技能根普通 .py，按 docs/15 排除虚拟环境与缓存。执行人仍复核目录写权限、技能根外依赖与哈希时间窗，并登记三项完整哈希。
+
 守卫只校验 SKILL.md 与 scripts/ 下的 .py。对 scripts/ 外的技能自身 .py，排除 __pycache__ 与虚拟环境目录，用 Get-FileHash 的 SHA256 算法逐个核对，记录相对路径与完整 SHA256，保存在仓库外部署记录；只记录哈希，不传源内容或配置内容。这是执行人的补充复核，不是守卫校验，也不是完整代码签名，与 docs/15 的范围说明一致；第三方依赖、字节码及本地扩展不因此纳入守卫校验。
 
 由执行人按本机规定限制整个技能目录的写权限，并确认核查到启用期间代码不变。技能更新后、每次重新启用前都要复核这些哈希、目录写权限及 a、b 项；有变化或无法确认就停止，交人工审阅，不靠重算哈希直接放行。
 
 #### d. 超时或中断后
+
+rc8 补充：代码已先清理本次组或 Job 再读结果，仍须部署前会话外核查实际残留；Windows 嵌套 Job 与 venv 转发器实测 NOT_RUN。以下 rc7 处置与失败证据作废要求保留。
 
 启用前由执行人在会话外只按进程名计数，记录上游解释器进程的基线与超时后处理方式，不打印命令行。守卫退出 5 或调用被中断后，再在会话外只按进程名计数，核对有没有残留的上游解释器进程；不能区分既有进程与残留时记“未确认”，停止并带回复核。残留按本机规定由执行人处理，不让团长处理或重试掩盖。
 
@@ -1274,7 +1280,9 @@ BOMC 插件外配置 bomc.json 本次不建。没有它时团长查 BOMC 会按 
 
 #### e. 输出与空间
 
-8 MiB 是子进程结束后的接纳阈值，不是运行中的写入上限；成功时不检查 stderr 大小。部署前确认 output_dir 与 TEMP 所在卷空间充足，不能按 8 MiB 估算运行中的最大占用。证据保留与归档由执行人按组织规定安排，不新增自动删除。
+rc8 运行期限制结果与 stderr 各 8 MiB，不做启动前剩余空间检查；部署前空间与保留安排仍按下文核对。
+
+8 MiB 同时是结果与 stderr 的运行期触发阈值和结束后接纳阈值；每 0.1 秒采样允许间隙内超调，不是内核硬配额。部署前确认 output_dir 与 TEMP 所在卷空间充足，不能按 8 MiB 估算运行中的最大占用。证据保留与归档由执行人按组织规定安排，不新增自动删除。
 
 #### f. 只读账号与范围
 
@@ -1288,7 +1296,9 @@ BOMC 插件外配置 bomc.json 本次不建。没有它时团长查 BOMC 会按 
 
 ### 新建插件外配置（PowerShell 5.1，可粘贴）
 
-只在“真实输出形状核对”和“部署前补充核查”全部通过后由执行人执行。脚本不装依赖、不读取真实技能配置内容或主机清单、不联网、不删除文件；会话外用同一 clone 的 tools/oncall/bomc_hashes.py 计算 skill_md_sha256 与必填 scripts_sha256，新建专用证据目录和 bomc.json。辅助工具在值班机上给定真实技能根目录，复用守卫算法，只读 SKILL.md 和 scripts/ 下递归普通 .py 源字节，不读配置或凭据、不执行上游、不写文件；拒绝链接、重解析点或越界路径。算法（相对路径统一 /、排序、路径+TAB+文件哈希+LF、UTF-8 整体 SHA256）、排除 __pycache__/*.pyc、目录外依赖和检查到运行的时间窗见 docs/15。已存在 bomc.json 就停止，不覆盖。skill_config 为可选输入：留空不写字段；填入时只校验绝对路径、文件类型、存在性及路径/父目录无 ..、链接或重解析点，不打开、不读取、不哈希该文件。使用本地盘绝对真实路径；不要把配置/输出放进插件、缓存、知识库、会话工作区或公开仓库。输出目录建议 D:\crm-sre-evidence\bomc，目录权限由执行人按本机组织规范限制。
+本段 BOMC 插件外配置只随 rc8 部署，不用于上文或后文 rc7 简单检查；rc7 守卫会拒绝未知 code_sha256 字段。保留旧配置用于对应旧包回退，不能把新配置交给 rc7。
+
+只在“真实输出形状核对”和“部署前补充核查”全部通过后由执行人执行。脚本不装依赖、不读取真实技能配置内容或主机清单、不联网、不删除文件；会话外用同一 clone 的 tools/oncall/bomc_hashes.py 计算 skill_md_sha256、必填 scripts_sha256 与 code_sha256，新建专用证据目录和 bomc.json。辅助工具在值班机上给定真实技能根目录，复用守卫算法，只读 SKILL.md 和技能根覆盖范围内普通 .py 源字节；code_sha256 排除 __pycache__ 及含 pyvenv.cfg 的目录树，排除树自身仍检查链接/重解析点，不读配置或凭据、不执行上游、不写文件；拒绝链接、重解析点或越界路径。算法（相对路径统一 /、排序、路径+TAB+文件哈希+LF、UTF-8 整体 SHA256）、排除 __pycache__/*.pyc、目录外依赖和检查到运行的时间窗见 docs/15。已存在 bomc.json 就停止，不覆盖。skill_config 为可选输入：留空不写字段；填入时只校验绝对路径、文件类型、存在性及路径/父目录无 ..、链接或重解析点，不打开、不读取、不哈希该文件。使用本地盘绝对真实路径；不要把配置/输出放进插件、缓存、知识库、会话工作区或公开仓库。输出目录建议 D:\crm-sre-evidence\bomc，目录权限由执行人按本机组织规范限制。
 
 ```powershell
 . {
@@ -1344,12 +1354,14 @@ BOMC 插件外配置 bomc.json 本次不建。没有它时团长查 BOMC 会按 
         if ($LASTEXITCODE -ne 0) { throw 'STOP: hash helper failed; review outside the expert session' }
         $BomcHashes = ($BomcHashOutput -join "`n") | ConvertFrom-Json
         $BomcHashFields = @($BomcHashes.PSObject.Properties.Name)
-        if ($BomcHashFields.Count -ne 2 -or $BomcHashFields -notcontains 'skill_md_sha256' -or $BomcHashFields -notcontains 'scripts_sha256') { throw 'Invalid hash helper fields' }
-        if ($BomcHashes.skill_md_sha256 -cnotmatch '^[0-9a-f]{64}$' -or $BomcHashes.scripts_sha256 -cnotmatch '^[0-9a-f]{64}$') { throw 'Invalid integrity hashes' }
+        if ($BomcHashFields.Count -ne 3 -or $BomcHashFields -notcontains 'skill_md_sha256' -or $BomcHashFields -notcontains 'scripts_sha256' -or $BomcHashFields -notcontains 'code_sha256') { throw 'Invalid hash helper fields' }
+        if ($BomcHashes.skill_md_sha256 -cnotmatch '^[0-9a-f]{64}$' -or $BomcHashes.scripts_sha256 -cnotmatch '^[0-9a-f]{64}$' -or $BomcHashes.code_sha256 -cnotmatch '^[0-9a-f]{64}$') { throw 'Invalid integrity hashes' }
         $SkillMdHash = $BomcHashes.skill_md_sha256
         $ScriptsHash = $BomcHashes.scripts_sha256
+        $CodeHash = $BomcHashes.code_sha256
         Write-Host ('Review skill_md_sha256: ' + $SkillMdHash)
         Write-Host ('Review scripts_sha256: ' + $ScriptsHash)
+        Write-Host ('Review code_sha256: ' + $CodeHash)
         $Document = [ordered]@{
             schema = 'crm-sre-bomc/v1'
             python = $BomcPython
@@ -1357,6 +1369,7 @@ BOMC 插件外配置 bomc.json 本次不建。没有它时团长查 BOMC 会按 
             output_dir = $BomcOutputDir
             skill_md_sha256 = $SkillMdHash
             scripts_sha256 = $ScriptsHash
+            code_sha256 = $CodeHash
             max_top = 50
             timeout_seconds = 180
         }
@@ -1367,13 +1380,14 @@ BOMC 插件外配置 bomc.json 本次不建。没有它时团长查 BOMC 会按 
         Write-Host ('Created config: ' + $ConfigPath)
         Write-Host ('SKILL.md SHA256: ' + $SkillMdHash)
         Write-Host ('scripts/ manifest SHA256: ' + $ScriptsHash)
+        Write-Host ('skill-root code manifest SHA256: ' + $CodeHash)
         Write-Host ('Config SHA256: ' + (Get-FileHash -LiteralPath $ConfigPath -Algorithm SHA256).Hash.ToLowerInvariant())
         Write-Host ('Evidence directory: ' + $BomcOutputDir)
     } finally { $ErrorActionPreference = $SavedErrorActionPreference }
 }
 ```
 
-执行人先在值班机用辅助工具检查真实技能，核对两个完整哈希再登记；预检时会话外重跑工具，与 bomc.json 的 skill_md_sha256、scripts_sha256 逐字段一致后才启用。已有配置缺 scripts_sha256 不可直接用于 fix9，先停用、保留原文件，再由用户会话外复核更新，不让团长修复。配置创建失败时保留现有文件和输出，不自动重建或删除；如留下不完整新配置，由执行人改名保留后再审阅。可选描述补充仅由用户修改用户级 bomc-alarm-query 的描述：“专家团团长优先通过 bomc-alarm-readonly 守卫查询；也可直接用本只读技能，成员不调用。”此举会改变真实 SKILL.md 的哈希，应先补描述再建配置；已有配置则停用并人工复核，不自动重算绕过。
+执行人先在值班机用辅助工具检查真实技能，核对三个完整哈希再登记；预检时会话外重跑工具，与 bomc.json 的 skill_md_sha256、scripts_sha256、code_sha256 逐字段一致后才启用。已有配置缺 code_sha256 不可直接用于 rc8，先停用、保留原文件，再由用户会话外复核更新，不让团长修复。配置创建失败时保留现有文件和输出，不自动重建或删除；如留下不完整新配置，由执行人改名保留后再审阅。可选描述补充仅由用户修改用户级 bomc-alarm-query 的描述：“专家团团长优先通过 bomc-alarm-readonly 守卫查询；也可直接用本只读技能，成员不调用。”此举会改变真实 SKILL.md 的哈希，应先补描述再建配置；已有配置则停用并人工复核，不自动重算绕过。
 
 提供 skill_config 时，守卫只将校验过的路径作为 --config <路径> 传给真实技能；守卫不打开、不读取、不哈希文件内容，回执不包含配置内容。留空时不传 --config，真实技能按 WorkBuddy 子进程继承的 BOMC_ALARM_* 取凭据，凭据由执行人在会话外配置。bomc.json 不放凭据。团长白名单仍只有 --alarm-time/--top/--ip/--grade/--crm，不得使用 --config、读取真实配置或查看环境变量，不运行 --check-env；失败就报告，不切换入口绕过。
 

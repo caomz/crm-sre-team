@@ -34,6 +34,7 @@ def setup(tmp_path):
               "skill_root": str(skill), "output_dir": str(output),
               "skill_md_sha256": hashlib.sha256((skill / "SKILL.md").read_bytes()).hexdigest(),
               "scripts_sha256": guard.scripts_sha256(skill),
+              "code_sha256": guard.code_sha256(skill),
               "max_top": 10, "timeout_seconds": 2}
     path = home / ".crm-sre-team/bomc.json"
     path.write_text(json.dumps(config), encoding="utf-8")
@@ -480,7 +481,7 @@ def test_excluded_files_do_not_change_hash_and_are_never_opened(setup):
     cache = scripts / "__pycache__"
     cache.mkdir()
     excluded = [scripts / "settings.json", scripts / "secret.pem", scripts / "ignored.pyc",
-                scripts / "ignored.PY", cache / "cached.py", setup[1] / "outside.py"]
+                scripts / "ignored.PY", cache / "cached.py", setup[1] / "outside.json"]
     for path in excluded:
         path.write_bytes(b"FAKE-EXCLUDED-CONTENT")
     allowed = {setup[4], setup[1] / "SKILL.md", scripts / "run_query.py"}
@@ -586,7 +587,7 @@ def test_manifest_rejects_ambiguous_posix_names(name):
 
 
 def test_receipt_keeps_all_fields_in_order_and_normalizes_both_pins(setup):
-    for name in ("skill_md_sha256", "scripts_sha256"):
+    for name in ("skill_md_sha256", "scripts_sha256", "code_sha256"):
         setup[3][name] = setup[3][name].upper()
     setup[4].write_text(json.dumps(setup[3]), encoding="utf-8")
     code, out, err = invoke()
@@ -618,7 +619,7 @@ def test_operator_helper_matches_guard_and_does_not_write_or_read_configuration(
          patch.object(Path, "write_text", side_effect=AssertionError("No writes")), \
          patch.object(guard.subprocess, "Popen", side_effect=AssertionError("No subprocess")), redirect_stdout(out):
         assert module.main([str(setup[1])]) == 0
-    expected = {name: setup[3][name] for name in ("skill_md_sha256", "scripts_sha256")}
+    expected = {name: setup[3][name] for name in ("skill_md_sha256", "scripts_sha256", "code_sha256")}
     assert json.loads(out.getvalue()) == expected
     before = sorted(path.relative_to(setup[1]) for path in setup[1].rglob("*"))
     result = subprocess.run([sys.executable, str(helper), str(setup[1])], capture_output=True, text=True)
@@ -670,16 +671,19 @@ def test_timeout_stops_only_spawned_child_and_reports(setup):
     config["timeout_seconds"] = 1
     path.write_text(json.dumps(config), encoding="utf-8")
     code, out, err = invoke(ARGS + ["--grade", "TEST_TIMEOUT"])
-    assert code == 5 and not out and "仅终止本次子进程" in err
+    assert code == 5 and not out and "仅清理本次进程组或 Job" in err
 
 
-def test_timeout_never_signals_process_group_or_other_pid(setup):
-    with patch.object(guard.subprocess, "Popen") as spawn:
-        child = spawn.return_value
-        child.wait.side_effect = [subprocess.TimeoutExpired("synthetic", 1), 0]
-        assert invoke()[0] == 5
-        child.kill.assert_called_once_with()
-        assert child.wait.call_count == 2
+def test_cleanup_signals_only_the_group_created_for_this_query(setup):
+    if guard.os.name == "nt":
+        pytest.skip("POSIX group assertion; Windows Job has separate mock coverage")
+    original = subprocess.Popen
+    with patch.object(guard.subprocess, "Popen", wraps=original) as spawn, \
+         patch.object(guard.os, "killpg", wraps=guard.os.killpg) as killpg:
+        assert invoke()[0] == 0
+    assert spawn.call_args.kwargs["start_new_session"] is True
+    assert len({call.args[0] for call in killpg.call_args_list}) == 1
+    assert [call.args[1] for call in killpg.call_args_list] == [guard.signal.SIGKILL, 0]
 
 
 @pytest.mark.parametrize("grade", ["TEST_MALFORMED", "TEST_UNKNOWN", "TEST_TOO_MANY"])
@@ -738,7 +742,7 @@ def test_redaction_nested_fields_connections_and_control_codes():
 def test_script_has_no_credential_environment_or_http_access():
     import ast
     tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    forbidden = {"getenv", "environ", "urlopen", "requests", "killpg", "system"}
+    forbidden = {"getenv", "environ", "urlopen", "requests", "system", "killall", "pkill"}
     for node in ast.walk(tree):
         if isinstance(node, ast.Attribute):
             assert node.attr not in forbidden
@@ -771,13 +775,12 @@ def test_long_and_multiline_forged_evidence_markers_are_neutralized():
 
 
 def test_interrupted_guard_reaps_only_its_child_and_clears_owned_evidence(setup):
-    with patch.object(guard.subprocess, "Popen") as spawn:
-        child = spawn.return_value
-        child.wait.side_effect = [KeyboardInterrupt(), 0]
+    with patch.object(guard, "start_query_process") as spawn:
+        owner = spawn.return_value
+        owner.exited.side_effect = KeyboardInterrupt()
         with pytest.raises(KeyboardInterrupt):
             guard.query(guard.load_config(), guard.parse_args(ARGS))
-        child.kill.assert_called_once_with()
-        assert child.wait.call_count == 2
+        owner.stop.assert_called_once_with()
     for file in setup[2].glob("*.json"):
         assert json.loads(file.read_text(encoding="utf-8"))["status"] == "FAILED_NO_USABLE_EVIDENCE"
 

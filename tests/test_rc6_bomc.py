@@ -223,15 +223,16 @@ def test_removing_lead_safety_clause_is_rejected(marker):
         "不能扩大查询范围或改变用户限制",
     )),
     (checker.BOMC_HASH_RULE, (
-        "SKILL.md 或 scripts/ 源文件清单哈希不符就停止本轮 BOMC 取数", "不重试", "不更新哈希或切换入口绕过",
+        "SKILL.md、scripts/ 或 code_sha256 源文件清单哈希不符就停止本轮 BOMC 取数", "不重试", "不更新哈希或切换入口绕过",
         "其余分析照常并写明缺口",
     )),
     (checker.BOMC_SCRIPTS_CONFIG_RULE, (
         "skill_md_sha256 固定上游 SKILL.md 哈希", "必填 scripts_sha256",
         "scripts/ 目录递归普通 .py 源文件", "规范化清单哈希", "至少包含 scripts/run_query.py",
         "64 位十六进制", "排除 __pycache__ 和 *.pyc", "拒绝链接、重解析点或越界路径",
-        "只按字节读取这些 .py 文件", "不读取 scripts/ 以外的文件内容",
-        "已有校验的 SKILL.md 除外", "不读取上游配置或凭据内容", "skill_config 仍只校验元数据",
+        "必填 code_sha256", "技能根下全部普通 .py", "pyvenv.cfg", "不遍历排除树",
+        "只按字节读取覆盖范围内的 .py 和 SKILL.md", "不读取上游配置或凭据内容",
+        "skill_config 仍只校验元数据", "读取内容前拒绝",
     )),
     (checker.BOMC_SCRIPTS_FAILURE_RULE, (
         "团长不在会话里计算哈希", "不改 bomc.json", "不重试", "遇到退出 3 或 4",
@@ -365,7 +366,8 @@ def test_docs_record_query_scope_observation_and_non_destructive_rollback():
     for case in range(1, 10):
         assert f"BRC-{case}" in guide
     assert "BRC-8b" in guide
-    assert "本次不执行" in guide and "没有连接 BOMC" in guide
+    assert "rc8 的宿主与真实接入状态均为待测 / NOT_RUN" in guide
+    assert "不向生产发送写请求试探" in guide
     runbook = read("tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md").split("## rc6 BOMC", 1)[1]
     for phrase in ("CreateNew", "SKILL.md", "Get-FileHash", "不覆盖", "不手工写 cache", "VERIFY", "glm-5.3-flash", ".workbuddy/memory"):
         assert phrase in runbook
@@ -724,8 +726,8 @@ def test_prompt_check_rejects_forbidden_host_prose(phrase):
             text + '\n' + phrase, lead, runtime=True)
 
 
-def test_guard_matches_reviewed_fix9_bytes_in_source_and_runtime():
-    expected = 'bf0e4995153841aed8f132502905f4a3bbd44507b30c86ca2082c47c65069feb'
+def test_guard_matches_reviewed_fix12_bytes_in_source_and_runtime():
+    expected = '1ef3e0dee1fbc5caf77b15e4c953873aca81975f686081fabeb943995d46b088'
     for rel in ('policy-source/skills/bomc-alarm-readonly/scripts/bomc_readonly.py',
                 'skills/bomc-alarm-readonly/scripts/bomc_readonly.py'):
         assert hashlib.sha256((ROOT / rel).read_bytes()).hexdigest() == expected

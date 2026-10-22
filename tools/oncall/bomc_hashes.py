@@ -32,6 +32,7 @@ def main(argv=None):
         result = {
             "skill_md_sha256": guard["hashlib"].sha256(guard["read_config_bytes"](skill_md, "SKILL.md")).hexdigest(),
             "scripts_sha256": guard["scripts_sha256"](root),
+            "code_sha256": guard["code_sha256"](root),
         }
         print(json.dumps(result))
         return 0

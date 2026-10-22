@@ -1,12 +1,12 @@
 {
-  "version": "2.8.0-rc7",
+  "version": "2.8.0-rc8",
   "skill_id": "oracle-dba",
   "agent_id": "telecom-crm-oracle-dba",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "MANUAL-MODE.md": "58b0338dd5d9c5af1185ff18724dfe940be9f98d8e21e1c713786f8513f844d0",
+    "MANUAL-MODE.md": "0ce6c319f22af75eee46bfa652b8f9070c935eb2b84028ff35964f3344662bfb",
     "SKILL.md": "2712da572f3681a6d1d299fbb6dc8fd03d5160ccb0cc7fc75e0bf675c07bc0fd",
-    "VERSION": "adc17bb55a687d8e0105de89015ac9f5127b7b6b01486a3f9662fa611773709f",
+    "VERSION": "c72171a43cadd534c750225980d5d7d35f26e6bfc33be71062b981c328988005",
     "agents/openai.yaml": "6a91f030cee86a11117a4ae898a530e172d07b75bc3b86b99a9fe3235adf6dc6",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",
     "assets/templates/environment-profile.md": "4e16258630a00ea674d096465470a2868714fc48bad37295e8fbf4b6568c6817",
