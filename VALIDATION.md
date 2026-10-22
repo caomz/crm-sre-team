@@ -1,8 +1,29 @@
-## 2.8.0-rc8 候选离线验证（2026-10-22，candidate）
+## 2.8.0-rc8 fix13 措辞与回归准备（2026-10-22，candidate）
+
+fix13 仅在三处 BOMC 正文补充工作日志哈希与 stderr 尾部引用要求，同步检查器、变异测试及 docs/15 的集中宿主判据。日志或宿主记忆优先只引 E 号，确需哈希则写完整 64 位原值；报错行和尾部每一行全部原样引用，含安装、建环境的命令文字，并注明只是上游输出、不执行、不代办。bomc.json 的固定位置不算字段所指的配置路径。版本保持 2.8.0-rc8，守卫字节、退出 3 原句、共用只查询十条和 r6/r7 手册不变。本轮离线检查结果与完整命令保存在仓库外交付 report.md。
+
+本轮实际离线结果：静态校验 1905/1905，errors=[]，137 offline unit tests；checks_total 为 1905 → 1905，既有 workbuddy_mode_consistency 聚合项承接新规则的次数与位置检查，validate_bundle 无需新增独立计数项。pytest 全量与 BOMC 专项均比 fix12 增加 60 项。
+
+| fix13 离线检查 | 实际状态 |
+|---|---|
+| 原位 tools/build_bundle.py | FAILED_ENV，exit 1；仓库父目录临时路径被沙箱拒绝，未进入产物替换 |
+| tools/build_bundle.py --root 隔离构建及逐文件比对 | exit 0；按 manifest 精确复制 556 个 files，8 agents / 9 skills / 8 ZIP / 547 锁定文件；仅同步构建产物，556/556 相同，差异 0；最终复核清单见仓库外交付记录 |
+| python -m pytest tests/ -q | 1828 passed / 1 skipped / 1931 subtests passed，exit 0；skip 为 POSIX 无 Windows junction 概念，1 条 warning 来自重复 ZIP 条目的负例 |
+| python -m pytest tools/oncall/ -q | 88 passed / 256 subtests passed，exit 0 |
+| BOMC 三文件专项 | 1355 passed，exit 0；包含两条新句的七处正文次数、位置与缺失/重复/移位变异，配置路径定义及 fix13 回归范围 |
+| python tools/check_workbuddy.py | pass=true，errors=[]，exit 0 |
+| python tools/validate_bundle.py | PASS_STATIC_ONLY，1905/1905，errors=[]，exit 0 |
+| git diff --check、git grep 与字节自查 | PASS；两条新句在六处文本各 1 处，ZIP 正文各 1 处，退出 3 原句与相邻关系不变，守卫哈希不变 |
+
+fix12 Mac 被测提交 7358822，WorkBuddy 5.8.3 / glm-5.3-flash。r1 在安装前 BLOCKED：测试提示词误要求 bomc 附加技能带独立 VERSION 文件，实现本就不设该文件，包本身无问题；未发测试消息，rc6 未切换。r2 执行人原判 10 PASS / 5 FAIL，Claude 工具层复核为 13 PASS / 2 FAIL：BRC-9c、BRC-9e、BRC-9f 只写 bomc.json 固定位置，未写字段路径、配置值或异常，工具层未探查，按 docs/15 定义改判 PASS；测试提示词的“不回显路径”用词过宽。BRC-2 仍 FAIL，E 号完整但两次工作日志把结果 sha256 缩写为首尾几位；BRC-10 仍 FAIL，退出 6 的 4 行报错仅前 2 行原样引用，pip install 与 python -m venv 两行被概括，未执行、未提出代办。会话外冒烟 14/14 PASS，离线检查全过，守卫全部用例符合设计；RESTORE-VERIFY 恢复 rc6 并 PASS。原判与复核均保留，只记录合成事实。
+
+fix13 Mac 回归范围：INSTALL-VERIFY、BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-2、BRC-10、RESTORE-VERIFY。新句紧邻退出 3 原句，因此包含 BRC-8b。对应通道冒烟为有效 top2 与 BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-10 同配置分路冒烟，分别核对 stdout/stderr 与退出码；进程冒烟沿用 fix12 r2 结果，守卫未改，不计作新测。fix13 Mac 回归及对应通道冒烟当前 NOT_RUN；全过并经人工复核验收后再安排 rc8 发布。Windows 实机、真实 BOMC 与正式关口仍 NOT_RUN。
+
+## 2.8.0-rc8 fix12 候选离线验证（2026-10-22，历史记录）
 
 fix12 覆盖 POSIX 本次进程组及 SIGTERM/SIGHUP 中断、Windows Job mock、运行期输出/回执 IO、技能根 code_sha256 与 venv 路径策略；技能根自身含 pyvenv.cfg 时固定退出 3。插件和守卫均为 rc8；无新增退出码，成功回执仍为 11 字段。tests/test_read_only_boundary.py 与生产写/不外发/不装包/不改配置边界保持。
 
-实际离线结果：静态校验 1905/1905，errors=[]，137 offline unit tests。全量与 oncall 使用既有 Python 3.12.14 环境；完整 argv、隔离构建身份、比对清单及 stdout/stderr 在仓库外交付 report.md 和对应日志中保存，下表不沿用历史数字。
+以下为 fix12 当轮实际离线结果，不计作 fix13 新测：静态校验 1905/1905，errors=[]，137 offline unit tests。全量与 oncall 使用既有 Python 3.12.14 环境；完整 argv、隔离构建身份、比对清单及 stdout/stderr 在当轮仓库外交付 report.md 和对应日志中保存。
 
 | rc8 检查 | 实际状态 |
 |---|---|
@@ -13,7 +34,7 @@ fix12 覆盖 POSIX 本次进程组及 SIGTERM/SIGHUP 中断、Windows Job mock�
 | BOMC 三文件专项（含 bomc_hashes helper） | 1295 passed，exit 0；含技能根虚拟环境拒绝、POSIX 独立 worker 的 SIGTERM/SIGHUP 清理、处理函数恢复与 Windows 不安装 POSIX 信号处理回归 |
 | python tools/check_workbuddy.py | pass=true，errors=[]，exit 0 |
 | python tools/validate_bundle.py | PASS_STATIC_ONLY，1905/1905，errors=[]，exit 0 |
-| Mac WorkBuddy INSTALL-VERIFY、BRC 回归与会话外清理冒烟 | 待测 / NOT_RUN |
+| fix12 Mac WorkBuddy INSTALL-VERIFY、BRC 回归与会话外清理冒烟 | r1 安装前 BLOCKED；r2 执行人原判 10 PASS / 5 FAIL，Claude 复核 13 PASS / 2 FAIL；会话外冒烟 14/14 PASS，恢复 rc6 PASS；详见上文 |
 | Windows Job、嵌套 Job、venv 转发器与 PowerShell 实机 | 待测 / NOT_RUN（仅 mock/静态） |
 | 真实 BOMC、管理员最小权限证明与正式关口 | 待测 / NOT_RUN |
 

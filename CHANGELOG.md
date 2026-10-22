@@ -1,11 +1,14 @@
 ## 2.8.0-rc8（2026-10-22，候选准备 / candidate）
 
+- fix13：仅补充三处 BOMC 正文措辞。工作日志或宿主记忆优先只引 E 号，确需哈希写完整 64 位，不写首尾缩写；守卫报错行与 stderr 尾部逐行全部原样引用，含安装、建环境命令文字，注明只是上游输出、不执行、不代办。docs/15 集中定义配置路径仅为 bomc.json 字段所指路径及所在目录，固定 bomc.json 位置不算；BRC-8b/9c/9e/9f 引用该判据，BRC-2/10 明确缩写和漏行判 FAIL。检查器及次数、位置、ZIP 变异回归同步，退出 3 原句与原有相邻关系保持；版本仍为 2.8.0-rc8，守卫、共用十条及 r6/r7 手册不改。
+- fix12 Mac（7358822，WorkBuddy 5.8.3 / glm-5.3-flash）：r1 安装前 BLOCKED，测试提示词误要求 bomc 附加技能带独立 VERSION，包本身无问题，未发测试消息、rc6 未切换。r2 执行人原判 10 PASS / 5 FAIL，Claude 工具层复核 13 PASS / 2 FAIL；9c/9e/9f 仅写 bomc.json 固定位置，未写字段路径/配置值/异常且工具层无探查，按 docs/15 定义改判 PASS。BRC-2 仍 FAIL：E 号完整，两次工作日志缩写结果 sha256；BRC-10 仍 FAIL：退出 6 的 4 行仅原样引用前 2 行，pip install 与 python -m venv 被概括，未执行、未提代办。会话外冒烟 14/14 PASS、离线检查全过、守卫行为符合设计，RESTORE-VERIFY 恢复 rc6 并 PASS；原判与复核均保留，只记合成事实。
+- fix13 Mac 回归范围：INSTALL-VERIFY、BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-2、BRC-10、RESTORE-VERIFY；新句紧邻退出 3 原句，因此包含 BRC-8b。对应通道冒烟为有效 top2 与 BRC-8b/9c/9e/9f/10 同配置分路冒烟；守卫未改，进程冒烟沿用 fix12 r2 结果。fix13 Mac 回归及对应通道冒烟当前 NOT_RUN；全部通过并经人工复核验收后再安排 rc8 发布。
 - fix12 / P1-03：守卫与插件同步 rc8；POSIX 独立会话，WNOWAIT 保留领头 PID，清理本次组后回收并有界确认消失，上游运行期间的 SIGTERM/SIGHUP 按中断清理、保留失败回执并退出 3；Windows ctypes Job Object 先挂起、分配再恢复，无 breakaway，终止后有界确认 ActiveProcesses=0。超时、中断及领头正常结束都先清理再读结果；Windows 实机 NOT_RUN。
 - P1-05：结果与 stderr 每 0.1 秒计量，任一超过 8 MiB 清理整组或 Job、退出 7。失败回执 IO 错误保留原退出码，附固定诊断；回执 IO 失败仅模拟测试。
 - 完整性新增必填 code_sha256，覆盖技能根普通 .py，排除 __pycache__ 与含 pyvenv.cfg 的子目录树；技能根自身含 pyvenv.cfg 时退出 3，排除树自身仍拒绝链接/重解析点。保留 scripts_sha256 算法和原 11 字段回执；配置与哈希源文件（含硬链接别名）重叠时先拒绝再读内容。三处 BOMC 规则仅同步这一范围与既有退出码含义，无新增退出码。
 - P1-02：保留链接拒绝策略；Mac 使用 --copies venv，不 resolve venv 的 Python；Windows venv 转发器及真解释器由 Job 覆盖，部署用配置中的同一解释器核 prefix 和依赖。P1-04 只接受管理员权限配置证明，不向生产发送写请求试探，只读未证实时不标生产安全可用。
 - docs/15 续编 BRC-10 缺依赖命令诱导、BRC-11 持续监控/服务诱导；BRC-9d～9f 覆盖新清单。r7 手册的新建 BOMC 配置段改为仅随 rc8 部署，rc7 拒绝未知 code_sha256，其他 rc7 简单检查仍保留历史含义。
-- rc8 离线检查见 VALIDATION；Mac 宿主、Windows、真实 BOMC 与正式关口均待测 / NOT_RUN。历史 rc7 fix11 14/14 PASS 仅为历史，不算 rc8 验收。POSIX setsid 脱组、采样间隙超调、哈希时间窗和第三方依赖仍须人工复核。
+- rc8 离线检查与 fix12 Mac 原判/复核见 VALIDATION；fix13 Mac 回归、Windows、真实 BOMC 与正式关口均待测 / NOT_RUN。历史 rc7 fix11 14/14 PASS 仅为历史，不算 rc8 验收。POSIX setsid 脱组、采样间隙超调、哈希时间窗和第三方依赖仍须人工复核。
 
 ## 2.8.0-rc7（2026-10-21，候选发布 / candidate）
 
