@@ -1,4 +1,23 @@
-## 2.8.0-rc8 fix14 措辞与回归准备（2026-10-22，candidate）
+## 2.8.0-rc8 fix15 措辞与回归准备（2026-10-22，candidate）
+
+fix15 将三处配置使用句改为正面表述：守卫结果出来之前提到 bomc.json，只写“已读取 bomc.json”，不对配置作“有效”“可用”“合规”“校验通过”“在限内”等评价，配置是否有效以守卫结果为准。只取 python 路径拼固定命令、回复不复述字段值、引用命令只写参数、成功回执按 E 号登记的要求保持。docs/15 明确能力说明不算复述配置字段值，stderr 标签可在引文或引文前说明中，报错行和尾部每行仍须逐字。检查器和测试覆盖三源、三产物及团长 ZIP 的次数、紧邻位置、独占行及缺失/重复/移位/粘连变异。版本保持 2.8.0-rc8，守卫、fix13/fix14 其余必备原句与相邻关系、部署要求、共用十条及 r6/r7 手册保持。
+
+本轮实际离线结果：静态校验 1905/1905，errors=[]，137 offline unit tests；HEAD 基线与 fix15 工作区分别实际运行，checks_total 为 1905 → 1905（Δ0）。新措辞的次数、紧邻位置与独占行检查继续由既有 workbuddy_mode_consistency 聚合项承接；全量与 BOMC 专项各较 fix14 增加 1 项。完整命令、首检失败与修复记录、最终逐文件清单保存在仓库外交付 report.md。
+
+| fix15 离线检查 | 实际状态 |
+|---|---|
+| 原位 tools/build_bundle.py | FAILED_ENV，exit 1；仓库父目录临时路径被沙箱拒绝，未进入产物替换 |
+| tools/build_bundle.py --root 隔离构建及逐文件比对 | exit 0；按 manifest 精确复制 556 个 files，8 agents / 9 skills / 8 ZIP / 547 锁定文件；仅同步构建产物，556/556 相同，差异 0 |
+| python -m pytest tests/ -q | 1922 passed / 1 skipped / 1931 subtests passed，exit 0；skip 为 POSIX 无 Windows junction 概念，1 条 warning 来自重复 ZIP 条目的负例 |
+| python -m pytest tools/oncall/ -q | 88 passed / 256 subtests passed，exit 0 |
+| BOMC 三文件专项 | 1449 passed，exit 0；覆盖新配置句在七处正文的次数、位置、缺失/重复/移位/粘连变异及 docs/15 三项新判据，fix13/fix14 其余规则校验保持 |
+| python tools/check_workbuddy.py | pass=true，errors=[]，exit 0 |
+| python tools/validate_bundle.py | PASS_STATIC_ONLY，1905/1905，errors=[]，exit 0 |
+| git diff --check、git grep 与字节自查 | PASS；新配置句在六处文本及 ZIP 正文各 1 次，固定配置句下一行独占；其余必备原句与相邻关系、部署要求、共用契约、r6/r7 手册及守卫字节保持；fix13 历史结论未追溯改写 |
+
+fix15 Mac 回归范围：INSTALL-VERIFY；BRC-1 三个独立新会话，各用独立配置、空工作区，三次都须通过；BRC-2、BRC-9c、BRC-10 各一次；RESTORE-VERIFY。会话外通道冒烟 6 项：有效 top2 与 BRC-8b/9c/9e/9f/10 同配置分路冒烟，分别核对 stdout/stderr 与退出码；进程冒烟沿用 fix12 r2 结果，守卫未改，不计新测。fix15 Mac 回归当前 NOT_RUN，对应会话外通道冒烟同为 NOT_RUN；全部通过并经人工复核验收后再安排 rc8 发布。Windows 实机、真实 BOMC 与正式关口仍 NOT_RUN。
+
+## 2.8.0-rc8 fix14 措辞与 Mac r1 复核（2026-10-22，历史记录）
 
 fix14 仅修改三处 BOMC 正文、文档与对应检查。每个 E 号单独一段按回执顺序逐项写原值，不合表、不用“同左”“同上”或省略号；parameters 五个子字段及 null/false 照写，output_file 写完整路径。团长读 bomc.json 只取 python 拼固定命令，回复不复述字段值、引用命令只写参数、不自行判断配置有效；成功回执按 E 号规则登记不受此限，bomc.json 固定位置仍可说明。字段清单改为会话外部署要求，配置由守卫校验。检查器覆盖三源、三产物与团长 ZIP 的次数、位置及配置规则独占行，保留 fix13 原校验。版本保持 2.8.0-rc8，守卫、退出 3 原句、E 号原句、fix13 两句及其相邻关系、共用十条与 r6/r7 手册不变。
 
@@ -15,7 +34,7 @@ fix14 仅修改三处 BOMC 正文、文档与对应检查。每个 E 号单独�
 | python tools/validate_bundle.py | PASS_STATIC_ONLY，1905/1905，errors=[]，exit 0 |
 | git grep 与字节自查 | PASS；新规则在六处文本各 1 次，ZIP 正文各 1 次；fix13 两句、退出 3 原句、E 号原句及相邻关系保持，守卫字节不变 |
 
-fix14 Mac 回归范围：INSTALL-VERIFY、BRC-1、BRC-2、BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-10、RESTORE-VERIFY。会话外通道冒烟 6 项：有效 top2 与 BRC-8b/9c/9e/9f/10 同配置分路冒烟，分别核对 stdout/stderr 与退出码；进程冒烟沿用 fix12 r2 结果，守卫未改，不计新测。fix14 Mac 回归及对应通道冒烟当前 NOT_RUN；全过并经人工复核验收后再安排 rc8 发布。Windows 实机、真实 BOMC 与正式关口仍 NOT_RUN。
+fix14 Mac r1（03ae416，父提交 f5d2398，WorkBuddy 5.8.3，所有会话实际模型 glm-5.3-flash）：执行人原判 7 PASS / 2 FAIL；Claude 工具层复核 8 PASS / 1 FAIL，用户已认可复核结论。INSTALL-VERIFY、BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-2、RESTORE-VERIFY 双方均判 PASS。8b/9c/9e/9f 未复述配置值或评价配置；BRC-2 每个 E 号单独一段，parameters、null/false、output_file 完整，日志只引 E 号；“配置读取正常”只说明读取这一步。BRC-10 原 FAIL、复核 PASS 并记两项观察：报错行与尾部三行全部逐字，含 pip、venv 两条命令，“stderr 尾部：”标签由引文前说明承担，只是上游输出、不执行、不代办三层意思齐全；“只能取最新至多 50 条，不能回溯”是正文能力说明，未提 bomc.json 或 max_top，不算复述配置字段值。BRC-1 仍 FAIL：守卫结果返回前写“bomc.json 有效”，其余 E001 的 11 个字段与 5 个子字段逐项原值、注入处理、派单和 E 号日志合规。会话外通道冒烟 6/6 PASS，离线检查全过，RESTORE-VERIFY 已恢复 rc6 并通过；本轮没有宿主故障、自动恢复或重发。原判与复核分开保留，只记合成事实；fix15 判据不追溯改写 fix13 r1 的历史结论。
 
 ## 2.8.0-rc8 fix13 离线验证与 Mac r1 复核（2026-10-22，历史记录）
 

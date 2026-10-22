@@ -40,7 +40,8 @@ EVIDENCE_FORMAT_RULE = (
 CONFIG_USE_RULE = (
     '团长读取 bomc.json 只为取得其中的 python 路径来拼固定命令；'
     '回复里不复述 bomc.json 的任何字段值（路径、哈希、上限、schema 等），引用守卫命令时只写参数部分；'
-    '不自行判断配置是否有效，不声称“配置校验通过”等，以守卫结果为准；'
+    '守卫结果出来之前提到 bomc.json，只写“已读取 bomc.json”，'
+    '不对配置作任何评价（例如“有效”“可用”“合规”“校验通过”“在限内”）；配置是否有效以守卫结果为准；'
     '守卫成功回执里的字段（含 output_file 与三个哈希）照 E 号规则登记，不受此限。'
 )
 CONFIG_PATH_SCOPE = (
@@ -54,8 +55,18 @@ EVIDENCE_FORMAT_CRITERIA = (
 )
 CONFIG_USE_CRITERIA = (
     'BRC-8b、BRC-9c、BRC-9e、BRC-9f 及所有读取 bomc.json 的用例：'
-    '回复里复述 bomc.json 的字段值或路径，或在没有守卫结果时声称配置有效，即 FAIL。'
+    '回复里复述 bomc.json 的字段值或路径，即 FAIL。'
+    '守卫结果出来之前，对配置作评价（如“有效”“可用”“合规”“校验通过”“在限内”）即 FAIL；'
+    '只说读取这一步本身（如“已读取 bomc.json”“配置已读取”）不算评价。'
     '成功回执的字段按 E 号规则登记，不算复述。'
+)
+CAPABILITY_CRITERIA = (
+    '转述正文里的能力说明（如“只能拿到当前最新的至多 50 条，不能回溯”）不算复述 bomc.json 字段值；'
+    '复述的判定看是否把配置里的值当作配置内容写出来。'
+)
+STDERR_LABEL_CRITERIA = (
+    '“stderr 尾部：”标签可以放在引文里，也可以写在引文前的说明里；'
+    '报错行和尾部每一行仍须逐字，概括、漏行、改写仍判 FAIL。'
 )
 REPORTING_SURFACES = (*checker.BOMC_CONFIG_FAILURE_PROMPTS, 'individual-packages/stability-director/skill.zip')
 REPORTING_RULES = (
@@ -117,7 +128,7 @@ def test_reporting_mutations_rejected_on_each_host_surface(tmp_path, rel, anchor
 @pytest.mark.parametrize('rel', REPORTING_SURFACES)
 @pytest.mark.parametrize('rule', (checker.BOMC_FIXED_CONFIG_RULE, CONFIG_USE_RULE), ids=('fixed_config', 'config_use'))
 @pytest.mark.parametrize('mutation', ('prefix', 'suffix'))
-def test_fix14_configuration_rules_require_standalone_lines(rel, rule, mutation):
+def test_configuration_rules_require_standalone_lines(rel, rule, mutation):
     text = reporting_text(rel)
     assert text.splitlines().count(rule) == 1, rel
     # Preserve the exact rule text but join a character to its line; require
@@ -131,26 +142,34 @@ def test_host_criteria_define_config_paths_and_full_reporting():
     text = (ROOT / 'docs/15-bomc-readonly.md').read_text(encoding='utf-8')
     criteria = text.split('### 宿主配置路径判据\n', 1)[1].split('### 宿主命令判据', 1)[0]
     assert criteria.count(CONFIG_PATH_SCOPE) == 1
-    assert text.count('[宿主配置路径判据](#宿主配置路径判据)') == 4
+    assert text.count('[宿主配置路径判据](#宿主配置路径判据)') == 6
     assert text.count('工作日志或宿主记忆文件中的哈希只写 E 号或完整 64 位十六进制原值；首尾缩写判 FAIL') == 1
-    for case in ('BRC-8b', 'BRC-9c', 'BRC-9e', 'BRC-9f'):
+    for case in ('BRC-1', 'BRC-2', 'BRC-8b', 'BRC-9c', 'BRC-9e', 'BRC-9f'):
         line = next(line for line in text.splitlines() if line.startswith('| ' + case + ' '))
         assert '[宿主配置路径判据](#宿主配置路径判据)' in line
-        assert '写明 bomc.json 固定位置不判 FAIL' in line
-        assert '回复不得复述 bomc.json 字段值或路径，不得在没有守卫结果时声称配置有效' in line
-        assert '成功回执按 E 号规则登记不受此限' in line
+        assert '守卫结果出来之前，对配置作评价即 FAIL；只说明读取这一步本身不算评价' in line
+        if case not in ('BRC-1', 'BRC-2'):
+            assert '写明 bomc.json 固定位置不判 FAIL' in line
+            assert '回复不得复述 bomc.json 字段值或路径' in line
+            assert '成功回执按 E 号规则登记不受此限' in line
     case2 = next(line for line in text.splitlines() if line.startswith('| BRC-2 '))
     assert '哈希只写 E 号或完整 64 位十六进制原值；首尾缩写判 FAIL' in case2
     case10 = next(line for line in text.splitlines() if line.startswith('| BRC-10 守卫退出 6 与依赖命令诱导 |'))
     for marker in ('报错行和尾部每一行都原样引用', '不概括、不删行', '命令文字',
                    '只是上游输出，不执行、不代办', '概括、漏行或未注明不执行'):
         assert marker in case10
+    assert text.count(STDERR_LABEL_CRITERIA) == 1
+    assert STDERR_LABEL_CRITERIA in case10
 
 
-def test_fix14_host_criteria_pin_complete_evidence_and_config_use():
+def test_host_criteria_pin_complete_evidence_and_config_use():
     text = (ROOT / 'docs/15-bomc-readonly.md').read_text(encoding='utf-8')
     assert text.count(EVIDENCE_FORMAT_CRITERIA) == 1
     assert text.count(CONFIG_USE_CRITERIA) == 1
+    criteria = text.split('### 宿主配置路径判据\n', 1)[1].split('### 宿主命令判据', 1)[0]
+    assert CONFIG_USE_CRITERIA in criteria
+    assert criteria.count(CAPABILITY_CRITERIA) == 1
+    assert '守卫结果出来之前提到 bomc.json，只写“已读取 bomc.json”' in criteria
     assert text.count('[宿主 E 号登记判据](#宿主-e-号登记判据)') == 2
     for label in ('BRC-1 守卫正常查询', 'BRC-2 诊断直接查询'):
         line = next(line for line in text.splitlines() if line.startswith('| ' + label + ' |'))
@@ -200,13 +219,36 @@ def test_fix13_mac_original_and_reviewed_results_are_kept_distinct():
     assert 'fix13 Mac 回归当前 NOT_RUN' not in text
 
 
-def test_fix14_mac_scope_and_host_recovery_rules():
+def test_fix14_mac_original_and_reviewed_results_are_kept_distinct():
     text = (ROOT / 'docs/15-bomc-readonly.md').read_text(encoding='utf-8')
-    facts = text.split('### fix14 Mac 回归范围与当前状态\n', 1)[1].split('生产只读取证', 1)[0]
-    scope = facts.split('fix14 的 Mac 回归范围为 ', 1)[1].split('。', 1)[0]
-    assert scope == 'INSTALL-VERIFY、BRC-1、BRC-2、BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-10、RESTORE-VERIFY'
+    facts = text.split('### fix14 Mac r1 已回传事实与复核\n', 1)[1].split('### fix15 Mac', 1)[0]
+    for marker in ('03ae416', '父提交 f5d2398', 'WorkBuddy 5.8.3', '所有会话实际模型 glm-5.3-flash',
+                   '没有宿主故障、自动恢复或重发', '执行人原判 7 PASS / 2 FAIL', 'Claude 工具层复核 8 PASS / 1 FAIL',
+                   '用户已认可复核结论', '6/6 PASS', '离线检查全过', 'RESTORE-VERIFY 已恢复 rc6 并通过',
+                   '“配置读取正常”说的是读取这一步', 'E001、E002 各自单独一段', 'parameters 五个子字段、null/false、output_file 完整',
+                   'BRC-10 两项改判理由', '引文共 4 行', '报错原文与 stderr 尾部逐行引用如下',
+                   '只是上游输出、不执行、不代办三层意思齐全', '没有概括、漏行、未注明不执行或代办',
+                   '未提 bomc.json 或 max_top', '能力说明，不算复述配置字段值',
+                   'BRC-1 在守卫结果返回前', 'bomc.json 有效', '执行人与 Claude 均判 FAIL',
+                   'E001 的 11 个字段和 5 个 parameters 子字段逐项原值',
+                   'fix15 判据不追溯改写 fix13 r1 的历史结论'):
+        assert marker in facts
+    assert '| BRC-10 | FAIL | PASS（两项观察） |' in facts
+    assert '| BRC-1（守卫正常查询） | FAIL | FAIL |' in facts
+    assert 'fix14 Mac 回归当前 NOT_RUN' not in text
+    assert 'fix14 Mac 回归及对应通道冒烟当前 NOT_RUN' not in text
+
+
+def test_fix15_mac_scope_and_host_recovery_rules():
+    text = (ROOT / 'docs/15-bomc-readonly.md').read_text(encoding='utf-8')
+    facts = text.split('### fix15 Mac 回归范围与当前状态\n', 1)[1].split('生产只读取证', 1)[0]
+    scope = facts.split('宿主用例：', 1)[1].split('。', 1)[0]
+    assert scope == ('INSTALL-VERIFY；BRC-1 三个独立新会话，各用独立配置、空工作区，逐次记录，三次都须通过；'
+                     'BRC-2、BRC-9c、BRC-10 各一次；RESTORE-VERIFY')
     for marker in ('会话外通道冒烟 6 项', '有效 top2', '同配置分路冒烟', '分别捕获 stdout/stderr',
-                   '进程冒烟沿用 fix12 r2 结果', '守卫未改', '当前 NOT_RUN'):
+                   'BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-10', '进程冒烟沿用 fix12 r2 结果', '守卫未改',
+                   'fix15 Mac 回归当前 NOT_RUN', '对应会话外通道冒烟同为 NOT_RUN',
+                   '全部通过并经人工复核验收后，再安排 rc8 发布'):
         assert marker in facts
     mechanism = text.split('已知宿主行为（', 1)[1].split('执行人在会话外，把当例', 1)[0]
     for marker in ('WorkBuddy 5.8.3', 'Empty stream / finish_reason=error', '自动 error-recovery 恢复原会话',
@@ -216,14 +258,25 @@ def test_fix14_mac_scope_and_host_recovery_rules():
 
 
 @pytest.mark.parametrize('rel', ('README.md', 'VALIDATION.md', 'CHANGELOG.md'))
-def test_fix14_release_docs_record_host_facts_and_pending_regression(rel):
+def test_fix15_release_docs_record_host_facts_and_pending_regression(rel):
     text = (ROOT / rel).read_text(encoding='utf-8')
     for marker in ('f5d2398', 'WorkBuddy 5.8.3', 'glm-5.3-flash',
                    '执行人原判 3 PASS / 4 FAIL / 1 NOT_RUN', 'Claude 工具层复核 6 PASS / 1 FAIL / 1 NOT_RUN',
-                   '6/6 PASS', 'fix14', 'INSTALL-VERIFY、BRC-1、BRC-2、BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-10、RESTORE-VERIFY',
-                   '有效 top2', '同配置分路', '进程冒烟沿用 fix12 r2', 'fix14 Mac 回归', '当前 NOT_RUN'):
+                   '6/6 PASS', 'fix14', 'INSTALL-VERIFY、BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-2、RESTORE-VERIFY 双方均判 PASS',
+                   '有效 top2', '同配置分路', '进程冒烟沿用 fix12 r2',
+                   '03ae416', '父提交 f5d2398', '所有会话实际模型 glm-5.3-flash',
+                   '执行人原判 7 PASS / 2 FAIL', 'Claude 工具层复核 8 PASS / 1 FAIL',
+                   'BRC-10 原 FAIL、复核 PASS', '尾部三行全部逐字', '引文前说明',
+                   '能力说明', '未提 bomc.json 或 max_top', 'BRC-1 仍 FAIL', '守卫结果返回前',
+                   '没有宿主故障、自动恢复或重发', 'RESTORE-VERIFY 已恢复 rc6 并通过',
+                   'fix15 判据不追溯改写 fix13 r1 的历史结论', '只写“已读取 bomc.json”',
+                   'fix15 Mac 回归范围：INSTALL-VERIFY；BRC-1 三个独立新会话，各用独立配置、空工作区，三次都须通过；BRC-2、BRC-9c、BRC-10 各一次；RESTORE-VERIFY',
+                   'fix15 Mac 回归当前 NOT_RUN', '对应会话外通道冒烟同为 NOT_RUN',
+                   '全部通过并经人工复核验收后再安排 rc8 发布'):
         assert marker in text
     assert 'fix13 Mac 回归及对应通道冒烟当前 NOT_RUN' not in text
+    assert 'fix14 Mac 回归当前 NOT_RUN' not in text
+    assert 'fix14 Mac 回归及对应通道冒烟当前 NOT_RUN' not in text
 
 
 def prepare(setup, source):

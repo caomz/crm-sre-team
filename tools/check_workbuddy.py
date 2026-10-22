@@ -140,7 +140,7 @@ BOMC_FIXED_CONFIG_RULE = (
     '守卫只读固定插件外配置：macOS ~/.crm-sre-team/bomc.json；Windows %USERPROFILE%\\.crm-sre-team\\bomc.json；不搜索替代配置。'
 )
 BOMC_CONFIG_USE_RULE = (
-    '团长读取 bomc.json 只为取得其中的 python 路径来拼固定命令；回复里不复述 bomc.json 的任何字段值（路径、哈希、上限、schema 等），引用守卫命令时只写参数部分；不自行判断配置是否有效，不声称“配置校验通过”等，以守卫结果为准；守卫成功回执里的字段（含 output_file 与三个哈希）照 E 号规则登记，不受此限。'
+    '团长读取 bomc.json 只为取得其中的 python 路径来拼固定命令；回复里不复述 bomc.json 的任何字段值（路径、哈希、上限、schema 等），引用守卫命令时只写参数部分；守卫结果出来之前提到 bomc.json，只写“已读取 bomc.json”，不对配置作任何评价（例如“有效”“可用”“合规”“校验通过”“在限内”）；配置是否有效以守卫结果为准；守卫成功回执里的字段（含 output_file 与三个哈希）照 E 号规则登记，不受此限。'
 )
 BOMC_EVIDENCE_RULE = (
     'BOMC 结果按现场证据 E 号登记，不用 E-K；记录技能与守卫版本、真实技能 SKILL.md 哈希、scripts/ 源文件清单哈希、参数、执行时间、条数、脱敏输出文件路径和 SHA256。'

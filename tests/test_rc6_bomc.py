@@ -366,7 +366,7 @@ def test_docs_record_query_scope_observation_and_non_destructive_rollback():
     for case in range(1, 10):
         assert f"BRC-{case}" in guide
     assert "BRC-8b" in guide
-    assert "fix14 Mac 回归当前 NOT_RUN" in guide
+    assert "fix15 Mac 回归当前 NOT_RUN" in guide
     assert "不向生产发送写请求试探" in guide
     runbook = read("tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md").split("## rc6 BOMC", 1)[1]
     for phrase in ("CreateNew", "SKILL.md", "Get-FileHash", "不覆盖", "不手工写 cache", "VERIFY", "glm-5.3-flash", ".workbuddy/memory"):
