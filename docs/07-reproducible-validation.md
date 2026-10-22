@@ -13,6 +13,8 @@ python3 tools/release.py
 
 `tools/release.py` 是统一发布入口，串行执行静态/测试/确定性门、staging 构包、validate_release、解包复验，全部通过才移入 dist/releases。用两个独立输出目录重建同一候选，比较发布 ZIP 原字节与 SHA256；单独验证可用 `python3 tools/validate_release.py --zip <实际 ZIP 路径>`。离线流水线通过不代表 WorkBuddy 或模型行为通过。
 
+发布测试门使用 pytest 同时执行 `tests/` 和 `tools/oncall/`，核对结构化的收集、运行、通过、失败、错误和跳过数量；任一范围缺失、全部跳过、收集失败或筛选漏跑都会阻断发布。该入口须在完整开发仓库运行，依赖 `requirements-dev.txt`；发行 ZIP 不含 repository-only 的 oncall 测试，不能直接重跑完整发布门。测试子进程忽略 `PYTEST_ADDOPTS`、pytest 配置中的 `addopts` 与自动加载的第三方插件，不调用发布入口自身。
+
 `check_release_diff.py` 现在针对真实原始上传的 2.5.0 ZIP，不再把 2.4.0 当作本次基线；历史脚本保留在 docs/history。只有拥有该原始上传版时才运行：
 
 ```bash

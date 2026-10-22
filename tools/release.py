@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -18,6 +19,8 @@ from pathlib import Path
 from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
+TEST_PATHS = ("tests", "tools/oncall")
+REPORT_SCOPE = "PYTEST_TESTS_AND_ONCALL"
 
 # ---------------------------------------------------------------------------
 # Tree digest (matches F3 scope: transient + generated-report exclusions)
@@ -72,6 +75,52 @@ def compute_tree_digest(root: Path) -> str:
 # Runner abstraction (default=real subprocess, fake=for pipeline tests)
 # ---------------------------------------------------------------------------
 
+class _PytestReport:
+    """Count each node once; a setup/teardown or subtest failure wins over pass."""
+
+    def __init__(self, output: Path):
+        self.output = output
+        self.outcomes = {}
+        self.collection_errors = 0
+        self.deselected = 0
+
+    def pytest_collectreport(self, report):
+        if report.failed:
+            self.collection_errors += 1
+
+    def pytest_deselected(self, items):
+        self.deselected += len(items)
+
+    def pytest_runtest_logreport(self, report):
+        if report.when != "call" and report.passed:
+            return
+        outcome = "errors" if report.failed and report.when != "call" else {
+            "passed": "passed", "failed": "failed", "skipped": "skipped"}[report.outcome]
+        priority = {"passed": 0, "skipped": 1, "failed": 2, "errors": 3}
+        previous = self.outcomes.get(report.nodeid)
+        if previous is None or priority[outcome] > priority[previous]:
+            self.outcomes[report.nodeid] = outcome
+
+    def pytest_sessionfinish(self, session, exitstatus):
+        root = Path.cwd()
+        by_path = {p: sum(item.path.is_relative_to(root / p) for item in session.items) for p in TEST_PATHS}
+        report = {"scope": REPORT_SCOPE, "test_paths": list(TEST_PATHS),
+                  "exit_code": int(exitstatus), "tests_collected": session.testscollected,
+                  "collected_by_path": by_path, "tests_run": len(self.outcomes),
+                  "deselected": self.deselected, "collection_errors": self.collection_errors}
+        report.update({"tests_" + outcome: sum(v == outcome for v in self.outcomes.values())
+                       for outcome in ("passed", "failed", "skipped", "errors")})
+        self.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+
+
+def _run_pytest(report_path):
+    """Child-process entry point: fixed scopes, no release pipeline invocation."""
+    import pytest
+    # The caller clears PYTEST_ADDOPTS; repository addopts cannot narrow the gate.
+    return int(pytest.main([*TEST_PATHS, "-q", "-o", "addopts="],
+                           plugins=[_PytestReport(Path(report_path))]))
+
+
 class StepRunner:
     """Default runner: real subprocess + function calls."""
 
@@ -90,12 +139,25 @@ class StepRunner:
             pass
         return proc.returncode, result
 
-    def run_unittest(self, root: Path):
-        """Returns (exit_code, stdout_str, stderr_str)."""
-        proc = subprocess.run(
-            [sys.executable, "-m", "unittest", "discover", "tests", "-v"],
-            cwd=str(root), capture_output=True, timeout=600)
-        return (proc.returncode,
+    def run_pytest(self, root: Path):
+        """Returns (exit_code, structured_report_or_None, stdout, stderr)."""
+        environment = os.environ.copy()
+        environment.pop("PYTEST_ADDOPTS", None)
+        environment.pop("PYTEST_PLUGINS", None)
+        environment["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+        with tempfile.TemporaryDirectory(prefix="crm-release-tests-") as temporary:
+            report_path = Path(temporary) / "pytest-report.json"
+            proc = subprocess.run(
+                [sys.executable, "-c", "import sys; sys.path.insert(0, sys.argv[1]); "
+                 "from release import _run_pytest; sys.exit(_run_pytest(sys.argv[2]))",
+                 str(self._PROJECT_ROOT / "tools"), str(report_path)],
+                cwd=str(root), env=environment, capture_output=True, timeout=600)
+            report = None
+            try:
+                report = json.loads(report_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                pass
+        return (proc.returncode, report,
                 proc.stdout.decode("utf-8", errors="replace"),
                 proc.stderr.decode("utf-8", errors="replace"))
 
@@ -310,20 +372,26 @@ class Pipeline:
         return {"ok": True, "exit_code": exit_code}
 
     def _step_tests(self):
-        exit_code, stdout, stderr = self.runner.run_unittest(self.root)
+        exit_code, report, stdout, stderr = self.runner.run_pytest(self.root)
         if exit_code != 0:
             tail = stderr[-200:] if stderr else stdout[-200:]
-            return {"ok": False, "error": "unittest exit_code=" + str(exit_code) + ": " + tail, "exit_code": exit_code}
-        output = stdout + "\n" + stderr
-        summaries = re.findall(r"^Ran (\d+) tests?(?: in [^\r\n]+)?\s*$", output, re.MULTILINE)
-        success = re.search(r"^OK(?: \(skipped=(\d+)\))?\s*\Z", output, re.MULTILINE)
-        if len(summaries) != 1 or not positive_count(int(summaries[0])) or success is None:
-            return {"ok": False, "error": "unittest missing valid nonzero success summary", "exit_code": exit_code}
-        tests_run = int(summaries[0])
-        skipped = int(success.group(1) or 0)
-        if skipped >= tests_run or re.search(r"^FAILED\b", output, re.MULTILINE):
-            return {"ok": False, "error": "unittest inconsistent passed/test counts", "exit_code": exit_code}
-        return {"ok": True, "exit_code": exit_code, "tests_run": tests_run, "tests_passed": tests_run - skipped}
+            return {"ok": False, "error": "pytest exit_code=" + str(exit_code) + ": " + tail, "exit_code": exit_code}
+        counts = ("tests_collected", "tests_run", "tests_passed", "tests_failed", "tests_skipped",
+                  "tests_errors", "collection_errors", "deselected", "exit_code")
+        if (not isinstance(report, dict) or report.get("scope") != REPORT_SCOPE
+                or report.get("test_paths") != list(TEST_PATHS)
+                or any(type(report.get(k)) is not int or report[k] < 0 for k in counts)):
+            return {"ok": False, "error": "pytest invalid structured report", "exit_code": exit_code}
+        by_path = report.get("collected_by_path")
+        if (not isinstance(by_path, dict) or set(by_path) != set(TEST_PATHS)
+                or not all(positive_count(n) for n in by_path.values())
+                or sum(by_path.values()) != report["tests_collected"]
+                or not positive_count(report["tests_passed"])
+                or report["tests_run"] != report["tests_collected"]
+                or report["tests_run"] != report["tests_passed"] + report["tests_skipped"]
+                or any(report[k] for k in ("tests_failed", "tests_errors", "collection_errors", "deselected", "exit_code"))):
+            return {"ok": False, "error": "pytest incomplete or inconsistent test counts", "exit_code": exit_code}
+        return {"ok": True, **report}
 
     def _step_determinism(self):
         exit_code, result = self.runner.run_determinism(self.root)

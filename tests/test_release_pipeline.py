@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Release pipeline scheduling tests -- fake runner, no real subprocess.
+"""Release scheduling tests plus a real pytest gate on tiny synthetic projects.
 
 Tests step ordering, failure handling, six-point assertions.
 Does NOT call release.py CLI (anti-recursion design).
 """
 import hashlib
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -16,7 +17,7 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-from release import compute_tree_digest, PIPELINE_STEPS, run_pipeline, StepRunner, Pipeline
+from release import compute_tree_digest, PIPELINE_STEPS, run_pipeline, StepRunner, Pipeline, REPORT_SCOPE, TEST_PATHS
 
 
 def bundle_report():
@@ -41,6 +42,14 @@ def determinism_report():
             "sorting_guard_negative_test": {"exit_code": 1, "detected": True, "failed_check_ids": ["synthetic_guard"]}}
 
 
+def pytest_report():
+    return {"scope": REPORT_SCOPE, "test_paths": list(TEST_PATHS), "exit_code": 0,
+            "tests_collected": 182, "tests_run": 182, "tests_passed": 182,
+            "tests_failed": 0, "tests_skipped": 0, "tests_errors": 0,
+            "collection_errors": 0, "deselected": 0,
+            "collected_by_path": {"tests": 180, "tools/oncall": 2}}
+
+
 # ---------------------------------------------------------------------------
 # Fake runner -- returns preset results, creates minimal real ZIP for unpack
 # ---------------------------------------------------------------------------
@@ -61,10 +70,10 @@ class FakeRunner:
         default = (0, bundle_report())
         return self.overrides.get("validate_bundle", default)
 
-    def run_unittest(self, root):
-        self.calls.append(("unittest", str(root)))
-        default = (0, "Ran 182 tests\nOK", "")
-        return self.overrides.get("unittest", default)
+    def run_pytest(self, root):
+        self.calls.append(("pytest", str(root)))
+        default = (0, pytest_report(), "182 passed", "")
+        return self.overrides.get("pytest", default)
 
     def run_determinism(self, root):
         self.calls.append(("determinism", str(root)))
@@ -257,15 +266,15 @@ class ReleasePipelineTests(unittest.TestCase):
                           expected_error_contains="digest mismatch", before_digest=before)
 
     def test_05_test_failure_aborts(self):
-        """Step 4 fails: unittest returns non-zero exit."""
+        """Step 4 fails: pytest returns non-zero exit, even with a success report."""
         before = compute_tree_digest(self.root)
-        runner = FakeRunner(unittest=(1, "Ran 182 tests\nFAILED", "assertion error"))
+        runner = FakeRunner(pytest=(1, pytest_report(), "", "assertion error"))
 
         result = run_pipeline(self.root, runner=runner)
 
         self.assertFalse(result["ok"])
         assert_six_points(self, result, self.root, "tests",
-                          expected_error_contains="unittest", before_digest=before)
+                          expected_error_contains="pytest", before_digest=before)
 
     def test_06_determinism_failure_aborts(self):
         """Step 5 fails: determinism check returns pass=false."""
@@ -350,13 +359,21 @@ class ReleasePipelineTests(unittest.TestCase):
                 assert_six_points(self, result, root, "input_consistency", "invalid report")
 
     def test_13_exit_zero_without_nonzero_test_success_is_rejected(self):
-        for summary in ("", "OK", "Ran 0 tests\nOK", "Ran 2 tests\nOK (skipped=2)",
-                        "Ran 2 tests\nFAILED\nOK", "Ran 2 tests\nOK\nRan 3 tests\nOK"):
-            with self.subTest(summary=summary), tempfile.TemporaryDirectory() as td:
+        invalid = [None, {}, [], {**pytest_report(), "scope": "WRONG"}]
+        mutations = [{"tests_run": 0}, {"tests_collected": 183}, {"tests_passed": True},
+                     {"tests_failed": 1}, {"tests_errors": 1}, {"collection_errors": 1},
+                     {"deselected": 1}, {"exit_code": 1}, {"tests_skipped": -1},
+                     {"tests_passed": 0, "tests_skipped": 182}, {"tests_passed": 181},
+                     {"test_paths": ["tests"]}, {"collected_by_path": {"tests": 182}},
+                     {"collected_by_path": {"tests": 182, "tools/oncall": 0}},
+                     {"collected_by_path": {"tests": 181, "tools/oncall": 2}}]
+        invalid += [{**pytest_report(), **mutation} for mutation in mutations]
+        for report in invalid:
+            with self.subTest(report=report), tempfile.TemporaryDirectory() as td:
                 root = make_minimal_project(Path(td) / "project")
-                result = run_pipeline(root, runner=FakeRunner(unittest=(0, "", summary)))
+                result = run_pipeline(root, runner=FakeRunner(pytest=(0, report, "182 passed", "")))
                 self.assertFalse(result["ok"])
-                assert_six_points(self, result, root, "tests", "unittest")
+                assert_six_points(self, result, root, "tests", "pytest")
 
     def test_14_determinism_report_must_prove_nonzero_checks(self):
         for mutation in ({"checked_files": 0}, {"hashes": {}}, {"validation_exit_codes": [0, 1, 0]},
@@ -442,6 +459,99 @@ class ReleasePipelineTests(unittest.TestCase):
         (self.root / "validation.tmp.txt").write_text("temporary")
         (self.root / "cache.pyc").write_bytes(b"temporary")
         self.assertEqual(compute_tree_digest(self.root), before)
+
+
+class RealPytestGateTests(unittest.TestCase):
+    """Only run tiny fixtures; never run the full release CLI from a test."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = make_minimal_project(Path(self.tmp.name) / "project")
+        (self.root / "tests").mkdir()
+        (self.root / "tools/oncall").mkdir(parents=True)
+        self.tests = self.root / "tests/test_synthetic.py"
+        self.oncall = self.root / "tools/oncall/test_synthetic_oncall.py"
+        self.tests.write_text("import unittest\nclass Baseline(unittest.TestCase):\n"
+                              "    def test_baseline(self):\n        self.assertTrue(True)\n"
+                              "def test_pytest_function():\n    assert True\n")
+        self.oncall.write_text("def test_oncall():\n    assert True\n")
+
+    def assert_pipeline_blocks(self):
+        class RealTestsRunner(FakeRunner):
+            def run_pytest(self, root):
+                return StepRunner().run_pytest(root)
+        before = compute_tree_digest(self.root)
+        runner = RealTestsRunner()
+        result = run_pipeline(self.root, runner=runner)
+        assert_six_points(self, result, self.root, "tests", "pytest", before)
+        self.assertEqual([c[0] for c in runner.calls], ["validate_bundle"])
+
+    def test_pytest_function_failure_blocks_pipeline(self):
+        self.tests.write_text(self.tests.read_text(encoding="utf-8").replace("assert True", "assert False"))
+        self.assert_pipeline_blocks()
+
+    def test_oncall_failure_blocks_pipeline(self):
+        self.oncall.write_text("def test_oncall():\n    assert False\n")
+        self.assert_pipeline_blocks()
+
+    def test_success_counts_unittest_functions_parameters_and_skips(self):
+        with self.tests.open("a") as stream:
+            stream.write("\nimport pytest\n@pytest.mark.parametrize('value', [1, 2])\n"
+                         "def test_parameters(value):\n    assert value > 0\n"
+                         "@pytest.mark.skip(reason='synthetic')\ndef test_skip():\n    pass\n")
+        result = Pipeline(self.root)._step_tests()
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(result["tests_collected"], 6)
+        self.assertEqual(result["tests_run"], 6)
+        self.assertEqual(result["tests_passed"], 5)
+        self.assertEqual(result["tests_skipped"], 1)
+        self.assertEqual(result["collected_by_path"], {"tests": 5, "tools/oncall": 1})
+
+    def test_external_and_project_addopts_cannot_hide_failure(self):
+        self.tests.write_text(self.tests.read_text(encoding="utf-8").replace("assert True", "assert False"))
+        (self.root / "pytest.ini").write_text("[pytest]\naddopts = -k baseline\n")
+        with patch.dict(os.environ, {"PYTEST_ADDOPTS": "--collect-only -k baseline"}):
+            self.assert_pipeline_blocks()
+
+    def test_empty_missing_skipped_and_deselected_scopes_block(self):
+        for scenario in ("empty", "missing", "skipped", "deselected"):
+            with self.subTest(scenario=scenario):
+                if scenario == "missing":
+                    self.oncall.parent.rename(self.root / "tools/renamed-oncall")
+                elif scenario == "skipped":
+                    (self.root / "tools/renamed-oncall").rename(self.oncall.parent)
+                    code = "import pytest\n@pytest.mark.skip(reason='synthetic')\ndef test_skip(): pass\n"
+                    self.tests.write_text(code)
+                    self.oncall.write_text(code)
+                elif scenario == "deselected":
+                    self.tests.write_text("def test_first(): pass\ndef test_second(): pass\n")
+                    self.oncall.write_text("def test_oncall(): pass\n")
+                    (self.root / "conftest.py").write_text(
+                        "def pytest_collection_modifyitems(items, config):\n"
+                        "    config.hook.pytest_deselected(items=items[:1])\n    del items[:1]\n")
+                else:
+                    self.oncall.write_text("# No test cases\n")
+                self.assert_pipeline_blocks()
+
+    def test_collection_setup_teardown_and_subtest_failures_are_counted(self):
+        cases = {
+            "collection_errors": "raise RuntimeError('synthetic collection error')\n",
+            "setup": "import pytest\n@pytest.fixture(autouse=True)\ndef fail():\n"
+                     "    raise RuntimeError('synthetic setup error')\ndef test_case(): pass\n",
+            "teardown": "import pytest\n@pytest.fixture(autouse=True)\ndef fail():\n"
+                        "    yield\n    raise RuntimeError('synthetic teardown error')\ndef test_case(): pass\n",
+            "subtest": "import unittest\nclass Example(unittest.TestCase):\n"
+                       "    def test_case(self):\n        with self.subTest(value=1):\n"
+                       "            self.assertTrue(False)\n"}
+        for scenario, code in cases.items():
+            with self.subTest(scenario=scenario):
+                self.tests.write_text(code)
+                status, report, _, _ = StepRunner().run_pytest(self.root)
+                self.assertNotEqual(status, 0)
+                field = "collection_errors" if scenario == "collection_errors" else (
+                    "tests_failed" if scenario == "subtest" else "tests_errors")
+                self.assertGreater(report[field], 0, report)
 
 
 if __name__ == "__main__":

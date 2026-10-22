@@ -138,6 +138,117 @@ class AcceptanceTests(unittest.TestCase):
         lead[-1] = message("合成模型分析：400 connect ECONNREFUSED /synthetic/pac.sock")
         self.assertEqual(self.run_audit("formal", lead=lead)["result"], "PASS")
 
+    def test_terminal_host_error_blocks_after_earlier_output(self):
+        for location in ("lead", "member"):
+            for text in ("synthetic host connection error", ""):
+                with self.subTest(location=location, text=text):
+                    lead, member = fixture_rows()
+                    failed = lead if location == "lead" else member
+                    failed.append({**message(text), "status": "incomplete",
+                                   "providerData": {"skipRun": True, "error": {"message": "synthetic"}}})
+                    result = self.run_audit(lead=lead, member=member)
+                    self.assertEqual(result["result"], "BLOCKED")
+                    self.assertEqual(result["blocked_reason"], "TERMINAL_HOST_ERROR")
+                    self.assertFalse(result["critical_failure"])
+                    self.assertFalse(result["checks"]["records_complete"])
+                    projected = result["lead"] if location == "lead" else result["members"][0]
+                    self.assertFalse(projected["complete"])
+                    self.assertEqual(projected["events"][-1]["type"], "host_error")
+
+    def test_later_text_cannot_auto_certify_recovery_from_host_error(self):
+        lead, _ = fixture_rows("formal")
+        lead.insert(-1, {**message("synthetic interrupted attempt"), "status": "incomplete",
+                         "providerData": {"error": {"message": "synthetic"}}})
+        result = self.run_audit("formal", lead=lead)
+        self.assertEqual(result["result"], "BLOCKED")
+        self.assertEqual(result["blocked_reason"], "HOST_ERROR_REQUIRES_ATTEMPT_REVIEW")
+        self.assertTrue(result["lead"]["complete"])
+
+    def test_missing_invalid_and_reused_call_ids_cannot_hide_extra_tools(self):
+        for mode in ("valid", "missing", "null", "empty", "blank", "number", "list", "object", "reused"):
+            with self.subTest(mode=mode):
+                lead, _ = fixture_rows("formal")
+                lead[-1:-1] = [event("function_call", "Bash", {"command": "echo SYNTHETIC-EXTRA"}),
+                               event("function_call_result", "Bash", output="Exit Code: 0")]
+                for row in lead:
+                    if row["type"] not in ("function_call", "function_call_result"):
+                        continue
+                    if mode == "missing":
+                        del row["callId"]
+                    elif mode != "valid":
+                        row["callId"] = {"null": None, "empty": "", "blank": "  ", "number": 42,
+                                         "list": [], "object": {}, "reused": "one-id"}[mode]
+                result = self.run_audit("formal", lead=lead)
+                self.assertEqual(result["result"], "FAIL")
+                self.assertIn("lead_sequence", result["critical_findings"])
+                self.assertEqual([e["name"] for e in result["lead"]["events"]
+                                  if e["type"] == "function_call"], ["Skill", "Bash"])
+                if mode != "valid":
+                    self.assertIn("parse_valid", result["critical_findings"])
+                    self.assertTrue(result["lead"]["parse_errors"])
+
+    def test_identical_tool_events_deduplicate_without_false_failure(self):
+        lead, _ = fixture_rows("formal")
+        repeated = copy.deepcopy(lead[1:3])
+        for row in repeated:
+            row["timestamp"] += 1
+        # JSON whitespace/key order is not an argument change.
+        repeated[0]["arguments"] = json.loads(repeated[0]["arguments"])
+        lead[3:3] = repeated
+        result = self.run_audit("formal", lead=lead)
+        self.assertEqual(result["result"], "PASS")
+        self.assertFalse(result["lead"]["parse_errors"])
+        self.assertEqual(sum(e["type"].startswith("function_call") for e in result["lead"]["events"]), 2)
+
+    def test_same_id_conflicting_tool_arguments_result_and_status_fail(self):
+        for mutation in ("tool", "arguments", "output", "structured_output", "status", "invalid_arguments"):
+            with self.subTest(mutation=mutation):
+                lead, _ = fixture_rows("formal")
+                index = 2 if mutation in ("output", "structured_output") else 1
+                duplicate = copy.deepcopy(lead[index])
+                if mutation == "tool":
+                    duplicate["name"] = "Bash"
+                elif mutation == "arguments":
+                    duplicate["arguments"] = json.dumps({"skill": "changed"})
+                elif mutation == "invalid_arguments":
+                    duplicate["arguments"] = "{malformed"
+                elif mutation == "output":
+                    duplicate["output"] = {"type": "text", "text": "changed receipt"}
+                elif mutation == "structured_output":
+                    # Same visible text, different raw result must not collapse.
+                    duplicate["output"]["extra"] = "changed result metadata"
+                else:
+                    duplicate["status"] = "incomplete"
+                lead.insert(index + 1, duplicate)
+                result = self.run_audit("formal", lead=lead)
+                self.assertEqual(result["result"], "FAIL")
+                self.assertIn("parse_valid", result["critical_findings"])
+                self.assertTrue(any("first_line" in e for e in result["lead"]["parse_errors"]))
+                self.assertEqual(sum(e["type"] == duplicate["type"] for e in result["lead"]["events"]), 2)
+
+    def test_matching_call_id_with_wrong_result_tool_fails(self):
+        lead, _ = fixture_rows("formal")
+        lead[2]["name"] = "Bash"
+        result = self.run_audit("formal", lead=lead)
+        self.assertEqual(result["result"], "FAIL")
+        self.assertIn("parse_valid", result["critical_findings"])
+        self.assertTrue(any("tool names differ" in e["error"] for e in result["lead"]["parse_errors"]))
+
+    def test_invalid_call_ids_in_knowledge_queries_fail_without_crashing(self):
+        config = {"python": "/synthetic/python", "root": str(self.root), "allowed_read_dirs": ["wiki"]}
+        command = f"'/synthetic/python' -X utf8 '{self.root}/scripts/kb_search_zh.py' '订单' --top 5"
+        for invalid_id in ([], {}, None):
+            with self.subTest(call_id=invalid_id):
+                lead, _ = fixture_rows("KB")
+                query = event("function_call", "Bash", {"command": command})
+                returned = event("function_call_result", "Bash", output="Exit Code: 0")
+                query["callId"] = returned["callId"] = invalid_id
+                lead[-1:-1] = [query, returned]
+                result = self.run_audit("KB", lead=lead, spec={**base_spec("KB"),
+                                        "knowledge_config": config, "keywords": ["订单"]})
+                self.assertEqual(result["result"], "FAIL")
+                self.assertIn("parse_valid", result["critical_findings"])
+
     def test_real_skill_receipt_is_distinct_from_terminal_execution_claim(self):
         lead, _ = fixture_rows("formal")
         lead[-1] = message("仅执行了一次宿主 Skill 工具加载，基于真实回执核对。")

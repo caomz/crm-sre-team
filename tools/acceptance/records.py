@@ -45,7 +45,7 @@ def project(path: Path) -> dict:
               "events": [], "inputs": [], "models": [], "agents": [],
               "parse_errors": [], "usage": {"prompt_tokens": 0, "completion_tokens": 0,
                                             "total_tokens": 0, "credit": 0}, "usage_rows": 0}
-    models, agents, timestamps, seen_events, seen_usage = set(), set(), [], set(), set()
+    models, agents, timestamps, seen_events, seen_usage = set(), set(), [], {}, set()
     for number, raw in enumerate(data.decode("utf-8").splitlines(), 1):
         if not raw.strip():
             continue
@@ -79,12 +79,14 @@ def project(path: Path) -> dict:
             agents.add(row["agent"])
         kind = row.get("type")
         if kind in ("function_call", "function_call_result"):
-            identity = (kind, row.get("callId"))
-            if identity in seen_events:
-                continue
-            seen_events.add(identity)
             event = {k: row[k] for k in ("type", "name", "callId", "status", "timestamp") if k in row}
             event["line"] = number
+            call_id = row.get("callId")
+            valid_id = isinstance(call_id, str) and bool(call_id.strip())
+            if not valid_id:
+                result["parse_errors"].append({"line": number, "error": "callId must be a nonempty string"})
+            if not isinstance(row.get("name"), str) or not row["name"].strip():
+                result["parse_errors"].append({"line": number, "error": "tool name must be a nonempty string"})
             if kind == "function_call":
                 try:
                     args = row.get("arguments", {})
@@ -96,6 +98,22 @@ def project(path: Path) -> dict:
                     result["parse_errors"].append({"line": number, "error": str(exc)})
             else:
                 event["output"] = visible(row.get("output"))
+            if valid_id:
+                identity = (kind, call_id)
+                payload = {k: v for k, v in event.items() if k not in ("line", "timestamp")}
+                if kind == "function_call_result":
+                    # Compare the full result, even when its visible projection is empty.
+                    payload["output"] = row.get("output")
+                signature = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+                prior = seen_events.get(identity)
+                if prior is not None:
+                    if signature == prior[0]:
+                        continue
+                    result["parse_errors"].append({"line": number, "first_line": prior[1],
+                                                   "error": "conflicting event for the same type and callId"})
+                else:
+                    seen_events[identity] = (signature, number)
+            # Invalid IDs and conflicting duplicates remain visible for review.
             result["events"].append(event)
         elif kind == "message":
             content = row.get("content", [])
@@ -104,11 +122,11 @@ def project(path: Path) -> dict:
             if row.get("role") == "assistant":
                 text = "\n".join(c.get("text", "") for c in content
                                  if isinstance(c, dict) and c.get("type") == "output_text")
-                if text:
-                    # The host writes connection errors in assistant-shaped rows.
-                    # Metadata, not error words quoted by a model, identifies them.
-                    host_error = isinstance(provider, dict) and bool(provider.get("error")) and (
-                        provider.get("skipRun") is True or row.get("status") == "incomplete")
+                # The host can write errors with no visible text. Metadata, not
+                # error words quoted by a model, identifies these rows.
+                host_error = isinstance(provider, dict) and bool(provider.get("error")) and (
+                    provider.get("skipRun") is True or row.get("status") == "incomplete")
+                if text or host_error:
                     result["events"].append({"type": "host_error" if host_error else "assistant_output",
                                              "line": number, "text": text})
             elif row.get("role") == "user":
@@ -117,13 +135,23 @@ def project(path: Path) -> dict:
                 result["inputs"].append({"line": number, "text": text})
     calls = [e for e in result["events"] if e["type"] == "function_call"]
     returns = [e for e in result["events"] if e["type"] == "function_call_result"]
-    call_ids, return_ids = {e.get("callId") for e in calls}, {e.get("callId") for e in returns}
+    valid_calls = {e["callId"]: e for e in calls
+                   if isinstance(e.get("callId"), str) and e["callId"].strip()}
+    valid_returns = {e["callId"]: e for e in returns
+                     if isinstance(e.get("callId"), str) and e["callId"].strip()}
+    call_ids, return_ids = set(valid_calls), set(valid_returns)
+    for call_id in sorted(call_ids & return_ids):
+        call, returned = valid_calls[call_id], valid_returns[call_id]
+        if call.get("name") != returned.get("name"):
+            result["parse_errors"].append({"line": returned["line"], "first_line": call["line"],
+                                           "error": "call and result tool names differ for the same callId"})
     result.update(models=sorted(models), agents=sorted(agents),
                   unpaired_calls=sorted(call_ids - return_ids, key=str),
                   unpaired_returns=sorted(return_ids - call_ids, key=str),
                   duration_seconds=(max(timestamps) - min(timestamps)) / 1000 if timestamps else None)
-    result["complete"] = bool(result["events"] and result["events"][-1]["type"] in ("assistant_output", "host_error")
-                              and not result["unpaired_calls"] and not result["unpaired_returns"])
+    result["complete"] = bool(result["events"] and result["events"][-1]["type"] == "assistant_output"
+                              and not result["parse_errors"] and not result["unpaired_calls"]
+                              and not result["unpaired_returns"])
     return result
 
 

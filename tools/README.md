@@ -8,6 +8,7 @@
 - check_thinking_tools.py：课程分工及原契约/窄范围变更指纹保护。
 - check_determinism.py：临时副本中重建、重复/反向目录遍历校验和排序守卫负例。
 - build_release.py / validate_release.py / release_rules.py：共享准确文件白名单，原子确定性 ZIP 与严格安全/内容检查。
+- release.py：发布流水线与独立 pytest 测试门；完整开发仓库内执行 tests/ 和 tools/oncall/，检查结构化计数，测试子进程不递归调用流水线。
 - check_release_diff.py：对真实原上传 2.5.0 基线检查旧 Schema/测试保护和允许的源码差异；支持 --output。
 - sync_git.py：工作区与 origin 双向同步计划器。默认 dry-run；写入需 --apply 加 plan_id 确认；只改项目根内文件，拒绝越界路径与符号链接；构建自有产物（agents/skills/templates/manual-mode/individual-packages/prompt-bundles.lock）不按文件同步；每次写入记入 reports/sync-ledger-*.jsonl，中途失败回滚。不授予任何权限，不改生产只读边界。
 - install_git_hooks.py：设置/卸载 core.hooksPath=tools/git-hooks（提交前重建门），幂等。
