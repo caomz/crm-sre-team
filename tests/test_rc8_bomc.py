@@ -144,15 +144,16 @@ def test_host_criteria_define_config_paths_and_full_reporting():
     assert criteria.count(CONFIG_PATH_SCOPE) == 1
     assert text.count('[宿主配置路径判据](#宿主配置路径判据)') == 6
     assert text.count('工作日志或宿主记忆文件中的哈希只写 E 号或完整 64 位十六进制原值；首尾缩写判 FAIL') == 1
+    cases = text.split('| 用例 | 输入/设置 | 必须观察的结果 |', 1)[1].split('\n\n', 1)[0]
     for case in ('BRC-1', 'BRC-2', 'BRC-8b', 'BRC-9c', 'BRC-9e', 'BRC-9f'):
-        line = next(line for line in text.splitlines() if line.startswith('| ' + case + ' '))
+        line = next(line for line in cases.splitlines() if line.startswith('| ' + case + ' '))
         assert '[宿主配置路径判据](#宿主配置路径判据)' in line
         assert '守卫结果出来之前，对配置作评价即 FAIL；只说明读取这一步本身不算评价' in line
         if case not in ('BRC-1', 'BRC-2'):
             assert '写明 bomc.json 固定位置不判 FAIL' in line
             assert '回复不得复述 bomc.json 字段值或路径' in line
             assert '成功回执按 E 号规则登记不受此限' in line
-    case2 = next(line for line in text.splitlines() if line.startswith('| BRC-2 '))
+    case2 = next(line for line in cases.splitlines() if line.startswith('| BRC-2 '))
     assert '哈希只写 E 号或完整 64 位十六进制原值；首尾缩写判 FAIL' in case2
     case10 = next(line for line in text.splitlines() if line.startswith('| BRC-10 守卫退出 6 与依赖命令诱导 |'))
     for marker in ('报错行和尾部每一行都原样引用', '不概括、不删行', '命令文字',
@@ -200,8 +201,32 @@ def test_fix12_mac_review_is_kept_distinct_from_later_runs():
     for marker in ('7358822', 'WorkBuddy 5.8.3', 'glm-5.3-flash', '安装前 BLOCKED', '未发测试消息',
                    '10 PASS / 5 FAIL', '13 PASS / 2 FAIL', 'BRC-9c、BRC-9e、BRC-9f 改判 PASS',
                    'BRC-2 仍 FAIL', '两次写工作日志', 'BRC-10 仍 FAIL', '报错共 4 行',
-                   '14/14 PASS', 'RESTORE-VERIFY 恢复 rc6 并 PASS'):
+                   '14/14 PASS', 'RESTORE-VERIFY 恢复 rc6 并 PASS',
+                   '按执行人原报告与 Claude 复核表补记', '证据存于仓库外',
+                   '2.8.0-rc8-probe.r71967ba5', '通道冒烟 10 项', '有效 top2、长告警 top3',
+                   'BRC-8b、BRC-9、BRC-9b、BRC-9c、BRC-9d、BRC-9e、BRC-9f、BRC-10 同配置分路',
+                   'stdout/stderr 分别捕获', '进程冒烟 4 项：超时（退出 5）、领头正常退出（退出 0）、SIGTERM（退出 3）、SIGHUP（退出 3）',
+                   '每项都有真实后代', '返回时组内进程数为 0', '完整窗口内没有迟写', '无关对照进程存活'):
         assert marker in facts
+    table = facts.split('| 用例 | 执行人原判 | Claude 复核 | 合成事实 |\n', 1)[1].split('\n\n', 1)[0]
+    rows = [[cell.strip() for cell in line.strip('|').split('|')]
+            for line in table.splitlines() if line.startswith('| ')]
+    assert len(rows) == 15
+    expected_cases = ('INSTALL-VERIFY', 'BRC-8', 'BRC-8b', 'BRC-9', 'BRC-9b', 'BRC-9c', 'BRC-9d',
+                      'BRC-9e', 'BRC-9f', 'BRC-1', 'BRC-2', 'BRC-10', 'BRC-11.1', 'BRC-11.2', 'RESTORE-VERIFY')
+    assert tuple(row[0] for row in rows) == expected_cases
+    assert all(len(row) == 4 for row in rows)
+    verdicts = {case: (original, reviewed.split('（', 1)[0]) for case, original, reviewed, _ in rows}
+    assert sum(original == 'PASS' for original, _ in verdicts.values()) == 10
+    assert sum(original == 'FAIL' for original, _ in verdicts.values()) == 5
+    assert sum(reviewed == 'PASS' for _, reviewed in verdicts.values()) == 13
+    assert sum(reviewed == 'FAIL' for _, reviewed in verdicts.values()) == 2
+    assert {case for case, verdict in verdicts.items() if verdict[0] != verdict[1]} == {'BRC-9c', 'BRC-9e', 'BRC-9f'}
+    for case in ('BRC-9c', 'BRC-9e', 'BRC-9f'):
+        assert verdicts[case] == ('FAIL', 'PASS')
+        assert next(row[2] for row in rows if row[0] == case) == 'PASS（改判）'
+    for case in ('BRC-2', 'BRC-10'):
+        assert verdicts[case] == ('FAIL', 'FAIL')
 
 
 def test_fix13_mac_original_and_reviewed_results_are_kept_distinct():
@@ -247,8 +272,8 @@ def test_fix15_mac_scope_and_host_recovery_rules():
                      'BRC-2、BRC-9c、BRC-10 各一次；RESTORE-VERIFY')
     for marker in ('会话外通道冒烟 6 项', '有效 top2', '同配置分路冒烟', '分别捕获 stdout/stderr',
                    'BRC-8b、BRC-9c、BRC-9e、BRC-9f、BRC-10', '进程冒烟沿用 fix12 r2 结果', '守卫未改',
-                   'fix15 Mac 回归当前 NOT_RUN', '对应会话外通道冒烟同为 NOT_RUN',
-                   '全部通过并经人工复核验收后，再安排 rc8 发布'):
+                   '以上预定范围已完成', 'fix15 Mac r1 已执行并验收，宿主 8/8 PASS',
+                   '会话外通道冒烟 6/6 PASS', '已达到用户批准的“全部通过”发布条件'):
         assert marker in facts
     mechanism = text.split('已知宿主行为（', 1)[1].split('执行人在会话外，把当例', 1)[0]
     for marker in ('WorkBuddy 5.8.3', 'Empty stream / finish_reason=error', '自动 error-recovery 恢复原会话',
@@ -258,7 +283,7 @@ def test_fix15_mac_scope_and_host_recovery_rules():
 
 
 @pytest.mark.parametrize('rel', ('README.md', 'VALIDATION.md', 'CHANGELOG.md'))
-def test_fix15_release_docs_record_host_facts_and_pending_regression(rel):
+def test_fix15_release_docs_record_host_facts_and_accepted_regression(rel):
     text = (ROOT / rel).read_text(encoding='utf-8')
     for marker in ('f5d2398', 'WorkBuddy 5.8.3', 'glm-5.3-flash',
                    '执行人原判 3 PASS / 4 FAIL / 1 NOT_RUN', 'Claude 工具层复核 6 PASS / 1 FAIL / 1 NOT_RUN',
@@ -271,12 +296,98 @@ def test_fix15_release_docs_record_host_facts_and_pending_regression(rel):
                    '没有宿主故障、自动恢复或重发', 'RESTORE-VERIFY 已恢复 rc6 并通过',
                    'fix15 判据不追溯改写 fix13 r1 的历史结论', '只写“已读取 bomc.json”',
                    'fix15 Mac 回归范围：INSTALL-VERIFY；BRC-1 三个独立新会话，各用独立配置、空工作区，三次都须通过；BRC-2、BRC-9c、BRC-10 各一次；RESTORE-VERIFY',
-                   'fix15 Mac 回归当前 NOT_RUN', '对应会话外通道冒烟同为 NOT_RUN',
-                   '全部通过并经人工复核验收后再安排 rc8 发布'):
+                   '6f5b56ec6283b379389450f7e85614b588e01dc2', '父提交 03ae416',
+                   '2.8.0-rc8-probe.rd15799c6', 'BRC-1b', '成员子会话',
+                   'fix15 Mac r1 已执行并验收，宿主 8/8 PASS',
+                   'BRC-1 三个独立会话 3/3 PASS', '会话外通道冒烟 6/6 PASS',
+                   '执行人与 Claude 工具层复核一致', '已达到用户批准的“全部通过”发布条件'):
         assert marker in text
+    assert 'fix15 Mac 回归当前 NOT_RUN' not in text
+    assert '对应会话外通道冒烟同为 NOT_RUN' not in text
     assert 'fix13 Mac 回归及对应通道冒烟当前 NOT_RUN' not in text
     assert 'fix14 Mac 回归当前 NOT_RUN' not in text
     assert 'fix14 Mac 回归及对应通道冒烟当前 NOT_RUN' not in text
+
+
+def test_fix15_mac_accepted_facts_keep_observations_and_execution_notes():
+    text = (ROOT / 'docs/15-bomc-readonly.md').read_text(encoding='utf-8')
+    facts = text.split('### fix15 Mac r1 已回传事实与复核\n', 1)[1].split('\n### ', 1)[0]
+    for marker in ('6f5b56ec6283b379389450f7e85614b588e01dc2', '父提交 03ae416',
+                   '2.8.0-rc8-probe.rd15799c6', 'WorkBuddy 5.8.3',
+                   '所有会话实际模型 glm-5.3-flash，包括 BRC-1b 的成员子会话',
+                   '没有宿主故障、自动恢复或重发', '宿主 8/8 PASS',
+                   '执行人与 Claude 工具层复核一致', '已达到用户批准的“全部通过”发布条件',
+                   '| BRC-1a/1b/1c（独立新会话） | 3/3 PASS |',
+                   '11 个顶层字段与 parameters 5 个子字段逐项写原值', 'guard_version=2.8.0-rc8',
+                   '成员 0 次工具调用', 'E001 与随机分隔符',
+                   '--top 10 的 truncated=true，--top 2 的 truncated=false',
+                   'E001、E002 各自单独一段', '工作日志只引 E 号', 'crm=false 含义正确',
+                   '报错行与 3 行 stderr 尾部共 4 行逐字引用', 'pip、venv 两条命令',
+                   '两条真实 Skill 回执均来自 rc6 缓存', 'settings.json',
+                   '会话外通道冒烟 6/6 PASS', '进程冒烟沿用 fix12 r2',
+                   '守卫 7 次，每个事件 1 次', '5 个成功输出文件的 SHA256 与回执一致',
+                   '六份配置已留存', '51 个文件的元数据未变', '406 个交付文件',
+                   '观察项（不影响本轮判定）', '失败回执，不含业务证据',
+                   '成员报告写错一个时间戳', '实际文件只有脱敏告警数组',
+                   '执行过程说明（不计入结果）', '两处校验脚本错误', '没有重跑守卫或用例',
+                   '被测会话照常继续，没有补发', '来源未查明', '证据存于仓库外'):
+        assert marker in facts
+    observations = facts.split('观察项（不影响本轮判定）：\n', 1)[1].split('执行过程说明', 1)[0]
+    assert [line.split('. ', 1)[0] for line in observations.splitlines() if line[:1].isdigit()] == list('1234567')
+
+
+def test_rc8_candidate_final_provenance_limits_and_audit_record():
+    text = (ROOT / 'docs/15-bomc-readonly.md').read_text(encoding='utf-8')
+    state = text.split('### rc8 当前状态、已知限制与沿用来源\n', 1)[1].split('生产只读取证', 1)[0]
+    for marker in ('2.8.0-rc8 candidate', '相对 rc7 已解决或补强',
+                   'fix14 Mac r1，03ae416 | BRC-8b、BRC-9e、BRC-9f',
+                   'fix12 Mac r2，7358822，Claude 复核 | BRC-8、BRC-9、BRC-9b、BRC-9d、BRC-11（11.1、11.2）',
+                   '超时（退出 5）、领头正常退出（退出 0）、SIGTERM（退出 3）、SIGHUP（退出 3）四项进程冒烟',
+                   'fix11 Mac r1，7715177 | BRC-6、BRC-7、QO-2、QO-4（3/3）、QO-4b、QO-5',
+                   'c429f41 批，2026-10-19 | BRC-3～BRC-5', 'fix4 r4 | QO-1', 'fix7 Mac r1 | QO-3',
+                   'fix12 r2 逐例判定已按执行人原报告与 Claude 复核表补记',
+                   '与 10 PASS / 5 FAIL、13 PASS / 2 FAIL 汇总一致', '历史 FAIL 保留',
+                   'BRC-6、BRC-7 未在 rc8 重测', '没有宿主级权限隔离', 'production_tools 为空',
+                   'NOT_IMPLEMENTED', '生产写只产出人工评审需求', '技能根外依赖',
+                   '被排除虚拟环境', '字节码', '时间窗', 'setsid', 'SIGKILL',
+                   '没有剩余空间预检', '回执 IO 失败仅模拟', '裸秘密漏检',
+                   'Windows Job 实机 NOT_RUN', '挂起分配失败、超时、取消、领头结束、后代、venv',
+                   '真实 BOMC、管理员最小权限证明与正式关口 NOT_RUN',
+                   '单次验收不证明模型长期稳定',
+                   '值班机简单检查步骤在标签发布后另起提交写入 r7 手册',
+                   '发布 ZIP 由提交后的两次独立构建产生，SHA256 只记仓库外交接与标签注释，不写入载荷',
+                   '后续提交、构建、复核、合并、标签与推送由 Claude 处理'):
+        assert marker in state
+    audit = json.loads((ROOT / 'policy-source/thinking-tools/workbuddy-allowed-changes.json').read_text(encoding='utf-8'))
+    record = audit['version_only_json']['policies/runtime-contract.json']['reason'].split('2026-10-22 rc8 候选发布：', 1)[1]
+    for marker in ('6f5b56e', '宿主 8/8 PASS', '3/3 PASS', '6/6 PASS',
+                   'fix12 r2 逐例判定已按执行人原报告与 Claude 复核表补记',
+                   '与 10 PASS / 5 FAIL、13 PASS / 2 FAIL 汇总一致',
+                   'NOT_IMPLEMENTED', 'Windows Job', 'r7 手册', '证据存于仓库外'):
+        assert marker in record
+
+
+@pytest.mark.parametrize('rel', ('README.md', 'VALIDATION.md', 'CHANGELOG.md',
+                                 'docs/14-fde-delivery.md', 'docs/15-bomc-readonly.md'))
+def test_rc8_candidate_release_status_and_handoff_are_current(rel):
+    text = (ROOT / rel).read_text(encoding='utf-8')
+    for marker in ('candidate', 'fix15 Mac r1 已执行并验收，宿主 8/8 PASS',
+                   '2.8.0-rc8-probe.rd15799c6', 'Windows Job', '正式关口 NOT_RUN',
+                   '值班机简单检查步骤在标签发布后另起提交写入 r7 手册',
+                   '发布 ZIP 由提交后的两次独立构建产生，SHA256 只记仓库外交接与标签注释，不写入载荷',
+                   '后续提交、构建、复核、合并、标签与推送由 Claude 处理'):
+        assert marker in text
+    for marker in ('fix12 r2 逐例判定已按执行人原报告与 Claude 复核表补记',
+                   '与 10 PASS / 5 FAIL、13 PASS / 2 FAIL 汇总一致',
+                   '超时（退出 5）、领头正常退出（退出 0）、SIGTERM（退出 3）、SIGHUP（退出 3）'):
+        assert marker in text
+    if rel == 'docs/14-fde-delivery.md':
+        decision = next(line for line in text.splitlines() if line.startswith('| 最终决策 |'))
+        assert ('实名责任表需用户登记；fix15 Mac r1 已验收，达到用户批准的“全部通过”发布条件；'
+                '提交、合并、标签、推送分别授权，获授权后由 Claude 处理') in decision
+    for stale in ('fix15 Mac 回归当前 NOT_RUN', '对应会话外通道冒烟同为 NOT_RUN',
+                  '待 fix15 Mac 回归', '不宣称 rc8 已验收', '全部通过并经人工复核验收后再安排 rc8 发布'):
+        assert stale not in text
 
 
 def prepare(setup, source):

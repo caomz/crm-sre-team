@@ -366,7 +366,9 @@ def test_docs_record_query_scope_observation_and_non_destructive_rollback():
     for case in range(1, 10):
         assert f"BRC-{case}" in guide
     assert "BRC-8b" in guide
-    assert "fix15 Mac 回归当前 NOT_RUN" in guide
+    assert "fix15 Mac r1 已执行并验收，宿主 8/8 PASS" in guide
+    assert "会话外通道冒烟 6/6 PASS" in guide
+    assert "2.8.0-rc8 candidate（候选发布）" in guide
     assert "不向生产发送写请求试探" in guide
     runbook = read("tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md").split("## rc6 BOMC", 1)[1]
     for phrase in ("CreateNew", "SKILL.md", "Get-FileHash", "不覆盖", "不手工写 cache", "VERIFY", "glm-5.3-flash", ".workbuddy/memory"):
@@ -375,8 +377,9 @@ def test_docs_record_query_scope_observation_and_non_destructive_rollback():
 
 def test_bomc_config_failure_host_cases_have_distinct_entry_points():
     guide = read("docs/15-bomc-readonly.md")
-    missing = next(line for line in guide.splitlines() if line.startswith("| BRC-8 "))
-    invalid = next(line for line in guide.splitlines() if line.startswith("| BRC-8b "))
+    cases = guide.split('| 用例 | 输入/设置 | 必须观察的结果 |', 1)[1].split('\n\n', 1)[0]
+    missing = next(line for line in cases.splitlines() if line.startswith("| BRC-8 "))
+    invalid = next(line for line in cases.splitlines() if line.startswith("| BRC-8b "))
     for phrase in ("会话外", "精确 bomc.json", "读取配置失败即停止这次取数", "未取得证据", "守卫 0 次",
                    "其余分析照常并写明证据缺口",
                    "不搜索替代配置", "不使用同目录其他文件", "不直调真实技能", "不改用其他取数", "恢复原名"):
@@ -393,7 +396,7 @@ def test_bomc_config_failure_host_cases_have_distinct_entry_points():
     assert "<任务目录>/bomc-cfg/missing-skill-config.json" in preparation
     assert "/tmp/" not in preparation and "/private/tmp/" not in preparation
     assert "显示栏与 stderr 通道按“宿主报错核对”处理" in preparation
-    mismatch = next(line for line in guide.splitlines() if line.startswith("| BRC-9 "))
+    mismatch = next(line for line in cases.splitlines() if line.startswith("| BRC-9 "))
     for phrase in ("退出4", "不启动子进程", "逐字核对报错原文和退出码",
                    "显示栏与 stderr 通道按“宿主报错核对”处理", "不更新哈希绕过"):
         assert phrase in mismatch
@@ -737,7 +740,8 @@ def test_direct_query_and_qo_host_cases_retain_tool_checks_and_accepted_host_sta
     guide = read('docs/15-bomc-readonly.md')
     assert checker.BOMC_EVIDENCE_RULE in guide
     assert checker.stale_bomc_evidence_errors(guide) == []
-    brc2 = next(line for line in guide.splitlines() if line.startswith('| BRC-2 '))
+    cases = guide.split('| 用例 | 输入/设置 | 必须观察的结果 |', 1)[1].split('\n\n', 1)[0]
+    brc2 = next(line for line in cases.splitlines() if line.startswith('| BRC-2 '))
     for phrase in ('合成事件甲', '合成事件乙', '两个事件均优先走守卫直接查询', '不出查询卡、不等同意',
                    '不索要额外查询授权', 'Skill', 'Read', '本身记观察项，不判 FAIL'):
         assert phrase in brc2
@@ -1090,8 +1094,9 @@ def assert_qo_host_case_contract(guide):
     sections['fix9_retest_scope'] = next((line for line in guide.splitlines() if line.startswith('fix9 的 Mac 重测范围')), '')
     sections['fix8_r1_facts'] = guide.split('### 已回传的 fix8 Mac r1 事实\n', 1)[1].split('\n### ', 1)[0]
     sections['fix7_r1_facts'] = guide.split('### 已回传的 fix7 Mac r1 事实\n', 1)[1].split('\n### ', 1)[0]
+    cases = guide.split('| 用例 | 输入/设置 | 必须观察的结果 |', 1)[1].split('\n\n', 1)[0]
     for case in ('BRC-1', 'BRC-2', 'BRC-8b', 'BRC-9b', 'BRC-9c'):
-        sections[case] = next(line for line in guide.splitlines() if line.startswith(f'| {case} '))
+        sections[case] = next(line for line in cases.splitlines() if line.startswith(f'| {case} '))
     sections['fix10_retest_scope'] = next((line for line in guide.splitlines() if line.startswith('fix10 的 Mac 重测范围')), '')
     sections['fix11_retest_scope'] = next((line for line in guide.splitlines() if line.startswith('fix11 的 Mac 重测范围')), '')
     sections['fix10_r1_facts'] = guide.split('### 已回传的 fix10 Mac r1 事实\n', 1)[1].split('\n### ', 1)[0]

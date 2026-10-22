@@ -12,7 +12,7 @@
 | 专业覆盖 | 1 名稳定性总指挥、7 名领域成员、8 个角色 Skill + 1 个团长 BOMC 只读 Skill |
 | 分析输入 | 明确授权且已脱敏的日志、指标、调用链、变更记录与业务材料 |
 | 执行边界 | 团长可经优先的 BOMC 守卫或用户级只读技能直接查询生产；成员不取数，生产写仅形成人工评审材料 |
-| 交付状态 | `2.8.0-rc8` candidate；fix14 Mac r1 执行人原判 7 PASS / 2 FAIL，Claude 工具层复核 8 PASS / 1 FAIL，BRC-1 仍 FAIL；fix15 收敛配置读取措辞与宿主判据，fix15 Mac 回归当前 NOT_RUN；Windows 11、真实 BOMC 与正式关口待测 / NOT_RUN；离线结果见 VALIDATION，历史验收保留 |
+| 交付状态 | `2.8.0-rc8` candidate；fix15 Mac r1 已执行并验收，宿主 8/8 PASS、BRC-1 三个独立会话 3/3 PASS、会话外通道冒烟 6/6 PASS，执行人与 Claude 工具层复核一致；Windows 11、真实 BOMC 与正式关口 NOT_RUN；离线结果见 VALIDATION，历史原判与复核保留 |
 
 ## 适用场景
 
@@ -208,7 +208,13 @@ fix14 Mac r1（03ae416，父提交 f5d2398，WorkBuddy 5.8.3，所有会话实�
 
 fix15 将三处配置使用句改为正面表述：守卫结果出来之前提到 bomc.json，只写“已读取 bomc.json”，不对配置作“有效”“可用”“合规”“校验通过”“在限内”等评价，配置是否有效以守卫结果为准。只取 python 路径拼固定命令、回复不复述字段值、引用命令只写参数、成功回执按 E 号登记的要求保持。docs/15 明确能力说明不算复述配置字段值，stderr 标签可在引文或引文前说明中，报错行和尾部每行仍须逐字。检查器和测试覆盖三源、三产物及团长 ZIP 的次数、紧邻位置、独占行及缺失/重复/移位/粘连变异。版本保持 2.8.0-rc8，守卫、fix13/fix14 其余必备原句与相邻关系、部署要求、共用十条及 r6/r7 手册保持。
 
-fix15 Mac 回归范围：INSTALL-VERIFY；BRC-1 三个独立新会话，各用独立配置、空工作区，三次都须通过；BRC-2、BRC-9c、BRC-10 各一次；RESTORE-VERIFY。会话外通道冒烟 6 项：有效 top2 与 BRC-8b/9c/9e/9f/10 同配置分路冒烟，分别核对 stdout/stderr 与退出码；进程冒烟沿用 fix12 r2 结果，守卫未改，不计新测。fix15 Mac 回归当前 NOT_RUN，对应会话外通道冒烟同为 NOT_RUN；全部通过并经人工复核验收后再安排 rc8 发布。Windows 实机、真实 BOMC 与正式关口仍 NOT_RUN。以下 rc7 与更早 PASS 均为历史。
+fix15 Mac 回归范围：INSTALL-VERIFY；BRC-1 三个独立新会话，各用独立配置、空工作区，三次都须通过；BRC-2、BRC-9c、BRC-10 各一次；RESTORE-VERIFY。会话外通道冒烟 6 项：有效 top2 与 BRC-8b/9c/9e/9f/10 同配置分路冒烟，分别核对 stdout/stderr 与退出码；进程冒烟沿用 fix12 r2 结果，守卫未改，不计新测。以上预定范围已完成，fix15 Mac r1 已执行并验收，宿主 8/8 PASS、BRC-1 三个独立会话 3/3 PASS、会话外通道冒烟 6/6 PASS；执行人与 Claude 工具层复核一致，已达到用户批准的“全部通过”发布条件。
+
+fix15 Mac r1 被测提交 6f5b56ec6283b379389450f7e85614b588e01dc2（父提交 03ae416），测试包 2.8.0-rc8-probe.rd15799c6，WorkBuddy 5.8.3；所有会话实际模型 glm-5.3-flash，包括 BRC-1b 的成员子会话。守卫结果前只说明读取，E 号逐项原值、日志只引 E 号，BRC-10 的报错行与尾部三行逐字引用；RESTORE-VERIFY 已恢复 rc6 并通过双技能真实回执核验。观察项与执行过程说明见 docs/15，历史判定保留，证据存于仓库外。
+
+rc8 相对 rc7 已解决或补强：守卫 VERSION / guard_version 已同步 rc8，POSIX 清组与结果/stderr 各 8 MiB 上限已实现；code_sha256 覆盖技能根普通 .py，完整性缺口部分解决，拒绝技能根为 venv 及配置与哈希源文件重叠。日志、逐 E 号登记、stderr 引用与守卫前配置读取规则已在 fix15 r1 验证。rc7 的 BRC-6 哈希缩写、BRC-7 时间合写已有对应规则，在 BRC-1/2 验证过，BRC-6/7 未在 rc8 重测。
+
+rc8 沿用 PASS 单列来源：BRC-8b/9e/9f 来自 fix14 r1（03ae416）；BRC-8/9/9b/9d、BRC-11（11.1、11.2）和超时（退出 5）、领头正常退出（退出 0）、SIGTERM（退出 3）、SIGHUP（退出 3）四项进程冒烟来自 fix12 r2（7358822，Claude 复核）。rc8 范围外的 BRC-6/7、QO-2/4（3/3）/4b/5 来自 fix11 r1（7715177），BRC-3～BRC-5 来自 c429f41 批（2026-10-19），QO-1 来自 fix4 r4，QO-3 来自 fix7 r1；均不计作 fix15 新测。fix12 r2 逐例判定已按执行人原报告与 Claude 复核表补记，与 10 PASS / 5 FAIL、13 PASS / 2 FAIL 汇总一致，详见 docs/15。以下 rc7 与更早结果保留历史含义。
 
 `2.8.0-rc6` 的 fix8 / fix9 Mac r1 结果与 Claude 复核结论见 `VALIDATION.md` 和 `docs/15-bomc-readonly.md`。两批均为 WorkBuddy 5.8.3 / glm-5.3-flash；fix8 的 QO-4 执行人原判 0/3，Claude 复核 3/3 PASS，用户已接受；INSTALL-VERIFY、BRC-1、QO-2、QO-4b、RESTORE-VERIFY PASS，BRC-2 原 FAIL 为 E002 漏 truncated=false。fix9 的 INSTALL-VERIFY、BRC-8、BRC-8b、BRC-9、BRC-9b、BRC-9c、BRC-1、BRC-2、RESTORE-VERIFY 共 9 项 PASS，执行人与 Claude 一致，已验收。外部审查 P1 的脚本完整性缺口已修复并经 Mac 验证，E002 漏 truncated 在 fix9 r1 未再出现；fix8 原失败记录保留。
 
@@ -227,15 +233,15 @@ rc7 候选验收与相对 rc6 已解决的问题：
 - 只读主要靠提示词约束，由共用规则和 BOMC 守卫兜底；没有宿主级权限隔离，production_tools 为空。
 - rc8 的 code_sha256 覆盖技能根普通 .py；技能根外依赖、被排除虚拟环境、字节码及检查到执行之间的时间窗仍由执行人在会话外复核。
 - 托管生产执行仍 NOT_IMPLEMENTED，生产写仅产出人工评审需求。rc8 插件与守卫 VERSION 一致；真实只读身份和接口/数据范围须由 BOMC 管理员出具权限配置证明，不用生产写请求试探，未完成前不标生产安全可用。
-- POSIX setsid 可脱组，守卫被 SIGKILL 强杀时无法清理上游会话；运行期大小采样可有间隙超调，磁盘仍可能因并发占用耗尽。Windows KILL_ON_JOB_CLOSE、嵌套 Job 与 venv 转发器仅 mock，实机待测。
-- BRC-6 工作日志的 sha256 缩写按 docs/15 记观察项，E 号登记完整；同样情况在 BRC-2 会判 FAIL。BRC-6 环境推断与 BRC-7 时间合写观察项见 docs/15；沿用项运行于较早规则文本，一次验收不证明模型长期稳定。
+- POSIX setsid 可脱组，守卫被 SIGKILL 强杀时无法清理上游会话；运行期大小采样可有间隙超调，没有剩余空间预检，磁盘仍可能因并发占用耗尽。回执 IO 失败仅模拟，未真写满磁盘；原始数据短暂落盘与 stderr 裸秘密漏检风险仍需核对。Windows KILL_ON_JOB_CLOSE、嵌套 Job 与 venv 转发器仅 mock，实机 NOT_RUN。
+- BRC-6 工作日志的 sha256 缩写按 docs/15 记观察项，E 号登记完整；同样情况在 BRC-2 会判 FAIL。BRC-6 环境推断与 BRC-7 时间合写、fix15 报告与记忆观察项见 docs/15；沿用项运行于较早规则文本与守卫，单次验收不证明模型长期稳定。Windows、真实 BOMC、管理员最小权限证明与正式关口 NOT_RUN。
 
-rc8 守卫、哈希辅助工具、三处 BOMC 完整性规则与部署文档已修订，产物由构建器生成；11 字段登记合同保持。实际离线命令与结果见 VALIDATION 和仓库外交付记录。发布 ZIP 的 SHA256 只记仓库外交接与标签注释，不写入载荷；正式使用须以对应构建的验收记录和组织上线审批为依据。
+rc8 守卫、哈希辅助工具、三处 BOMC 完整性规则与部署文档已修订，产物由构建器生成；11 字段登记合同保持。候选发布整理保留宿主加载内容、成员 ZIP、r6/r7 手册、守卫及辅助工具的被测字节。实际离线命令与结果见 VALIDATION 和仓库外 rc8-release-notes.md，完整补丁为 rc8-release.patch。发布 ZIP 由提交后的两次独立构建产生，SHA256 只记仓库外交接与标签注释，不写入载荷。后续提交、构建、复核、合并、标签与推送由 Claude 处理；正式使用须以对应构建的验收记录和组织上线审批为依据。
 
 ### 验收与交付流程
 
 1. 自检、WB 用例、7A/7B、校准和关口全部先在 Mac 运行。Mac 跑完、返回结果经人工复核并验收后，再安排 Windows 值班机。
-2. rc8 在 Mac 回归经人工验收后安排 Windows 11 值班机，当前 NOT_RUN；安装/切换 + VERIFY（来源、缓存完整性与 Skill 回执路径）+ 记录版本（实际 WorkBuddy、插件版本和模型）；仅在需确认宿主行为时加一个短会话。本版涉及 Windows Job，须另列挂起分配失败、超时、取消、领头结束、后代与 venv/嵌套 Job 的实测项目；r7 手册的新建配置段只用于 rc8，历史 rc7 简单检查不部署新配置。
+2. fix15 Mac r1 已验收；Windows 11 值班机当前 NOT_RUN，rc8 标签发布后只做安装/切换 + VERIFY（来源/缓存完整性、Skill 回执路径）+ 记录版本（实际 WorkBuddy、插件版本和模型）；仅在需确认宿主行为时加一个短会话。本版涉及 Windows Job，须另列挂起分配失败、超时、取消、领头结束、后代与 venv/嵌套 Job 的实测项目；r7 手册的新建配置段只用于 rc8，历史 rc7 简单检查不部署新配置。值班机简单检查步骤在标签发布后另起提交写入 r7 手册。
 3. 两台都记录实际 WorkBuddy 版本、插件版本和模型；有差异时，值班机检查须覆盖差异。日常与关口固定 glm-5.3-flash，逐次记录实际模型，分别记录团长与成员。
 4. 每轮 N/S（校准与正式 18 次关口）只使用同一台机器上同次构建的双包，不混用 Mac 与值班机的构建。两台机器各自记录构建后缀与身份，包括机器、`source_commit`、manifest 与缓存哈希。
 
@@ -269,4 +275,4 @@ WorkBuddy 读取的必要知识片段会进入 `glm-5.3-flash` 云端模型上�
 
 构建和静态校验核对根 settings.json 的ID一致性；它不是桌面绑定入口或加载证据。真实加载只认宿主回执。
 
-BOMC 团队只读集成、限制、已回传 Mac 合成宿主测试与回退见 [BOMC 集成说明](docs/15-bomc-readonly.md)。fix14 Mac r1 执行人原判 7 PASS / 2 FAIL、Claude 工具层复核 8 PASS / 1 FAIL，fix15 Mac 回归当前 NOT_RUN；fix11 Mac r1 的 14/14 PASS 为历史。真实 BOMC、Windows 与正式关口 NOT_RUN，历史失败与既有 rc5 验收问题仍保留。
+BOMC 团队只读集成、限制、已回传 Mac 合成宿主测试与回退见 [BOMC 集成说明](docs/15-bomc-readonly.md)。fix15 Mac r1 已验收，宿主 8/8 PASS、BRC-1 三会话 3/3 PASS、会话外通道冒烟 6/6 PASS，执行人与 Claude 工具层复核一致；fix12～fix14 的原判、复核和 fix11 的 14/14 PASS 保留历史含义。真实 BOMC、Windows 与正式关口 NOT_RUN，历史失败与既有 rc5 验收问题仍保留。
