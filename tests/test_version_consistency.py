@@ -1,4 +1,5 @@
 """VERSION is the single source of truth for release version."""
+import ast
 import json
 from pathlib import Path
 import unittest
@@ -26,6 +27,20 @@ class VersionConsistencyTests(unittest.TestCase):
         for sid in roles:
             skill_version = (ROOT / "skills" / sid / "VERSION").read_text(encoding="utf-8").strip()
             self.assertEqual(skill_version, version, f"skill {sid} VERSION mismatch")
+
+    def test_bomc_guard_source_and_runtime_versions_match_plugin(self):
+        version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        plugin = json.loads((ROOT / ".codebuddy-plugin/plugin.json").read_text(encoding="utf-8"))
+        for rel in ("policy-source/skills/bomc-alarm-readonly/scripts/bomc_readonly.py",
+                    "skills/bomc-alarm-readonly/scripts/bomc_readonly.py"):
+            with self.subTest(path=rel):
+                tree = ast.parse((ROOT / rel).read_text(encoding="utf-8"))
+                assignments = [node for node in tree.body if isinstance(node, ast.Assign)
+                               and any(isinstance(target, ast.Name) and target.id == "VERSION"
+                                       for target in node.targets)]
+                self.assertEqual(len(assignments), 1)
+                self.assertEqual(ast.literal_eval(assignments[0].value), version)
+                self.assertEqual(ast.literal_eval(assignments[0].value), plugin["version"])
 
     def test_current_manual_entry_titles_match_version(self):
         version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()

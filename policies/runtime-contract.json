@@ -1,5 +1,5 @@
 {
-  "version": "2.8.0-rc8",
+  "version": "2.8.0-rc9",
   "implementation_status": "NOT_IMPLEMENTED",
   "mode": "EVIDENCE_WITH_LEAD_READ_ONLY_QUERIES",
   "production_executor": false,

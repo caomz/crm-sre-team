@@ -1,12 +1,12 @@
 {
-  "version": "2.8.0-rc8",
+  "version": "2.8.0-rc9",
   "skill_id": "java-runtime",
   "agent_id": "telecom-crm-java-runtime",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "MANUAL-MODE.md": "8916444c6ae229c64f92e818bb6b21bd0d4126de8b3160c217510e47af836000",
-    "SKILL.md": "d555987e71c93f6c38114bf8e1928823a57a4a4e8a1e0fb58e212c16394f5fd0",
-    "VERSION": "c72171a43cadd534c750225980d5d7d35f26e6bfc33be71062b981c328988005",
+    "MANUAL-MODE.md": "6842c381a34de6f5a4225ff9950bf83f1655a76c73d031cdb74e88eae29e3f39",
+    "SKILL.md": "c5323b218c1a63108bf4e34213af1fed2ee67c69a8e2dbdba0a3fb06d628636d",
+    "VERSION": "6acf4f92a9be68da9d9074d010eeb2d13fc4992e0d1276d471a596c05db9ec3c",
     "agents/openai.yaml": "303e9e3cbb971fc83a6d74e8cf26a893ec1878b5a9891e3732c7e3515846f451",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",
     "assets/templates/environment-profile.md": "4e16258630a00ea674d096465470a2868714fc48bad37295e8fbf4b6568c6817",

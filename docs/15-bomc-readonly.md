@@ -1,14 +1,20 @@
-# BOMC 团队只读集成与 Mac 合成测试 · 2.8.0-rc8
+# BOMC 团队只读集成与 Mac 合成测试 · 2.8.0-rc9
+
+## rc9 候选验收与交付
+
+插件与守卫 VERSION / guard_version 同步为 2.8.0-rc9。守卫仅改变版本常量，配置 Schema、参数白名单、哈希覆盖、资源限制、进程清理与退出码保持。Mac R4 聚焦验收已通过：两次 Skill 加载、独立 CLI 真实 exit=0、GUARD 无额外工具且 E001 完整、恢复 rc6 均已核对；用户接受技术结果与已记录的静态临时夹具清理偏差后同意继续发布。此结论不等于完整宿主用例、真实 BOMC、Windows 或正式关口已验证。先固定发布身份，再安排值班机 UPDATE/VERIFY；回执用空工作区，保留实际 Skill 路径、模型与构建身份。
+
+## rc8 及更早的历史验收记录
 
 本篇记录 A′ 集成、合成测试步骤与已回传验收事实：团队技能 bomc-alarm-readonly 由团长持有，守卫转调插件外配置指向的用户级只读技能。fix15 Mac r1 已执行并验收，宿主 8/8 PASS、BRC-1 三个独立会话 3/3 PASS、会话外通道冒烟 6/6 PASS；执行人与 Claude 工具层复核一致，已达到用户批准的“全部通过”发布条件。fix14 Mac r1 执行人原判 7 PASS / 2 FAIL；Claude 工具层复核为 8 PASS / 1 FAIL，用户已认可复核结论，该批 BRC-1 仍 FAIL。fix13 Mac r1 执行人原判 3 PASS / 4 FAIL / 1 NOT_RUN；Claude 工具层复核为 6 PASS / 1 FAIL / 1 NOT_RUN，用户已认可复核结论，详见下文。fix12 Mac r1 在安装前 BLOCKED；r2 执行人原判 10 PASS / 5 FAIL，Claude 工具层复核为 13 PASS / 2 FAIL。fix11 Mac r1 已执行并验收，14/14 PASS（QO-4 的 3 个独立会话逐次计入）；执行人与 Claude 复核一致。fix9 Mac r1 已执行并验收，9/9 PASS；执行人与 Claude 复核一致。历史原判、复核差异及沿用结果分别保留，证据存于仓库外。真实 BOMC、Windows 11 值班机及正式关口 NOT_RUN。已知宿主机制见“只查询合成用例”。
 
-当前版本为 2.8.0-rc8 candidate（候选发布），插件与守卫 VERSION 同步为 rc8。fix12 加固进程归属、运行期资源与技能根代码完整性；fix13 补充工作日志哈希与 stderr 尾部引用措辞；fix14 明确逐 E 号登记格式、bomc.json 读取与回复边界，并将字段要求改为会话外部署要求；fix15 将守卫结果前的配置描述收敛为“已读取 bomc.json”，细化配置评价、能力说明与 stderr 标签位置判据，守卫字节不变。fix15 Mac r1 已验收，收尾已恢复 rc6 正式包并完成双技能真实回执核验；离线结果见 VALIDATION，新测、沿用来源及已知限制见下文。历史 fix11 Mac r1 的 14/14 PASS、fix10 整批 BLOCKED / BRC-8b FAIL 和收尾恢复 rc6 事实保留，不折算为 rc8 新测。
+历史 rc8 版本为 2.8.0-rc8 candidate（候选发布），插件与守卫 VERSION 同步为 rc8。fix12 加固进程归属、运行期资源与技能根代码完整性；fix13 补充工作日志哈希与 stderr 尾部引用措辞；fix14 明确逐 E 号登记格式、bomc.json 读取与回复边界，并将字段要求改为会话外部署要求；fix15 将守卫结果前的配置描述收敛为“已读取 bomc.json”，细化配置评价、能力说明与 stderr 标签位置判据，守卫字节不变。fix15 Mac r1 已验收，收尾已恢复 rc6 正式包并完成双技能真实回执核验；离线结果见 VALIDATION，新测、沿用来源及已知限制见下文。历史 fix11 Mac r1 的 14/14 PASS、fix10 整批 BLOCKED / BRC-8b FAIL 和收尾恢复 rc6 事实保留，不折算为 rc8 新测。
 
 ## 注册与配置
 
 plugin.json 在既有 8 个技能后追加 ./skills/bomc-alarm-readonly。团长绑定严格为 [stability-director, bomc-alarm-readonly]，7 名成员各自仍只绑定自己的技能。成员实际上可能持有 Bash、PowerShell、Write，禁止查询依靠规则及执行人核对，不是“没有终端工具”。用户级技能保留原名，避免同名注册；团长可直接调用已确认只读的取数技能，BOMC 优先使用团队守卫。
 
-源为 policy-source/skills/bomc-alarm-readonly.md 和其同名目录下 scripts/bomc_readonly.py；构建器生成 skills/bomc-alarm-readonly/ 中的 SKILL.md、脚本和 BUNDLE-LOCK.json。它是插件内的附加能力，不是第 9 名角色，不发独立成员 ZIP；守卫实现与插件均为 rc8，BUNDLE-LOCK 跟随当前插件版本，不增加独立 VERSION 文件，保留已冻结的八角色 N/S 构建协议。prompt-bundles.lock 锁住源、脚本和生成文件。
+源为 policy-source/skills/bomc-alarm-readonly.md 和其同名目录下 scripts/bomc_readonly.py；构建器生成 skills/bomc-alarm-readonly/ 中的 SKILL.md、脚本和 BUNDLE-LOCK.json。它是插件内的附加能力，不是第 9 名角色，不发独立成员 ZIP；当前守卫实现与插件均为 rc9，BUNDLE-LOCK 跟随当前插件版本，不增加独立 VERSION 文件，保留已冻结的八角色 N/S 构建协议。prompt-bundles.lock 锁住源、脚本和生成文件。
 
 配置只放插件外：Mac ~/.crm-sre-team/bomc.json；Windows %USERPROFILE%\.crm-sre-team\bomc.json。字段示例如下（全为占位符，不可直接使用；通用环境变量模式可整项省略 skill_config，不用空字符串或 null 代替；值班机凭据走配置文件，部署时必须填 skill_config，报错后不建议删除或省略字段绕过）：
 
@@ -31,7 +37,7 @@ plugin.json 在既有 8 个技能后追加 ./skills/bomc-alarm-readonly。团长
 
 ### 源文件清单哈希与会话外辅助工具
 
-scripts_sha256 与 rc8 新增的 code_sha256 均必填；skill_md_sha256 保持独立。缺失或格式错误退出 3，只使用固定字段名。rc7 守卫拒绝未知 code_sha256；新配置只随 rc8 部署，回退保留与旧包匹配的旧配置。
+scripts_sha256 与 rc8 新增的 code_sha256 均必填；skill_md_sha256 保持独立。缺失或格式错误退出 3，只使用固定字段名。rc7 守卫拒绝未知 code_sha256；该配置 Schema 自 rc8 起沿用，rc9 配置格式不变；回退保留与旧包匹配的旧配置。
 
 1. scripts_sha256 沿用原算法：递归 scripts/ 下普通 .py，至少含 scripts/run_query.py，排除 __pycache__ 树和 *.pyc。code_sha256 则收集技能根下全部普通 .py，相对路径以技能根为根；排除 __pycache__ 和任何含 pyvenv.cfg 的子目录树（虚拟环境），不遍历被排除的树、不读 pyvenv.cfg 内容。技能根自身含 pyvenv.cfg 时，守卫与辅助工具均退出 3，固定报错 `code_sha256 技能根不能是虚拟环境目录；请人工复核。`，不把整个根当排除树。排除目录自身仍检查元数据并拒绝链接/重解析点；其余被遍历条目同样拒绝链接、重解析点、越界路径和非普通 .py。
 2. 两种清单的相对路径分隔符均为 /，不折叠大小写、不做 Unicode 归一化；按路径字符串区分大小写排序。相对路径中的反斜杠字面量、TAB、CR、LF、NUL 均拒绝。

@@ -68,6 +68,15 @@ def rc6_fragment_bytes(name, chunk):
     return chunk
 
 
+def rc7_rc8_script_bytes(raw):
+    """Freeze the published script, undoing only the reviewed confirmation fix."""
+    before = b"function Confirm-Yes([string]$Action) {\n    Write-Host $Action\n"
+    after = before + b"    try { $Host.UI.RawUI.FlushInputBuffer() } catch {}\n"
+    if raw.count(after) != 1:
+        raise AssertionError("Unexpected confirmation flush substitution")
+    return raw.replace(after, before, 1)
+
+
 def function_body(text, name):
     """Select one top-level function for bounded static contract checks."""
     found = re.search(rf"^function {re.escape(name)}\b.*?(?=^function |^# Main orchestration\.|\Z)",
@@ -170,6 +179,41 @@ class OncallUpdaterStaticTests(unittest.TestCase):
         self.assertLess(native.index("$global:LASTEXITCODE = $null"), native.index(call))
         self.assertLess(native.index(call), native.index("$Code = $global:LASTEXITCODE"))
         self.assertNotRegex(native, r"\$Code\s*=\s*\$(?:local:|script:|private:)?LASTEXITCODE\b")
+
+    def test_confirmation_flushes_pasted_input_before_exact_yes(self):
+        self.assertEqual(function_body(self.text, "Confirm-Yes"),
+                         "function Confirm-Yes([string]$Action) {\n"
+                         "    Write-Host $Action\n"
+                         "    try { $Host.UI.RawUI.FlushInputBuffer() } catch {}\n"
+                         "    if ((Read-Host 'Type YES to confirm the displayed plan') -cne 'YES') { throw 'Confirmation refused; no installation writes performed' }\n"
+                         "}\n")
+
+    def test_current_updater_hash_matches_local_candidate_note(self):
+        digest = '0bf81df1ed28ebb4065998669700fc7ecfdde13f72005f7ae6d608ea1cb97463'
+        self.assertEqual(hashlib.sha256(self.raw).hexdigest(), digest)
+        runbook = (ROOT / 'tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md').read_text(encoding='utf-8')
+        intro = runbook.split('## 发布身份与只读查看', 1)[0]
+        self.assertIn('本地更新脚本修复候选的 SHA256 为 `' + digest + '`', intro)
+        self.assertIn('现纳入 rc9 开发候选，发布身份待定', intro)
+        self.assertIn('固定 UPDATE 块使用标签内脚本，尚不包含本修复', intro)
+
+    def test_rc9_handoff_requires_acceptance_and_fixed_release_identity(self):
+        runbook = (ROOT / 'tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md').read_text(encoding='utf-8')
+        intro = runbook.split('## 发布身份与只读查看', 1)[0]
+        self.assertTrue(intro.startswith('# 值班机手册 r7 · rc9 开发候选（未发布，Windows 安装未执行）\n'))
+        for token in ['rc9 尚未发布', '不执行 rc9 UPDATE/VERIFY',
+                      '先在 Mac 完成重建、全量回归', '经执行人人工复核验收后',
+                      'rc8 的 Mac 验收和 Windows Skill 回执不能充当 rc9 验收',
+                      'Tag、ExpectedCommit、ExpectedZipSha256 与交付手册提交均待发布时固定',
+                      '本节不提供可执行安装常量', '不得复用旧计划',
+                      'Windows 只按届时交付的新指引执行 UPDATE、双 Skill 回执与正式 VERIFY',
+                      '真实 YES 输入行为仍须验证', '回执使用新建空文件夹工作区',
+                      '不再通过本地同步工具覆盖同版本来源或缓存',
+                      '由更新器为 rc9 创建新版本缓存及独立计划、备份',
+                      'BOMC 插件外配置与生产通道部署仍单独安排']:
+            self.assertIn(token, intro)
+        self.assertNotIn('```', intro)
+        self.assertNotRegex(intro, r'\$(?:Tag|ExpectedCommit|ExpectedZipSha256)\s*=')
 
     def test_post_check_clone_identity_excludes_only_exact_generated_reports(self):
         identity = function_body(self.text, "Assert-CloneIdentity")
@@ -1682,10 +1726,11 @@ class Rc7SimpleCheckTests(unittest.TestCase):
                 '生成带 path_roots 的新计划与独立备份', '不复用 rc5 旧计划']:
             self.assertIn(token, self.text)
         digest = '342fd92b64ca403cc22a59c776bd5b2f3ff35075f2d03c5ff5df6ceddfd4691e'
-        self.assertEqual(hashlib.sha256(SCRIPT.read_bytes()).hexdigest(), digest)
+        self.assertEqual(hashlib.sha256(rc7_rc8_script_bytes(SCRIPT.read_bytes())).hexdigest(), digest)
         self.assertIn('tools/oncall/Update-CrmSreTeam.ps1：' + digest, self.text)
         intro, view = self.raw.decode('utf-8').split('## 发布身份与只读查看', 1)
-        self.assertTrue(intro.startswith('# 值班机手册 r7 · rc8 候选发布（已合并 main，Windows 未执行）\n'))
+        self.assertTrue(intro.startswith('# 值班机手册 r7 · rc9 开发候选（未发布，Windows 安装未执行）\n'))
+        self.assertIn('下方 rc5、rc6、rc7、rc8 的固定发布身份、安装块与实测均保留为历史', intro)
         self.assertIn('rc8 值班机简单检查（2026-10-22）', intro)
         self.assertIn('本次 rc8 安装身份见“rc8 值班机简单检查（2026-10-22）”',
                       view.split('## ①', 1)[0])
@@ -1797,9 +1842,14 @@ class Rc8SimpleCheckTests(unittest.TestCase):
                 '生成带 path_roots 的新计划与独立备份', '不复用 rc5 旧计划']:
             self.assertIn(token, self.text)
         digest = '342fd92b64ca403cc22a59c776bd5b2f3ff35075f2d03c5ff5df6ceddfd4691e'
-        self.assertEqual(hashlib.sha256(SCRIPT.read_bytes()).hexdigest(), digest)
+        self.assertEqual(hashlib.sha256(rc7_rc8_script_bytes(SCRIPT.read_bytes())).hexdigest(), digest)
         self.assertIn('tools/oncall/Update-CrmSreTeam.ps1：' + digest, self.text)
         self.assertIn('已被“rc8 值班机简单检查（2026-10-22）”取代', self.rc7.decode('utf-8'))
+
+    def test_update_block_is_pasted_alone_and_confirmed_manually(self):
+        update = self.text.split('### 步骤 2：UPDATE\n', 1)[1].split('### 步骤 3：', 1)[0]
+        instructions = update.split('```powershell', 1)[0]
+        self.assertIn('本块单独粘贴，看到 `Type YES` 后手动输入 `YES`。', instructions)
 
     def test_four_frozen_blocks_only_change_twelve_reviewed_rc7_lines(self):
         original = re.findall(rb'```powershell\n(.*?)^```', self.rc7, re.M | re.S)

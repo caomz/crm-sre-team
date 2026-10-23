@@ -23,7 +23,7 @@ import sys
 import tempfile
 import time
 
-VERSION = "2.8.0-rc8"
+VERSION = "2.8.0-rc9"
 SCHEMA = "crm-sre-bomc/v1"
 MAX_BYTES = 8 * 1024 * 1024
 PREVIEW_CHARS = 6000

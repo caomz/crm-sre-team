@@ -419,6 +419,7 @@ function Assert-Package {
 }
 function Confirm-Yes([string]$Action) {
     Write-Host $Action
+    try { $Host.UI.RawUI.FlushInputBuffer() } catch {}
     if ((Read-Host 'Type YES to confirm the displayed plan') -cne 'YES') { throw 'Confirmation refused; no installation writes performed' }
 }
 function Assert-PlanLayout($Document) {

@@ -506,6 +506,14 @@ QUERY_ONLY_ENTRIES = [
 ]
 
 QUERY_ONLY_CRITICAL_CLAUSES = {
+    checker.QUERY_ONLY_TOOL_DELIVERY_RULE: (
+        '用户明确限定本轮可用工具时', '结果展示、文件交付工具', 'present_files', '同样必须在名单内',
+        '不因守卫生成文件、Read 读取结果或工具输出提示而扩大范围',
+        '守卫脱敏 JSON 默认作为内部证据', '用户只要求文字分析', '且未要求交付文件时',
+        '最终交付为正文与 E 号登记', '不把 output_file 自动视为附件或可视化交付物',
+        '展示工具未获本轮许可时', '不调用它', '也不以生成预览、卡片或下载链接替代',
+        '直接依据已有回执完成正文', '额外读取仍受原文件范围限制',
+    ),
     checker.QUERY_ONLY_AMBIGUOUS_RULE: (
         '用户用名称或描述点名诊断、技能或数据源', '宿主 Skill 工具清单里',
         '有多个近似对应项', '无法确定是哪一个', '本轮第一条回复',
@@ -729,11 +737,17 @@ def test_prompt_check_rejects_forbidden_host_prose(phrase):
             text + '\n' + phrase, lead, runtime=True)
 
 
-def test_guard_matches_reviewed_fix12_bytes_in_source_and_runtime():
+def test_guard_matches_reviewed_fix12_bytes_except_current_version_in_source_and_runtime():
     expected = '1ef3e0dee1fbc5caf77b15e4c953873aca81975f686081fabeb943995d46b088'
+    version_line = f'\nVERSION = "{read("VERSION").strip()}"\n'.encode('utf-8')
     for rel in ('policy-source/skills/bomc-alarm-readonly/scripts/bomc_readonly.py',
                 'skills/bomc-alarm-readonly/scripts/bomc_readonly.py'):
-        assert hashlib.sha256((ROOT / rel).read_bytes()).hexdigest() == expected
+        data = (ROOT / rel).read_bytes()
+        assert data.count(version_line) == 1, rel
+        # The reviewed rc8 bytes stay pinned: a release identity change must not
+        # hide any guard logic, limit, credential, or subprocess behavior change.
+        normalized = data.replace(version_line, b'\nVERSION = "2.8.0-rc8"\n', 1)
+        assert hashlib.sha256(normalized).hexdigest() == expected, rel
 
 
 def test_direct_query_and_qo_host_cases_retain_tool_checks_and_accepted_host_status():
@@ -1220,7 +1234,7 @@ def test_fix10_rules_present_and_mutation_checked_in_individual_zip(tmp_path, si
     name = f'{sid}/SKILL.md'
     with ZipFile(ROOT / rel) as archive:
         text = archive.read(name).decode('utf-8')
-    markers = [checker.QUERY_ONLY_AMBIGUOUS_RULE]
+    markers = [checker.QUERY_ONLY_AMBIGUOUS_RULE, checker.QUERY_ONLY_TOOL_DELIVERY_RULE]
     if sid == 'stability-director':
         markers += [checker.BOMC_CRM_FILTER_RULE, checker.BOMC_SKILL_CONFIG_FAILURE_RULE]
     (tmp_path / 'release-manifest.json').write_text(json.dumps({'files': [rel]}))

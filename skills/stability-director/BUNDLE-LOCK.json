@@ -1,12 +1,12 @@
 {
-  "version": "2.8.0-rc8",
+  "version": "2.8.0-rc9",
   "skill_id": "stability-director",
   "agent_id": "telecom-crm-sre-team-lead",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "MANUAL-MODE.md": "bdc22b8c515a4e08007b308a41c311211a430cef2210c653958c7177491effa8",
-    "SKILL.md": "eb9ca105e0f5f3cd450d3000a9f573fd967b8a3a5e0afe4d9e84be8368d14405",
-    "VERSION": "c72171a43cadd534c750225980d5d7d35f26e6bfc33be71062b981c328988005",
+    "MANUAL-MODE.md": "f7dd55adeba8663bbfd958bbc6bd012f35fa630fde0a86e41b5f4c6cd5001656",
+    "SKILL.md": "84e331b64de61532208668b07b8122dd12f41c73f2e5ca02851619c849c1d265",
+    "VERSION": "6acf4f92a9be68da9d9074d010eeb2d13fc4992e0d1276d471a596c05db9ec3c",
     "agents/openai.yaml": "025062d860bf91c0ece131ff482ac6a2200add3c2532637d63c11eef173eace7",
     "assets/templates/action-review.md": "4be8c289d6325e718b503fb88d774998ad7619edbdbd8819c7c11226ba2a661f",
     "assets/templates/environment-profile.md": "4e16258630a00ea674d096465470a2868714fc48bad37295e8fbf4b6568c6817",
