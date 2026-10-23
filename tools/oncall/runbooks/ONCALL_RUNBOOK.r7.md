@@ -1,5 +1,7 @@
 # 值班机手册 r7 · rc9 开发候选（未发布，Windows 安装未执行）
 
+> **发布后状态附记（2026-10-23）**：以下“尚未发布／发布身份待定”是发布前冻结记录。Mac R4 聚焦验收结果及准备阶段临时夹具清理偏差已向用户报告，用户同意继续提交 GitHub 和安排值班机升级。rc9 安装身份固定为 Tag `crm-sre-team-2.8.0-rc9`、ExpectedCommit `a838012a37d86b5e0a77fdf85fc677cf8538e267`、ExpectedZipSha256 `67e54af00c572757da6b19eea12aa6689f8cbfbd050175d7fba9defa93cd39eb`；更新脚本 SHA256 为 `0bf81df1ed28ebb4065998669700fc7ecfdde13f72005f7ae6d608ea1cb97463`。Windows UPDATE、真实 YES 输入、双 Skill 回执与正式 VERIFY 仍为 NOT_RUN，不能把 Mac 结果外推为 Windows 已通过。值班机仅使用随本轮交付的 `ONCALL-RC9.md` 新操作单，不执行下方历史 rc8 块；交付手册提交与安装提交分别核对。此附记为 repository-only，不改变标签载荷或发布 ZIP。
+
 当前准备 `2.8.0-rc9` 开发候选，rc9 尚未发布。Mac 验收及发布身份未固定前，不执行 rc9 UPDATE/VERIFY。下方 rc5、rc6、rc7、rc8 的固定发布身份、安装块与实测均保留为历史，不是 rc9 安装指引。rc8 候选发布内容已合并 main，原始安装身份见“rc8 值班机简单检查（2026-10-22）”；其手册中“Windows 未执行”和 NOT_RUN 是当时状态，不能用旧文案代替后续真实回执或正式 VERIFY 记录。
 
 本地更新脚本修复候选的 SHA256 为 `0bf81df1ed28ebb4065998669700fc7ecfdde13f72005f7ae6d608ea1cb97463`，在 `Confirm-Yes` 读取确认前尝试清空输入缓冲；现纳入 rc9 开发候选，发布身份待定。下文 rc7、rc8 的更新脚本 SHA256 保留各自已发布标签的值，固定 UPDATE 块使用标签内脚本，尚不包含本修复。此哈希只标识当前脚本字节，不是 rc9 发布 ZIP 哈希，也不证明真实 PowerShell 输入行为已验证。
