@@ -12,11 +12,12 @@ Mac 第5次精简八例各发一次、零重跑，机器草表8 PASS、Claude逐
 
 | 项目 | 发布后填写 / 核对 |
 |---|---|
-| Tag | `<RC10_RELEASE_TAG>`；目标为 `crm-sre-team-2.8.0-rc10` |
-| ExpectedCommit | `<RC10_RELEASE_COMMIT_40_HEX>`；安装提交，不是后续手册提交 |
-| ExpectedZipSha256 | `<RC10_RELEASE_ZIP_SHA256_64_HEX>` |
-| 发布 ZIP | `crm-sre-team-2.8.0-rc10.zip`；`<RC10_RELEASE_ZIP_BYTES>`字节；560项申报文件 |
-| RunbookCommit | `<RC10_RUNBOOK_COMMIT_40_HEX>`；后续身份固定手册提交 |
+| Tag | `crm-sre-team-2.8.0-rc10`；目标为 `crm-sre-team-2.8.0-rc10` |
+| ExpectedCommit | `ad31d9210c0c25f13e756f62c8080010a966e368`；安装提交，不是后续手册提交 |
+| ExpectedZipSha256 | `d5a8f76d797e8bfafd28cbfa81e15282081ba7bc5968c73594629f4b7da2c87e` |
+| 发布 ZIP | `crm-sre-team-2.8.0-rc10.zip`；`2607204`字节；560项申报文件 |
+| 更新脚本 SHA256 | `tools/oncall/Update-CrmSreTeam.ps1`：`0bf81df1ed28ebb4065998669700fc7ecfdde13f72005f7ae6d608ea1cb97463`；仅标识脚本字节，不证明真实 PowerShell 输入行为已验证 |
+| RunbookCommit | 即在 main 上补入本身份行的手册提交，哈希见独立交接稿 |
 | 当前插件 | 未知；按本站实际VERSION与更新器支持的方式从现有版本升级，不预设rc5/rc6/rc9 |
 
 执行前须确认本地项目 `D:\python_code\github_my\crm-sre-team` 已同步到标签 `crm-sre-team-2.8.0-rc10`，且标签指向交付的完整安装提交。仅从本地项目取得目标标签，在全新bootstrap核对标签/提交和脚本后运行现有 `Update-CrmSreTeam.ps1`；不访问GitHub。只用现有普通Windows PowerShell 5.1、Git及已具备所需依赖的Python；默认路径与更新器一致，缺依赖、路径不符或现有安装不受支持即停，保留原输出。上次SWITCH/UPDATE未完成或提示不要启动客户端时，不继续。
