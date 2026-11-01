@@ -1,6 +1,22 @@
-# WorkBuddy 实机验收（候选包待执行）
+# WorkBuddy 实机验收（2.8.0-rc10 Mac 精简验收已接受）
 
-> 当前开发候选2.8.0-rc9；本轮宿主验收待执行，历史结果按当时版本保留。rc4 的历史运行前声明：2.8.0-rc4 场景验收 NOT_RUN；这是当时冻结状态，实际r4 Mac结果见VALIDATION，不能折算关口。
+## rc10 当前验收记录（2026-11-01）
+
+rc10 的 Mac 精简验收已通过，正在整理发布交接，尚未创建本次发布提交或标签。2026-11-01 13:16～13:50（+08:00），Codex 桌面会话执行八例各一次、零重跑，机器草表 8 PASS；Claude 逐例复核 8/8 PASS，用户于当日 14:20（+08:00）回复“确认验收”。WorkBuddy 5.9.3，团长与 MEMBER 成员实际模型均为 glm-5.3-flash；INSTALL、真实 MEMBER、KB 三页、TD-01～TD-04、rc6 RESTORE 均通过。Windows UPDATE/VERIFY、真实 YES、Windows Job、真实 BOMC 查询与 bomc.json 部署、正式 N/S、WB 全量仍为 NOT_RUN。
+
+被测包为 `2.8.0-rc10-mac-lean4.r20261101758e264c425445ce`（ZIP SHA256 `5383cf64b745e14d0eb668704c7ba7559569128060878c13f39a6b7d27cb3e26`），与 `candidate-5.zip`（`747612b296075afb1cc77362a1da9aab7a9c3878955ceaceac8bc0bc487f8b2d`）只差版本串。候选5与验收后补写前的 rc10 离线正式构包有 334 项宿主运行文件同字节，560 项载荷仅 `docs/15-bomc-readonly.md` 与 `prompt-bundles.lock` 不同；本次验收归档另改文档，最终全部差异由仓库外交接逐文件列出，运行文件仍须同字节。正式版本为 `2.8.0-rc10`，目标标签为 `crm-sre-team-2.8.0-rc10`；发布提交及最终 ZIP SHA256 在提交后确定，发布身份见标签说明与 r7 手册固定记录；r7 身份固定行由发布后的独立手册提交补入。
+
+外部证据为 `/Volumes/WorkSSD/Archives/claude-tests/rc10-mac-lean-20261101-131633` 的 `REPORT.md`、`checks/1793511988652113000/`、118项 `SHA256SUMS`。封存草表是非关口8 PASS，最终8/8复核及14:20用户确认为其后补记；证据原文不改。完整逐例事实与历次失败/改判见 [VALIDATION](../VALIDATION.md)。
+
+INSTALL与RESTORE各两条真实Skill回执分别指向探测缓存与rc6缓存；MEMBER一次Skill及一次真实Agent，五字段派单与限制/E001原文齐全，成员无工具调用、一条补证附阳性/阴性影响；KB严格配置→索引→三页正文，E-K元数据齐全。TD-01未越界读输出、未交付，TD-02只文字，TD-03读获准文件并说明合成字段与padding截断，TD-04只交付本轮文件且物理SHA一致；四例E001全部11字段、parameters五字段及三个完整哈希逐项对应回执。
+
+第2次MEMBER由Claude改判PASS、用户认可，TD-03仍失败；第3次行为均过，第4次TD-01越界Read失败，第5次8/8通过。第3次会话 jsonl 的 `<persisted-output>` 是记录层转存，不能据此认定模型只看到了前 2047 字节。按 rawUsage.prompt_tokens 增量，51,951 字节 Skill 回执后为 +13,171；48,082 字节回执后第4/5次分别为 +11,882/+11,875；若只给 2 KB 预览约增 1K。据此模型当轮收到了全文；技能 SKILL.md ≤48,128 字节的尺寸门禁作为防护保留，会话重载后的情形未验证。
+
+恢复注册/来源为rc6、installedAt未变、两配置缺席、记忆on/on经重启确认；settings.json移除、旧缓存.orphaned_at、内置插件更新、连续空行折叠与已核对身份的editor_sdk一次SIGTERM均记为宿主观察。Windows只安排r7 rc10节的简单检查和一次INSTALL短会话，覆盖与Mac 5.9.3的版本差异，不把Mac结果算作Windows通过。
+
+以下rc4/rc5及更早NOT_RUN和观察按原时点保留：
+
+> rc4 的历史运行前声明：2.8.0-rc4 场景验收 NOT_RUN；这是当时冻结状态，实际r4 Mac结果见VALIDATION，不能折算关口。
 
 状态：2.8.0-rc5 场景验收 NOT_RUN；下列 2.6.1、rc2 与 Mac rc3 探测包观察不能折算为 rc4 PASS。只在客户端真实运行后写独立记录，不能把下面预期行为直接标成 PASS。记录 WorkBuddy 版本、插件版本、团长/成员实际模型、实际加载位置、场景、去敏工具参数/返回、可见调用身份、失败与人工判读。不要使用真实凭据或未授权资料。
 

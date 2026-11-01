@@ -294,9 +294,10 @@ def test_removing_lead_safety_clause_is_rejected(marker):
     )),
     (checker.BOMC_TERMINAL_AND_READ_RULE, (
         "除固定守卫命令外，不为 BOMC 另跑终端命令或脚本",
-        "需要查看完整脱敏结果时",
-        "用宿主的 Read 工具读取守卫回执中的输出文件",
-        "仍受用户文件范围限制",
+        "仅当用户本轮文件范围明确包含守卫输出文件时，才用 Read 读取",
+        "Read 在工具名单内不等于文件获准",
+        "只准读 bomc.json 等其他文件时不读输出文件",
+        "未获准则按守卫预览分析，写明未读范围及限制",
     )),
 ])
 def test_bomc_priority_direct_query_and_safety_rule_mutations_rejected(rel, marker, clauses):

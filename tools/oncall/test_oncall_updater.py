@@ -14,6 +14,7 @@ import re
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -1620,11 +1621,7 @@ class Rc6SimpleCheckTests(unittest.TestCase):
                 '“交付的手册提交”是包含本节的那次提交，与安装身份 ExpectedCommit=',
                 '不把交付的手册提交填入 ExpectedCommit', '安装一律以 rc6 标签和上表为准']:
             self.assertIn(token, self.text)
-        manifest = json.loads((ROOT / 'release-manifest.json').read_text(encoding='utf-8'))
-        # Historical rc6 stays 555 above; current rc8 adds its registered tests.
-        self.assertEqual(len(manifest['files']), 556)
-        self.assertIn('tests/test_rc8_bomc.py', manifest['files'])
-        self.assertIn('settings.json', manifest['files'])
+        # This identity describes the published rc6 payload, not today's manifest.
         identity = re.search(r'^\| 更新脚本 SHA256 \| tools/oncall/Update-CrmSreTeam.ps1：([0-9a-f]{64})；', self.text, re.M)
         self.assertIsNotNone(identity)
         self.assertEqual(identity.group(1),
@@ -1894,12 +1891,9 @@ class Rc8SimpleCheckTests(unittest.TestCase):
         self.assertEqual(messages, re.findall(rb'```text\n(.*?)\n```', self.rc7, re.S))
         self.assertEqual(hashlib.sha256(messages[0]).hexdigest(),
                          'ebb50a6f6e371f146c31fdbd34653710e3b74b17f8601ae1fd8e19c107b4391e')
-        manifest = json.loads((ROOT / 'release-manifest.json').read_bytes())
-        count = len(manifest['files'])
-        self.assertEqual(count, 556)
-        self.assertIn('settings.json', manifest['files'])
-        for token in [f'{count - 1}/{count}, root settings.json missing (host-managed)',
-                      f'{count}/{count}, root settings.json matches package',
+        # Freeze the rc8 receipts independently of the current release payload.
+        for token in ['555/556, root settings.json missing (host-managed)',
+                      '556/556, root settings.json matches package',
                       '预期 rc5', '直接 UPDATE 到 rc8', '只做本节步骤 1～5',
                       'rc6、rc7 两节简单检查已被本节取代，不再执行', '不做本文 r7 的 ③～⑦', '不跑全套',
                       '普通 Windows PowerShell 5.1', '先带回原输出，不继续', '由用户正常退出 WorkBuddy',
@@ -1941,6 +1935,126 @@ class Rc8SimpleCheckTests(unittest.TestCase):
         excluded = self.text.split('### 不在本次\n', 1)[1].split('\n### ', 1)[0]
         self.assertIn('bomc.json 必须填 skill_config', excluded)
         self.assertNotIn('skill_config 按真实技能凭据接口决定', excluded)
+
+
+class ManifestCountRegressionTests(unittest.TestCase):
+    """Current inventory follows the manifest; published handoffs stay frozen.
+
+    Python runs the updater's embedded installed-file verifier on isolated copies.
+    PowerShell UPDATE/VERIFY wiring is checked statically, not executed on Windows.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = decode_script(SCRIPT.read_bytes())
+        cls.manifest = json.loads((ROOT / 'release-manifest.json').read_bytes())
+        cls.verifier = {'__name__': 'manifest_count_regression'}
+        exec(compile(extracted_verifier(cls.text), '<embedded verifier>', 'exec'), cls.verifier)
+
+    def assert_manifest_count_contract(self, text):
+        for name in ['Get-ManifestHashes', 'Get-DeclaredNames']:
+            code = mask_literals(function_body(text, name))
+            self.assertEqual(re.findall(r'(?m)^\s*\$Names\s*=\s*([^\n]+)', code),
+                             ['@($Manifest.files)'])
+        prepare = function_body(text, 'Prepare-InstallContext')
+        self.assertIn('$InstallExpectedNames = @(@(Get-DeclaredNames $PackageRoot) + $InstallMetadataNames)', prepare)
+        self.assertIn('$PackageHashes = Get-SelectedPackageHashes $PackageRoot', prepare)
+        imported = function_body(text, 'Import-PlanContext')
+        self.assertIn('$InstallExpectedNames = @($Document.expected_names)', imported)
+        self.assertIn('$PackageHashes = ConvertTo-HashTable $Document.package_hashes', imported)
+        verify = function_body(text, 'Test-InstalledDeclaredFiles')
+        self.assertEqual(re.findall(r'(?m)^\s*\$Total\s*=\s*([^\n]+)', mask_literals(verify)),
+                         ['@($InstallExpectedNames).Count'])
+        self.assertIn('Assert-PathSetEqual $InstallExpectedNames $DeclaredNames', verify)
+        self.assertIn('declared_matched=$Matched; declared_total=$Total;', verify)
+        self.assertIn('"$Matched/$Total, root settings.json missing (host-managed)"', verify)
+        self.assertIn('"$Matched/$Total, root settings.json matches package"', verify)
+
+    def test_update_verify_and_receipt_counts_are_manifest_derived(self):
+        self.assert_manifest_count_contract(self.text)
+
+    def test_hardcoded_current_totals_are_rejected(self):
+        assignment = '$Total = @($InstallExpectedNames).Count'
+        self.assertEqual(self.text.count(assignment), 1)
+        # Both the obsolete value and a hardcoded value matching today must fail.
+        for total in [556, len(self.manifest['files']), len(self.manifest['files']) + 1]:
+            with self.subTest(hardcoded_total=total):
+                mutant = self.text.replace(assignment, '$Total = ' + str(total))
+                with self.assertRaises(AssertionError):
+                    self.assert_manifest_count_contract(mutant)
+
+    def test_current_inventory_hashes_and_host_settings_exception_follow_manifest(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from build_release import build_release
+        from release_rules import manifest_names
+        names = manifest_names(ROOT)
+        self.assertEqual(names, self.manifest['files'])
+        self.assertIn('settings.json', names)
+        self.assertIn('tests/test_rc8_bomc.py', names)
+        added = 'tests/fixtures/oncall-manifest-growth.txt'
+        self.assertNotIn(added, names)
+        # Shrink, current payload (rc10 has 560), and growth without deleting files.
+        inventories = [names[:-1], names, sorted(names + [added])]
+        with tempfile.TemporaryDirectory(prefix='crm-oncall-manifest-') as temporary:
+            for index, expected in enumerate(inventories):
+                with self.subTest(manifest_count=len(expected)):
+                    base = Path(temporary) / str(index)
+                    package = base / 'package'
+                    for rel in expected:
+                        path = package / rel
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_bytes(b'manifest growth fixture\n' if rel == added else (ROOT / rel).read_bytes())
+                    manifest = dict(self.manifest, files=expected)
+                    (package / 'release-manifest.json').write_text(json.dumps(manifest), encoding='utf-8')
+                    self.assertEqual(manifest_names(package), expected)
+                    archive = base / 'release.zip'
+                    report = build_release(package, archive)
+                    self.assertEqual(report['files'], len(expected))
+                    hashes = self.verifier['file_map'](package, expected)
+                    with ZipFile(archive) as zipped:
+                        self.assertEqual(zipped.namelist(), ['crm-sre-team/' + rel for rel in expected])
+                        self.assertEqual({rel: hashlib.sha256(zipped.read('crm-sre-team/' + rel)).hexdigest()
+                                          for rel in expected}, hashes)
+                    self.assertEqual(self.verifier['installed_matches'](package, expected, hashes), [])
+                    installed = base / 'installed-without-root-settings'
+                    for rel in expected:
+                        if rel == 'settings.json':
+                            continue
+                        path = installed / rel
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copyfile(package / rel, path)
+                    self.assertEqual(self.verifier['installed_matches'](installed, expected, hashes), [])
+                    # Every present declared file, including root settings, must match.
+                    (installed / 'settings.json').write_text('tampered\n', encoding='utf-8')
+                    with self.assertRaisesRegex(ValueError, 'newest plan first'):
+                        self.verifier['installed_matches'](installed, expected, hashes)
+                    (package / 'VERSION').write_text('tampered\n', encoding='utf-8')
+                    with self.assertRaisesRegex(ValueError, 'newest plan first'):
+                        self.verifier['installed_matches'](package, expected, hashes)
+
+    def test_historical_checks_ignore_current_manifest_growth_and_shrinkage(self):
+        # Execute the two formerly failing tests against different current counts.
+        # Their original receipt/identity/frozen-hash assertions must still pass.
+        runbook = ROOT / 'tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md'
+        frozen = runbook.read_bytes()
+        with tempfile.TemporaryDirectory(prefix='crm-oncall-history-') as temporary:
+            root = Path(temporary)
+            target = root / runbook.relative_to(ROOT)
+            target.parent.mkdir(parents=True)
+            target.write_bytes(frozen)
+            names = self.manifest['files']
+            for expected in [names[:-1], names, sorted(names + ['future-payload.txt'])]:
+                with self.subTest(current_manifest_count=len(expected)):
+                    (root / 'release-manifest.json').write_text(
+                        json.dumps(dict(self.manifest, files=expected)), encoding='utf-8')
+                    with patch.dict(globals(), ROOT=root):
+                        Rc6SimpleCheckTests.setUpClass()
+                        Rc8SimpleCheckTests.setUpClass()
+                        Rc6SimpleCheckTests().test_published_identity_and_distinct_runbook_delivery()
+                        Rc6SimpleCheckTests().test_install_verify_message_bytes_and_target_receipts()
+                        Rc8SimpleCheckTests().test_release_identity_and_runbook_delivery_are_distinct()
+                        Rc8SimpleCheckTests().test_receipts_integrity_counts_and_scoped_handoff()
+            self.assertEqual(target.read_bytes(), frozen)
 
 
 class ConfigurableRootTests(unittest.TestCase):

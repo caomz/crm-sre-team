@@ -1,6 +1,6 @@
 # CRM SRE Team
 
-电信 CRM 稳定性专家团 · `2.8.0-rc9` · 候选发布（candidate）
+电信 CRM 稳定性专家团 · `2.8.0-rc10` · Mac 精简验收已接受，发布交接准备中
 
 面向电信 CRM 运维场景的 WorkBuddy 专家团项目。基于用户授权的脱敏材料，组织业务链路、数据库、应用运行时和基础设施等领域分析，形成可追溯的诊断结论、最小补证需求、人工评审卡与交接记录。
 
@@ -12,7 +12,21 @@
 | 专业覆盖 | 1 名稳定性总指挥、7 名领域成员、8 个角色 Skill + 1 个团长 BOMC 只读 Skill |
 | 分析输入 | 明确授权且已脱敏的日志、指标、调用链、变更记录与业务材料 |
 | 执行边界 | 团长可经优先的 BOMC 守卫或用户级只读技能直接查询生产；成员不取数，生产写仅形成人工评审材料 |
-| 交付状态 | `2.8.0-rc9` candidate；Mac R4 聚焦加载、CLI、GUARD 与 rc6 恢复检查通过，用户接受技术结果及已记录的准备阶段偏差后推进发布；全量离线结果见 VALIDATION。Windows UPDATE/VERIFY、真实 BOMC 与正式关口仍 NOT_RUN |
+| 交付状态 | rc10 Mac 精简八例与 Claude 复核均8/8 PASS，用户2026-11-01 14:20确认验收；发布身份待提交后固定；Windows、真实BOMC、正式N/S与WB全量NOT_RUN，详见VALIDATION |
+
+## 发布与验收状态（2026-11-01）
+
+rc9 已于 2026-10-23 发布：安装提交 `a838012a37d86b5e0a77fdf85fc677cf8538e267`，标签 `crm-sre-team-2.8.0-rc9`（标签对象 `656cf3fd80d1512fc2496358f7d361c54f4be073`），发布 ZIP SHA256 `67e54af00c572757da6b19eea12aa6689f8cbfbd050175d7fba9defa93cd39eb`；手册附记提交为 `83ae9f9225bf701eb95531b060b515a8e5797cbf`。Mac R4 的技术结果及已记录偏差已获用户接受。
+
+rc10 的 Mac 精简验收已通过，正在整理发布交接，尚未创建本次发布提交或标签。2026-11-01 13:16～13:50（+08:00），Codex 桌面会话执行八例各一次、零重跑，机器草表 8 PASS；Claude 逐例复核 8/8 PASS，用户于当日 14:20（+08:00）回复“确认验收”。WorkBuddy 5.9.3，团长与 MEMBER 成员实际模型均为 glm-5.3-flash；INSTALL、真实 MEMBER、KB 三页、TD-01～TD-04、rc6 RESTORE 均通过。Windows UPDATE/VERIFY、真实 YES、Windows Job、真实 BOMC 查询与 bomc.json 部署、正式 N/S、WB 全量仍为 NOT_RUN。
+
+被测包为 `2.8.0-rc10-mac-lean4.r20261101758e264c425445ce`（ZIP SHA256 `5383cf64b745e14d0eb668704c7ba7559569128060878c13f39a6b7d27cb3e26`），与 `candidate-5.zip`（`747612b296075afb1cc77362a1da9aab7a9c3878955ceaceac8bc0bc487f8b2d`）只差版本串。候选5与验收后补写前的 rc10 离线正式构包有 334 项宿主运行文件同字节，560 项载荷仅 `docs/15-bomc-readonly.md` 与 `prompt-bundles.lock` 不同；本次验收归档另改文档，最终全部差异由仓库外交接逐文件列出，运行文件仍须同字节。正式版本为 `2.8.0-rc10`，目标标签为 `crm-sre-team-2.8.0-rc10`；发布提交及最终 ZIP SHA256 在提交后确定，发布身份见标签说明与 r7 手册固定记录；r7 身份固定行由发布后的独立手册提交补入。
+
+外部证据：`/Volumes/WorkSSD/Archives/claude-tests/rc10-mac-lean-20261101-131633`，执行人 `REPORT.md`、`checks/1793511988652113000/` 与 `SHA256SUMS`（118 项 OK）。封存报告当时的 PENDING_HUMAN_REVIEW 保留；Claude 复核与用户确认是其后的验收事实，本节为其后补记。完整八例、历次失败/改判、宿主恢复及转存更正见 [VALIDATION.md](VALIDATION.md)。
+
+工具与交付范围规则已属于 rc9；rc10 另收紧审计、Read 可见性与本轮文件授权范围，并增加尺寸门禁。验收后的文档整理不改候选5的宿主运行文件。
+
+Mac 已留存 10-25 的 rc10 测试缓存；后续加载须核对实际来源、全部申报文件与根锁哈希，不能以相同版本目录名认定是本候选，也不能覆盖旧缓存。
 
 ## 适用场景
 
@@ -243,9 +257,11 @@ rc8 历史交接约定：值班机简单检查步骤在标签发布后另起提�
 ## 验收与交付流程
 
 1. 自检、WB 用例、7A/7B、校准和关口全部先在 Mac 运行。Mac 跑完、返回结果经人工复核并验收后，再安排 Windows 值班机。
-2. rc9 Mac R4 聚焦验收已完成，用户复核后同意推进发布；准备阶段临时夹具清理偏差保留在 VALIDATION。Windows rc9 UPDATE/VERIFY 当前 NOT_RUN。按独立固定的候选发布身份，值班机只做安装/切换 + VERIFY（来源/缓存完整性、Skill 回执路径）+ 记录版本（WorkBuddy、插件）和实际模型；仅在需确认宿主行为时加一个短会话。Windows Job 实机须另列挂起分配失败、超时、取消、领头结束、后代与 venv/嵌套 Job 的项目。rc9 沿用 rc8 配置 Schema，BOMC 真实配置和生产部署单独安排；旧 r7 rc8 安装常量与新候选不得混用。
+2. rc10 Mac 精简八例与 Claude 逐例复核均8/8 PASS，用户2026-11-01 14:20确认验收；历次原判、改判与观察项见 VALIDATION。Windows rc10 UPDATE/VERIFY 当前 NOT_RUN。发布身份固定后按 r7 的 rc10 简单检查节，从现有版本安装/切换、记录 WorkBuddy/插件/实际模型，运行一次 INSTALL 同款短会话并正式 VERIFY 来源/缓存与两条 Skill 路径；此短会话覆盖相对 Mac 5.9.3 的宿主版本差异。Windows Job、真实 BOMC 查询与 bomc.json 部署、正式 N/S 和 WB 全量单独安排，不混用历史安装常量。
 3. 两台都记录实际 WorkBuddy 版本、插件版本和模型；有差异时，值班机检查须覆盖差异。日常与关口固定 glm-5.3-flash，逐次记录实际模型，分别记录团长与成员。
 4. 每轮 N/S（校准与正式 18 次关口）只使用同一台机器上同次构建的双包，不混用 Mac 与值班机的构建。两台机器各自记录构建后缀与身份，包括机器、`source_commit`、manifest 与缓存哈希。
+
+值班机通用流程是安装/切换 + VERIFY 并记录版本；仅在需确认宿主行为时加一个短会话。本次 rc10 为覆盖宿主版本及双技能加载差异，已明确安排一次 INSTALL 同款短会话。
 
 校准和关口前，两台都要查看宿主记忆条目，由执行人在会话外核对 conversation_search 可检索的测试历史，记录可能进入被测会话的内容及隔离状态；Mac 测试历史更多，同样适用。是否清理或关闭由用户决定。宿主用例与关口材料按 `docs/11-workbuddy-host-acceptance.md` 的要求隔离。
 

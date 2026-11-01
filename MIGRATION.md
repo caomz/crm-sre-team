@@ -1,6 +1,26 @@
+# 迁移到 2.8.0-rc10
+
+rc10 收紧验收审计与输出读取范围，不自动迁移 WorkBuddy 配置、记忆或缓存。Mac 精简验收已复核并获用户确认，当前准备发布交接；发布身份固定后再安排值班机简单检查。rc9 标签与缓存保留。
+
+审计 CLI 退出码：PASS=0、FAIL=1、执行/输入错误=2、BLOCKED=3、HOST_LIMIT/PASS_WITH_KNOWN_ISSUES 或其他待复核=4；PASS 仍有 review_required 时也为 4。report 有阻断或待复核也不返回 0。调用方必须核对 JSON result 和待复核字段。
+
+含成员的 audit 同时传 --collection 与明确可信的 --projects；裸 --member 或无法重核来源的离线日志不再自动通过。正常消息需明确 completed；仅自动评分一个明确请求。多请求、缺终态或未答追加请求保持阻断，不能用裁剪日志或补造字段规避。知识路径使用源平台物理身份；跨机缺证明不自动通过。具体参数见 docs/14。
+
+rc10 的 Mac 精简验收已通过，正在整理发布交接，尚未创建本次发布提交或标签。2026-11-01 13:16～13:50（+08:00），Codex 桌面会话执行八例各一次、零重跑，机器草表 8 PASS；Claude 逐例复核 8/8 PASS，用户于当日 14:20（+08:00）回复“确认验收”。WorkBuddy 5.9.3，团长与 MEMBER 成员实际模型均为 glm-5.3-flash；INSTALL、真实 MEMBER、KB 三页、TD-01～TD-04、rc6 RESTORE 均通过。Windows UPDATE/VERIFY、真实 YES、Windows Job、真实 BOMC 查询与 bomc.json 部署、正式 N/S、WB 全量仍为 NOT_RUN。
+
+被测包为 `2.8.0-rc10-mac-lean4.r20261101758e264c425445ce`（ZIP SHA256 `5383cf64b745e14d0eb668704c7ba7559569128060878c13f39a6b7d27cb3e26`），与 `candidate-5.zip`（`747612b296075afb1cc77362a1da9aab7a9c3878955ceaceac8bc0bc487f8b2d`）只差版本串。候选5与验收后补写前的 rc10 离线正式构包有 334 项宿主运行文件同字节，560 项载荷仅 `docs/15-bomc-readonly.md` 与 `prompt-bundles.lock` 不同；本次验收归档另改文档，最终全部差异由仓库外交接逐文件列出，运行文件仍须同字节。正式版本为 `2.8.0-rc10`，目标标签为 `crm-sre-team-2.8.0-rc10`；发布提交及最终 ZIP SHA256 在提交后确定，发布身份见标签说明与 r7 手册固定记录；r7 身份固定行由发布后的独立手册提交补入。
+
+外部证据：`/Volumes/WorkSSD/Archives/claude-tests/rc10-mac-lean-20261101-131633`，执行人 `REPORT.md`、`checks/1793511988652113000/` 与 `SHA256SUMS`（118 项 OK）。封存报告当时的 PENDING_HUMAN_REVIEW 保留；Claude 复核与用户确认是其后的验收事实，本节为其后补记。完整八例、历次失败/改判、宿主恢复及转存更正见 [VALIDATION.md](VALIDATION.md)。
+
+Mac 已留存 10-25 的 rc10 测试缓存；后续加载须核对实际来源、全部申报文件与根锁哈希，不能以相同版本目录名认定是本候选，也不能覆盖旧缓存。
+
+rc9 已于 2026-10-23 发布：安装提交 `a838012a37d86b5e0a77fdf85fc677cf8538e267`，标签 `crm-sre-team-2.8.0-rc9`（标签对象 `656cf3fd80d1512fc2496358f7d361c54f4be073`），发布 ZIP SHA256 `67e54af00c572757da6b19eea12aa6689f8cbfbd050175d7fba9defa93cd39eb`；手册附记提交为 `83ae9f9225bf701eb95531b060b515a8e5797cbf`。Mac R4 的技术结果及已记录偏差已获用户接受。
+
+以下保留 rc9 及更早迁移记录。
+
 # 迁移到 2.8.0-rc9
 
-rc9 统一插件、Skill 包和守卫 VERSION / guard_version，纳入当前 main 的发布门与审计修复，以及更新器 YES 输入缓冲修复。BOMC 配置 Schema、参数白名单、最小权限和生产写边界不变；旧配置和旧包保留，不自动改 bomc.json。Mac R4 聚焦验收已完成，用户在知悉技术结果和准备阶段临时清理偏差后同意继续。正式候选按新的发布提交、标签与 ZIP SHA256 固定，之后安排 Windows UPDATE + VERIFY；Windows 与真实生产通道仍未验证。
+rc9 统一插件、Skill 包和守卫 VERSION / guard_version，纳入当前 main 的发布门与审计修复，以及更新器 YES 输入缓冲修复。BOMC 配置 Schema、参数白名单、最小权限和生产写边界不变；旧配置和旧包保留，不自动改 bomc.json。Mac R4 聚焦验收已完成，用户在知悉技术结果和准备阶段临时清理偏差后同意继续。rc9 发布提交、标签与 ZIP SHA256 已固定（见上方发布身份），Windows UPDATE + VERIFY 仍待正式回执；Windows 与真实生产通道仍未验证。
 
 rc8 标签发布包与 cd1423a 同步工作树存在非运行时字节差异，不能仅凭相同 rc8 目录名确认安装身份。rc9 使用新的版本目录，由客户端从新来源创建缓存；不覆盖旧缓存、不移动或清理旧记忆。后续安装只使用正式固定的 rc9 身份与更新器安装记录，不复用 rc8 补充指令中的计划路径或常量。
 

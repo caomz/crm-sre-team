@@ -1,10 +1,10 @@
 {
-  "version": "2.8.0-rc9",
+  "version": "2.8.0-rc10",
   "skill_id": "bomc-alarm-readonly",
   "agent_id": "telecom-crm-sre-team-lead",
   "verification_scope": "CONTENT_INTEGRITY_NOT_RUNTIME_BEHAVIOR",
   "files": {
-    "SKILL.md": "61b342dc0c74cffce5fa3abcf02b07f9f331800f7eb639cd3bd42a8bc1455314",
-    "scripts/bomc_readonly.py": "efbd0383ea30fd5381fc136a6f20661a321d6d481d60ec3d9fbcc19e597e780c"
+    "SKILL.md": "62f68c04e982083e718a3443ad5577fb03a6c4616dda0b1355b10d4b389380b3",
+    "scripts/bomc_readonly.py": "3b3fe8ff172397256ec648998d2de2ae794a9708707a75f58a41e53d7e32a1fb"
   }
 }

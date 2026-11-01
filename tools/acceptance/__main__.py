@@ -24,12 +24,16 @@ def report(paths: list[Path], output: Path) -> dict:
     rows = ["# WorkBuddy 验收汇总", "", "仅机械取证；语义与人工复核另记。", "",
             "| 用例 | 结论 | 关键失败 | 证据 |", "|---|---|---|---|"]
     for path, data in zip(paths, audits):
-        rows.append(f"| {data['case']} | {data['result']} | {data['critical_failure']} | {path} |")
+        reason = data.get("blocked_reason") or ""
+        rows.append(f"| {data['case']} | {data['result']} {reason} | {data['critical_failure']} | {path} |")
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.is_symlink():
         raise ValueError("output cannot be a symlink")
     output.write_text("\n".join(rows) + "\n", encoding="utf-8")
-    return {"cases": len(audits), "critical_failures": sum(a["critical_failure"] for a in audits), "report": str(output)}
+    return {"cases": len(audits), "critical_failures": sum(a["critical_failure"] for a in audits),
+            "blocked": sum(a["result"] == "BLOCKED" for a in audits),
+            "review_required": sum(a["result"] in ("HOST_LIMIT", "PASS_WITH_KNOWN_ISSUES") or bool(a.get("review_required")) for a in audits),
+            "all_pass": bool(audits) and all(a["result"] == "PASS" and not a.get("review_required") for a in audits), "report": str(output)}
 
 
 def main(argv=None):
@@ -44,6 +48,8 @@ def main(argv=None):
     a = commands.add_parser("audit")
     a.add_argument("--lead", type=Path, required=True)
     a.add_argument("--member", type=Path, action="append", default=[])
+    a.add_argument("--collection", type=Path, help="collection.json; required for member provenance")
+    a.add_argument("--projects", type=Path, help="explicit trusted local projects root to recheck")
     a.add_argument("--spec", type=Path, required=True)
     a.add_argument("--output", type=Path, required=True)
     r = commands.add_parser("report")
@@ -58,16 +64,23 @@ def main(argv=None):
         if args.command == "collect":
             result = collect(args.projects, args.session_id, args.member_id, args.output)
         elif args.command == "audit":
-            result = audit(args.lead, args.member, json.loads(args.spec.read_text(encoding="utf-8")))
+            result = audit(args.lead, args.member, json.loads(args.spec.read_text(encoding="utf-8")),
+                           collection_path=args.collection, projects=args.projects)
             write_json(args.output, result)
         elif args.command == "report":
             result = report(args.audits, args.output)
         else:
             result = append(args.ledger, json.loads(args.run.read_text(encoding="utf-8")), args.schema)
         print(json.dumps(result if args.command != "audit" else
-                         {k: result[k] for k in ("case", "result", "critical_failure", "critical_findings", "quality_findings", "review_required")},
+                         {k: result.get(k) for k in ("case", "result", "blocked_reason", "criteria_version", "critical_failure", "critical_findings", "quality_findings", "review_required")},
                          ensure_ascii=False, indent=2))
-        return 1 if args.command == "audit" and result["result"] == "FAIL" or args.command == "ledger" and not result["ratchet"]["ok"] else 0
+        if args.command == "audit":
+            if result["result"] == "PASS" and result["review_required"]:
+                return 4
+            return {"PASS": 0, "FAIL": 1, "BLOCKED": 3}.get(result["result"], 4)
+        if args.command == "report" and not result["all_pass"]:
+            return 3 if result["blocked"] else 4
+        return 1 if args.command == "ledger" and not result["ratchet"]["ok"] else 0
     except (OSError, ValueError, KeyError, ValidationError) as exc:
         print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 2

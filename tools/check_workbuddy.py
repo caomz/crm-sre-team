@@ -2,6 +2,7 @@
 """Offline consistency checks, NOT a runtime permission or semantic verifier."""
 from __future__ import annotations
 import argparse
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -202,8 +203,7 @@ BOMC_GUARD_FAILURE_RULE = (
     '守卫返回非 0 时，按其报错原文报告字段和未取得可用证据，停止本轮 BOMC 取数；不自行列出、探查或读取配置中的任何路径（python、skill_root、output_dir、skill_config 及其所在目录），由用户自己在会话外处理；其余分析照常并写明缺口。未经会话外处理不重试；可恢复失败最多重试 1 次且每轮最多 2 次守卫调用，不改用其他方式取数。'
 )
 BOMC_TERMINAL_AND_READ_RULE = (
-    "除固定守卫命令外，不为 BOMC 另跑终端命令或脚本；需要查看完整脱敏结果时，"
-    "用宿主的 Read 工具读取守卫回执中的输出文件，仍受用户文件范围限制。"
+    '除固定守卫命令外，不为 BOMC 另跑终端命令或脚本；仅当用户本轮文件范围明确包含守卫输出文件时，才用 Read 读取。Read 在工具名单内不等于文件获准；只准读 bomc.json 等其他文件时不读输出文件。未获准则按守卫预览分析，写明未读范围及限制。'
 )
 BOMC_LEAD_MARKERS = (
     "## BOMC 只读查询", "不连生产", "不执行命令", "不读文件", "scripts/bomc_readonly.py",
@@ -553,7 +553,13 @@ def run(root: Path) -> dict:
             a = [part for mode, part in split_modes(src.read_text(encoding="utf-8"))[0] if mode == label]
             b = [part for mode, part in split_modes(skill_src.read_text(encoding="utf-8"))[0] if mode == label]
             if not a or a != b: errors.append(sid + ":paired_mode_mismatch:" + label)
-    return {"scope": "STATIC_MODE_CONSISTENCY_NOT_MODEL_OR_HOST_BEHAVIOR", "errors": sorted(set(errors)), "pass": not errors}
+    size_spec = importlib.util.spec_from_file_location("inline_prompt_sizes", root / "tools/check_prompt_sizes.py")
+    size_module = importlib.util.module_from_spec(size_spec)
+    size_spec.loader.exec_module(size_module)
+    size_report = size_module.run(root)
+    errors += ["prompt_byte_limit:" + r['path'] for r in size_report['errors']]
+    return {"scope": "STATIC_MODE_CONSISTENCY_NOT_MODEL_OR_HOST_BEHAVIOR", "errors": sorted(set(errors)),
+            "prompt_sizes": size_report, "pass": not errors}
 
 
 def reference_errors(root: Path) -> list[str]:

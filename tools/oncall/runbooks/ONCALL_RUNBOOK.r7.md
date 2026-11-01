@@ -1,5 +1,49 @@
 # 值班机手册 r7 · rc9 开发候选（未发布，Windows 安装未执行）
 
+> **当前交接附记（2026-11-01）**：首标题与下方 rc9/rc8 安装块保留冻结历史；当前执行范围是以下 rc10 简单检查。Mac 精简验收已复核并获用户确认，Windows 仍 NOT_RUN。完整、可直接粘贴的命令随仓库外交接稿 `ONCALL-rc10-simple-check.md` 提供，不执行历史常量。
+
+## rc10 值班机简单检查（2026-11-01）
+
+Mac 第5次精简八例各发一次、零重跑，机器草表8 PASS、Claude逐例复核8/8 PASS，用户于2026-11-01 14:20（+08:00）“确认验收”。Mac WorkBuddy为5.9.3，团长与MEMBER成员均为glm-5.3-flash。以下为待执行步骤，不把Mac结果当作Windows已通过。
+
+### rc10 发布身份与前提
+
+发布身份见标签说明与 r7 手册固定记录。发布提交和最终ZIP身份在提交后确定；本节身份固定行由发布后的独立手册提交补入，与rc9发布后附记的做法相同。本节及独立交接稿的占位须在Claude提交、复核构包并推送后填写，未填齐不得执行。
+
+| 项目 | 发布后填写 / 核对 |
+|---|---|
+| Tag | `<RC10_RELEASE_TAG>`；目标为 `crm-sre-team-2.8.0-rc10` |
+| ExpectedCommit | `<RC10_RELEASE_COMMIT_40_HEX>`；安装提交，不是后续手册提交 |
+| ExpectedZipSha256 | `<RC10_RELEASE_ZIP_SHA256_64_HEX>` |
+| 发布 ZIP | `crm-sre-team-2.8.0-rc10.zip`；`<RC10_RELEASE_ZIP_BYTES>`字节；560项申报文件 |
+| RunbookCommit | `<RC10_RUNBOOK_COMMIT_40_HEX>`；后续身份固定手册提交 |
+| 当前插件 | 未知；按本站实际VERSION与更新器支持的方式从现有版本升级，不预设rc5/rc6/rc9 |
+
+执行前须确认本地项目 `D:\python_code\github_my\crm-sre-team` 已同步到标签 `crm-sre-team-2.8.0-rc10`，且标签指向交付的完整安装提交。仅从本地项目取得目标标签，在全新bootstrap核对标签/提交和脚本后运行现有 `Update-CrmSreTeam.ps1`；不访问GitHub。只用现有普通Windows PowerShell 5.1、Git及已具备所需依赖的Python；默认路径与更新器一致，缺依赖、路径不符或现有安装不受支持即停，保留原输出。上次SWITCH/UPDATE未完成或提示不要启动客户端时，不继续。
+
+### rc10 默认检查步骤
+
+1. **版本记录**：记录实际WorkBuddy版本、升级前插件VERSION、所选模型与机器。模型选GLM-5.3-Flash；运行后另记实际模型。当前插件版本未知，不套用历史rc5/rc6来源假设。
+2. **UPDATE安装/切换**：正常退出WorkBuddy，单独粘贴交接稿UPDATE块，使用本次Tag、ExpectedCommit、ExpectedZipSha256。按PLAN/dry-run→必要DRILL→展示计划→APPLY保留整包备份。看到`Type YES`后再手动输入一次`YES`，避免YES被粘贴缓冲读走；不把YES或下一块命令一并粘贴。记下本次Bootstrap、PlanPath、PlanSha256；已为rc10也由更新器核验，不手动覆盖同版本来源或缓存。
+3. **一次INSTALL同款短会话**：UPDATE成功后打开WorkBuddy，只点套件“刷新”；用新建空文件夹开新会话，选“电信CRM稳定性专家团”和GLM-5.3-Flash。只发下方INSTALL同款请求，记录真实SessionId、实际模型、截图或会话记录位置。本次短会话同时为正式VERIFY提供会话证据；Mac与Windows宿主版本不同时，用它覆盖双技能加载的差异，不把该结果扩大为其他宿主行为通过，不因WorkBuddy日常升级改变插件版本。
+4. **正式VERIFY**：短会话结束后用同一bootstrap updater的`-Mode VERIFY`，传本次`-Tag/-ExpectedCommit/-ExpectedZipSha256/-PlanPath/-PlanSha256/-SessionId`，只用本次计划和刚才真实SessionId，不复用旧计划或Mac会话ID。来源/缓存完整性与Skill回执必须同时核对；命令可在新普通PowerShell 5.1窗口单独运行。
+
+INSTALL同款请求（与Mac第5次完全一致）：
+
+仅通过宿主 Skill 工具按顺序加载 stability-director 和 bomc-alarm-readonly。仅核对这两次实际工具回执，分别给出技能名、是否成功和回执中的完整目录。除这两次 Skill 调用外，不读文件，不执行命令，不联网，不写文件或记忆，不派成员，不查询 BOMC。回执不可见或加载失败就如实说明，不根据正文、自拟版本号或历史记忆声称成功。
+
+两个真实目录必须分别为 `...\plugins\cache\my-experts\crm-sre-team\2.8.0-rc10\skills\stability-director` 与 `...\plugins\cache\my-experts\crm-sre-team\2.8.0-rc10\skills\bomc-alarm-readonly`。核对 `skill-receipts.json` 中两条路径与version=2.8.0-rc10，不能只依据回答自报版本或来源目录；updater本身只要求至少一条相关目标版本Skill回执，双技能齐全须人工核对。缺任一条、错版本或出现范围外工具调用即停止并保留原记录，不以重发覆盖失败。
+
+来源与缓存各核560项申报文件：完整时为 `560/560, root settings.json matches package`；仅根settings.json被宿主移除时允许 `559/560, root settings.json missing (host-managed)`，存在则须同字节。其他申报文件缺失、类型或哈希不符均失败。来源记忆、缓存 `.in_use` 等额外路径分别记名称/数量，其他extra path交人工复核，不删除、不自动放行。`PASS_DECLARED_FILES_ONLY`仅表示申报文件完整性，`host_acceptance=HUMAN_REVIEW_REQUIRED`，不能证明Agent正文加载。
+
+### rc10 带回与范围
+
+回传VERIFY原始输出及evidence目录（`skill-receipts.json`、`SHA256SUMS`）、Bootstrap/PlanPath/PlanSha256/SessionId、短会话截图或会话记录位置，以及WorkBuddy版本、升级前后插件版本、实际模型记录；未派成员记NOT_RUN。本机路径与会话ID留仓库外交接。
+
+不部署bomc.json、不读取配置或凭据、不查BOMC、不连生产、不跑WB全量、正式N/S或Windows Job；生产写只产人工评审要求。Mac为5.9.3，Windows版本以本次记录为准，不能互相替代。失败保留输出、计划与备份；若需回退，正常退出客户端，按原更新器及本次计划支持的ROLLBACK/切换流程恢复检查前记录的旧版本，再刷新并以对应身份VERIFY，不手写缓存、不删除、不覆盖旧备份。Windows与真实BOMC仍NOT_RUN。
+
+## rc9及更早的冻结历史记录
+
 > **发布后状态附记（2026-10-23）**：以下“尚未发布／发布身份待定”是发布前冻结记录。Mac R4 聚焦验收结果及准备阶段临时夹具清理偏差已向用户报告，用户同意继续提交 GitHub 和安排值班机升级。rc9 安装身份固定为 Tag `crm-sre-team-2.8.0-rc9`、ExpectedCommit `a838012a37d86b5e0a77fdf85fc677cf8538e267`、ExpectedZipSha256 `67e54af00c572757da6b19eea12aa6689f8cbfbd050175d7fba9defa93cd39eb`；更新脚本 SHA256 为 `0bf81df1ed28ebb4065998669700fc7ecfdde13f72005f7ae6d608ea1cb97463`。Windows UPDATE、真实 YES 输入、双 Skill 回执与正式 VERIFY 仍为 NOT_RUN，不能把 Mac 结果外推为 Windows 已通过。值班机仅使用随本轮交付的 `ONCALL-RC9.md` 新操作单，不执行下方历史 rc8 块；交付手册提交与安装提交分别核对。此附记为 repository-only，不改变标签载荷或发布 ZIP。
 
 当前准备 `2.8.0-rc9` 开发候选，rc9 尚未发布。Mac 验收及发布身份未固定前，不执行 rc9 UPDATE/VERIFY。下方 rc5、rc6、rc7、rc8 的固定发布身份、安装块与实测均保留为历史，不是 rc9 安装指引。rc8 候选发布内容已合并 main，原始安装身份见“rc8 值班机简单检查（2026-10-22）”；其手册中“Windows 未执行”和 NOT_RUN 是当时状态，不能用旧文案代替后续真实回执或正式 VERIFY 记录。

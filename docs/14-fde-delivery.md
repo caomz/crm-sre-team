@@ -1,6 +1,12 @@
-# FDE 交付与治理规格 · 2.8.0-rc9
+# FDE 交付与治理规格 · 2.8.0-rc10
 
-rc9 当前为开发候选，纳入发布门、记录审计与 YES 输入缓冲修复，插件和守卫版本同步。本轮离线状态见 VALIDATION；Mac 宿主验收及 Windows UPDATE/VERIFY 待执行，旧 rc8 的已验收事实按历史记录保留，不折算为 rc9 新测。业务价值与正式关口尚无新增证据。
+## 当前交付状态（2026-11-01）
+
+rc10 的 Mac 精简验收已通过，正在整理发布交接，尚未创建本次发布提交或标签。2026-11-01 13:16～13:50（+08:00），Codex 桌面会话执行八例各一次、零重跑，机器草表 8 PASS；Claude 逐例复核 8/8 PASS，用户于当日 14:20（+08:00）回复“确认验收”。WorkBuddy 5.9.3，团长与 MEMBER 成员实际模型均为 glm-5.3-flash；INSTALL、真实 MEMBER、KB 三页、TD-01～TD-04、rc6 RESTORE 均通过。Windows UPDATE/VERIFY、真实 YES、Windows Job、真实 BOMC 查询与 bomc.json 部署、正式 N/S、WB 全量仍为 NOT_RUN。
+
+被测包为 `2.8.0-rc10-mac-lean4.r20261101758e264c425445ce`（ZIP SHA256 `5383cf64b745e14d0eb668704c7ba7559569128060878c13f39a6b7d27cb3e26`），与 `candidate-5.zip`（`747612b296075afb1cc77362a1da9aab7a9c3878955ceaceac8bc0bc487f8b2d`）只差版本串。候选5与验收后补写前的 rc10 离线正式构包有 334 项宿主运行文件同字节，560 项载荷仅 `docs/15-bomc-readonly.md` 与 `prompt-bundles.lock` 不同；本次验收归档另改文档，最终全部差异由仓库外交接逐文件列出，运行文件仍须同字节。正式版本为 `2.8.0-rc10`，目标标签为 `crm-sre-team-2.8.0-rc10`；发布提交及最终 ZIP SHA256 在提交后确定，发布身份见标签说明与 r7 手册固定记录；r7 身份固定行由发布后的独立手册提交补入。
+
+外部证据：RUN `rc10-mac-lean-20261101-131633`（完整路径见 VALIDATION），执行人 `REPORT.md`、`checks/1793511988652113000/`、118项 `SHA256SUMS`；Claude复核和用户确认为其后补记，不改封存报告。逐例事实、历次改判和记录层转存更正见 [VALIDATION](../VALIDATION.md)。Windows只安排r7 rc10简单检查及一次INSTALL短会话，覆盖相对Mac 5.9.3的宿主差异。业务价值与正式关口尚无新增证据；离线结果见仓库外交接。
 
 当前交付为只读材料分析、待人工复核的建议与离线验收工具。业务价值和真实使用尚无证据，待用户采集。本轮提供采集规格，不采集事故数据、不读取真实知识库正文。系统层通过不能折算业务价值或生产就绪。
 
@@ -157,6 +163,27 @@ rc9 当前为开发候选，纳入发布门、记录审计与 YES 输入缓冲�
 | 回执确认与回滚 | common执行回执纪律、oncall备份/VERIFY | 生产写只给人工评审需求；不可逆动作不开放自动执行；仅本地包切换可按备份恢复 |
 
 日常取证步骤：先登记匿名事件、日期时区、WorkBuddy/插件/主成员实际模型和构建身份；记录实际会话/成员ID；任务完成后collect到授权外部目录；核副本与原文件字节；audit后人工打开失败/待复核项的调用与可见输出；记录结论、理由和证据定位；追加台账，复算SHA256。不得让被测会话读取gold、评估期望或真实历史档案。
+
+### rc10 审计输入与阻断规则
+
+判据为 `workbuddy-audit/2026-10-24`。仅一个明确请求可以自动评分；assistant 的 completed、请求位置、工具配对和最终输出需同时成立。缺失/未知状态、未答新请求、多请求或恢复歧义不能借用旧输出通过；原始记录保留，不靠人工补 status 或裁剪回合消除阻断。真实宿主错误仍需会话外复核。人工 review_record 同时绑定 case、raw_sha256、criteria_version 与 request_bindings。
+
+Skill 版本核对只读取 Skill 工具回执中以 `Base directory for this skill: ` 开头的完整目录行，将正斜杠 `/`、Windows 反斜杠 `\` 及二者混用都作为路径段分隔符。末四段须精确为 `crm-sre-team/<expected_version>/skills/stability-director`，且目标回执版本列表须恰有一项；相似前缀目录、其他插件根段或技能名、额外尾段及任意位置的 `..` 段均不通过。不做大小写归一化；与原版本提取语义一致，安装前缀（含盘符）不参与版本比较，因此这项检查不证明完整安装根或物理文件身份，仍须独立核对来源与缓存。此兼容性有合成回归覆盖，真实 Windows 回执仍须在值班机确认。
+
+含成员时，使用同一主会话 collect 的清单与副本，并显式指定可信宿主来源根。下面路径与 ID 是占位参数：
+
+```bash
+python3 -m tools.acceptance collect --projects /trusted/projects --session-id SESSION-ID --output /evidence/run
+python3 -m tools.acceptance audit --lead /evidence/run/SESSION-ID.jsonl --member /evidence/run/agent-MEMBER-ID.jsonl --collection /evidence/run/collection.json --projects /trusted/projects --spec /outside/spec.json --output /evidence/run/audit.json
+```
+
+collection/v2 记录 Agent callId、真实回执 ID、行号、主会话来源层级和字节哈希；audit 重新核对源文件、副本与投影。v1 只有在原来源仍可验证时兼容。裸 --member、改名、跨会话拼接或只有自声明清单不能证明来源；源不可用为 BLOCKED。sessionId 不假定等于 Agent ID，parentId 不假定是父会话 ID。本机来源重核防错选和串档，不提供对整套伪造宿主存储的密码学认证。
+
+WorkBuddy 5.8.3 的成员 Skill 预加载会写 user 消息，但带 isMeta=true、skipRun=true，并完整包在 skill-preloaded 标签内。仅在成员来源已核验、这些消息位于唯一派单输入之前且派单正文与真实 Agent prompt 逐字一致时，将它们登记为 host_preload_lines。普通用户消息、缺标记、派单之后的预加载样式文本均不能借此排除；保留原始输入与全部上下文，不裁剪文件。
+
+知识库审计使用规范路径与本机文件身份，不读私密正文、不扫描目录。私密拒绝优先；原始 `..`、链接/reparse、越界仍拒绝。`knowledge_config.path_flavor` 可为 posix/windows，默认审计运行机平台；跨机或物理身份不可用为 BLOCKED，Mac 不能代替 Windows 原生验证。正文覆盖所有允许目录，按同一文件身份去重，max_pages 为 1–3。配置、精确 wiki/index.md、可信 spec 的 navigation_paths 及精确 referenced_raw 单独分类；导航清单应由执行人根据真实导航引用冻结，不由被测模型自报。原文数量没有新增自动豁免承诺，不得凭 sources 目录名免计正文。引用或私密身份不完整时不自动放行。
+
+CLI：PASS=0、FAIL=1、输入/执行错误=2、BLOCKED=3、HOST_LIMIT/PASS_WITH_KNOWN_ISSUES 或仍有 review_required=4。report 记录阻断与待复核数量，非全通过不返回 0。调用方必须同时核对 JSON，不把诊断命令成功运行等同验收通过。HOST_LIMIT 的既有专项判读、ledger 的 BLOCKED 未通过统计和人工审批要求不变；新旧 criteria_version 不混算。
 
 ## 7. 五类风险与两列责任
 
