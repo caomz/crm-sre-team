@@ -24,10 +24,10 @@ Mac 第5次精简八例各发一次、零重跑，机器草表8 PASS、Claude逐
 
 ### rc10 默认检查步骤
 
-1. **版本记录**：记录实际WorkBuddy版本、升级前插件VERSION、所选模型与机器。模型选GLM-5.3-Flash；运行后另记实际模型。当前插件版本未知，不套用历史rc5/rc6来源假设。
-2. **UPDATE安装/切换**：正常退出WorkBuddy，单独粘贴交接稿UPDATE块，使用本次Tag、ExpectedCommit、ExpectedZipSha256。按PLAN/dry-run→必要DRILL→展示计划→APPLY保留整包备份。看到`Type YES`后再手动输入一次`YES`，避免YES被粘贴缓冲读走；不把YES或下一块命令一并粘贴。记下本次Bootstrap、PlanPath、PlanSha256；已为rc10也由更新器核验，不手动覆盖同版本来源或缓存。
+1. **版本记录与前置检查**：记录实际 WorkBuddy 版本、安装来源 VERSION、所选模型与机器，模型选 GLM-5.3-Flash，运行后另记实际模型。当前插件状态未知，使用仓库外交接稿 `ONCALL-rc10-simple-check.v2.md`（v2 取代 v1），先只读检查来源 VERSION 与目标缓存路径；来源版本匹配 `2.8.0-rc10*`，或 `%USERPROFILE%\.workbuddy\plugins\cache\my-experts\crm-sre-team\2.8.0-rc10` 已存在时，停止并带回现状，另行核对来源、缓存、申报清单与锁哈希，不进入本次 UPDATE。来源 VERSION 缺失、为空或检查失败同样停止。
+2. **UPDATE 安装/切换**：仅在前置检查未阻断且 UPDATE 块复查通过后，正常退出 WorkBuddy，单独粘贴交接稿 UPDATE 块，使用本次 Tag、ExpectedCommit、ExpectedZipSha256。更新器生成 PLAN、必要时完成合成 DRILL，展示计划后等待确认；输入 YES 后会把现有来源移入全新备份，再重写为目标来源，同版本也不自动跳过，缓存重建由宿主处理。看到 `Type YES` 后再单独手动输入一次 `YES`，避免 YES 被粘贴缓冲读走，不把 YES 或下一块命令一并粘贴。记录本次 Bootstrap、PlanPath、PlanSha256；失败保留输出、来源、缓存、计划及备份并停止。
 3. **一次INSTALL同款短会话**：UPDATE成功后打开WorkBuddy，只点套件“刷新”；用新建空文件夹开新会话，选“电信CRM稳定性专家团”和GLM-5.3-Flash。只发下方INSTALL同款请求，记录真实SessionId、实际模型、截图或会话记录位置。本次短会话同时为正式VERIFY提供会话证据；Mac与Windows宿主版本不同时，用它覆盖双技能加载的差异，不把该结果扩大为其他宿主行为通过，不因WorkBuddy日常升级改变插件版本。
-4. **正式VERIFY**：短会话结束后用同一bootstrap updater的`-Mode VERIFY`，传本次`-Tag/-ExpectedCommit/-ExpectedZipSha256/-PlanPath/-PlanSha256/-SessionId`，只用本次计划和刚才真实SessionId，不复用旧计划或Mac会话ID。来源/缓存完整性与Skill回执必须同时核对；命令可在新普通PowerShell 5.1窗口单独运行。
+4. **正式VERIFY**：短会话结束后用同一bootstrap updater的`-Mode VERIFY`，传本次`-Tag/-ExpectedCommit/-ExpectedZipSha256/-PlanPath/-PlanSha256/-SessionId`，只用本次计划和刚才真实SessionId，不复用旧计划或Mac会话ID。来源/缓存完整性与Skill回执必须同时核对；命令可在新普通PowerShell 5.1窗口单独运行。本次 UPDATE 未明确成功或缺少本次 INSTALLED 状态时，不执行后续刷新、INSTALL 短会话及正式 VERIFY，也不复用旧计划；来源或缓存哈希不符即停止并带回原输出，不手动改写同版本缓存。
 
 INSTALL同款请求（与Mac第5次完全一致）：
 
