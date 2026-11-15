@@ -1,5 +1,7 @@
 # AGENTS.md
 
+项目用途、操作与验证导航见 [PROJECT.md](PROJECT.md)；本文件及既有专项入口的约束继续适用。
+
 本文件是本项目的 AI 协作规则，优先级高于通用习惯，与 `policy-source/prompts/common.md` 描述的运行契约一致。
 
 ## 唯一真源
