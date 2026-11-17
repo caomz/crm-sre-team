@@ -548,7 +548,7 @@ class OncallUpdaterStaticTests(unittest.TestCase):
         from build_release import build_release
         # Retain this isolated artifact: no cleanup/delete operations in this test.
         archive = Path(tempfile.mkdtemp(prefix="crm-oncall-static-")).resolve() / "release.zip"
-        report = build_release(ROOT, archive)
+        report = build_release(ROOT, archive, target="workbuddy")
         with ZipFile(archive) as zipped:
             actual = zipped.namelist()
         self.assertEqual(report["files"], len(manifest["files"]))
@@ -2008,7 +2008,7 @@ class ManifestCountRegressionTests(unittest.TestCase):
                     (package / 'release-manifest.json').write_text(json.dumps(manifest), encoding='utf-8')
                     self.assertEqual(manifest_names(package), expected)
                     archive = base / 'release.zip'
-                    report = build_release(package, archive)
+                    report = build_release(package, archive, target="workbuddy")
                     self.assertEqual(report['files'], len(expected))
                     hashes = self.verifier['file_map'](package, expected)
                     with ZipFile(archive) as zipped:

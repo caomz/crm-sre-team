@@ -141,10 +141,12 @@ class ReleaseSafetyTests(unittest.TestCase):
     def test_15_build_preflight_failure_leaves_tree_unchanged(self):
         p = self.root / "settings.json";p.write_text("[]",encoding="utf-8")
         before = tree_hash(self.root)
-        with self.assertRaises(ValueError): builder.build(self.root)
+        with self.assertRaises(ValueError): builder.build(self.root, target="workbuddy")
         self.assertEqual(tree_hash(self.root), before)
 
     def test_16_build_commit_failure_rolls_back_and_reruns(self):
+        # Start from a coherent target build; source edits can stale the checked-in lock.
+        builder.build(self.root)
         before=tree_hash(self.root); actual=builder.os.replace; count=[0]
         def fail_once(src,dst):
             count[0]+=1
@@ -167,7 +169,7 @@ class ReleaseSafetyTests(unittest.TestCase):
     def test_19_symlinked_source_parent_rejected(self):
         target=self.base/"external-templates";shutil.move(str(self.root/"policy-source/templates"),target)
         (self.root/"policy-source/templates").symlink_to(target,target_is_directory=True)
-        with self.assertRaises(ValueError): builder.build(self.root)
+        with self.assertRaises(ValueError): builder.build(self.root, target="workbuddy")
 
     def test_20_path_rule_negative_cases(self):
         for name in ["../escape", "/absolute", "a/../b", "a//b", "a\\b", "C:/x", ".env", "a/.env.test", "a/key.pem", "a/id_rsa", "random.zip", "a/.venv/x.py", "reports/report.json", "a/backup.bak", "a/file.md~"]:
@@ -177,7 +179,7 @@ class ReleaseSafetyTests(unittest.TestCase):
         p = self.root / "skills/stability-director/private-notes.md"
         p.write_text("SYNTHETIC_USER_NOTES", encoding="utf-8")
         before = tree_hash(self.root)
-        with self.assertRaises(ValueError): builder.build(self.root)
+        with self.assertRaises(ValueError): builder.build(self.root, target="workbuddy")
         self.assertEqual(tree_hash(self.root), before)
 
     @requires_real_symlink

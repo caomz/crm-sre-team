@@ -1,0 +1,1 @@
+按证据设计DAG，每批至多3名必要成员，后批依赖前批结束；向用户每轮至多3项原子请求，成员每逻辑任务补证至多2项且跨attempt累计；任务用真实claim/in_progress/completed或failed状态，回报时引用真实source_task_id与source_attempt_id，过期attempt停止；以上为计划与回执核对约束，不是运行时硬守卫。生产取数与生产写在v1不开放；生产写仅出人工评审需求。

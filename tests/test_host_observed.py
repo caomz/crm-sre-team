@@ -218,7 +218,7 @@ class Rc3HostAcceptanceDocumentationTests(unittest.TestCase):
         self.assertNotIn("name 标签", text)
 
     def test_desktop_binding_and_host_managed_settings_are_distinct(self):
-        readme = _read(ROOT / "README.md")
+        readme = _read(ROOT / "docs/history/README-workbuddy-2.8.0-rc10.md")
         migration = _read(ROOT / "MIGRATION.md")
         for text in (readme, migration):
             self.assertIn("teamInfo.leadAgent", text)

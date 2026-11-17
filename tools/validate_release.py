@@ -9,6 +9,7 @@ import sys
 from zipfile import ZipFile, BadZipFile, ZIP_DEFLATED
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import release_rules
 from release_rules import PREFIX, ZIP_TIME, release_files, safe_relative
 from validate_individual_zip import sha256_file_bounded, stream_member_compare
 
@@ -18,11 +19,42 @@ MAX_TOTAL_BYTES = 100 * 1024 * 1024
 MAX_MEMBER_BYTES = 20 * 1024 * 1024
 
 
-def validate(root: Path, archive: Path) -> dict:
+def validate_installation(source_root: Path, installed_root: Path) -> dict:
+    """Check the source-free DSH installation payload after unpacking.
+
+    A runtime ZIP intentionally omits build sources, tests and the source lock.
+    Verify its exact file set and bytes against the already checked source tree
+    rather than pretending the whole source validator can run in that payload.
+    """
+    errors = []
+    try:
+        expected = release_rules.target_files(source_root, "dsh")
+        actual = []
+        for item in sorted(installed_root.rglob("*")):
+            if release_rules.is_link(item):
+                raise ValueError("Linked installed entry")
+            if item.is_file():
+                actual.append(item.relative_to(installed_root).as_posix())
+        if actual != expected:
+            errors.append("installed_file_set_mismatch")
+        for name in expected:
+            item = installed_root / name
+            if not item.is_file() or item.read_bytes() != (source_root / name).read_bytes():
+                errors.append("installed_content_mismatch:" + name)
+    except (OSError, ValueError, KeyError) as exc:
+        errors.append(type(exc).__name__ + ":" + str(exc))
+    return {"pass": not errors, "errors": errors,
+            "target": "dsh", "scope": "EXACT_DSH_INSTALL_PAYLOAD_NOT_RUNTIME"}
+
+
+def validate(root: Path, archive: Path, *, target: str | None = None) -> dict:
     errors = []
     files_total = files_checked = 0
+    resolved = None
     try:
-        expected = {PREFIX + "/" + p.relative_to(root.resolve()).as_posix(): p for p in release_files(root)}
+        resolved = release_rules.target_name(root.resolve(), target)
+        expected = {PREFIX + "/" + p.relative_to(root.resolve()).as_posix(): p
+                    for p in release_files(root, target=target)}
         files_total = len(expected)
         with ZipFile(archive) as z:
             entries = z.infolist()
@@ -59,6 +91,7 @@ def validate(root: Path, archive: Path) -> dict:
         try: sha = sha256_file_bounded(archive)
         except (OSError, RuntimeError): pass
     return {"pass": not errors, "errors": errors, "scope": "ZIP_INTEGRITY_NOT_RUNTIME",
+            "target": resolved,
             "sha256": sha, "files_total": files_total, "files_checked": files_checked}
 
 
@@ -66,7 +99,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--zip", type=Path, required=True)
+    parser.add_argument("--target", choices=["dsh", "workbuddy"], default=None,
+                        help="Override the manifest default_target (default: dsh)")
     args = parser.parse_args()
-    report = validate(args.root.resolve(), args.zip)
+    report = validate(args.root.resolve(), args.zip, target=args.target)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     raise SystemExit(0 if report["pass"] else 1)

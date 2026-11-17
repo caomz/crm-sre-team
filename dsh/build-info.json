@@ -1,0 +1,65 @@
+{
+  "captain_preset": {
+    "composition_entry": "preset-crm-sre",
+    "preset": "crm-sre",
+    "registry_default_override": "agent-preset-registry",
+    "scoped_plugins": [
+      "@deepseek-ai/dsh-persona",
+      "@deepseek-ai/dsh-time-context",
+      "@deepseek-ai/dsh-tool-fs"
+    ],
+    "tool_fs": {
+      "applyPatch": false,
+      "edit": false,
+      "read": true,
+      "readImage": false,
+      "write": false
+    }
+  },
+  "managed_harness": "NOT_IMPLEMENTED",
+  "member_tool_allow": [
+    "agent_teams_claim_task",
+    "agent_teams_update_task",
+    "agent_teams_send_message",
+    "agent_teams_status"
+  ],
+  "members": 7,
+  "outputs": {
+    "cordis.patch.yml": "c7ba1849c817d01593d8d033f9f56a209de9064fe754248d936d2830cf66785d",
+    "package.json": "bfe6a71f90c38967338ff0d238bc7a219016d7dc733be85e77ada54889d7726a"
+  },
+  "package": "crm-sre-dsh-team",
+  "production_executor": false,
+  "production_tools": [],
+  "profile": "crm-sre",
+  "scope": "CONFIGURATION_AND_PROMPTS_ONLY_NO_JS_RUNTIME",
+  "source_files": {
+    "policies/runtime-contract.json": "16be90a2a2f2e459aacd38bbc104cb9488d1f192c22f19762c5d751b21be1dd8",
+    "policy-source/dsh/lead-rules.md": "e00c02c64688e4b14f72b37b33b6bc18b916b3aa651d05c9b41dc783c65428f0",
+    "policy-source/dsh/package-source.json": "33548b285c7cdd1b9a8e299e58fb2817e89ee16c26e5ef53704a257a0ae25426",
+    "policy-source/dsh/protocol-summary.md": "74d9873670e59834867648ae7495777f5bef83e3916cee126097e0f3e3519f9c",
+    "policy-source/dsh/shared-discipline.md": "6efdb1870537248a7291b288debcab1e727522205ca87e203569abd714dc15c5",
+    "policy-source/prompts/roles/telecom-crm-change-capacity-dr.md": "bdf79714edcd8dcf00b117a1365e6428ff9520fa8af61216ccc7297fbe37fc2f",
+    "policy-source/prompts/roles/telecom-crm-crm-business-flow.md": "d54483c11e37a461320fc3e48604f665afe35f3df1149e93409dbe66edc68126",
+    "policy-source/prompts/roles/telecom-crm-java-runtime.md": "d7a10ea351302af2318892058338e27646a26d93767447fc4ac51df3a819d098",
+    "policy-source/prompts/roles/telecom-crm-k8s-platform.md": "718716b7c6682eefb368c6211e33f8d5c4170a7f94863673f29e85c92d6f0e20",
+    "policy-source/prompts/roles/telecom-crm-linux-infra.md": "17de4241889f6f34b9a0ea6f286f80a39f47bff1d0b38359c49c9bf5fe448129",
+    "policy-source/prompts/roles/telecom-crm-observability-diagnosis.md": "6810c8673dfec914b5293596063478064a94bc28bc059866abd5172ab987657d",
+    "policy-source/prompts/roles/telecom-crm-oracle-dba.md": "b83ef055d28e39f458b0f00c6ef15263b4a31a1dd5bab829756758d4b87240b7",
+    "policy-source/references/app-jvm-runbook.md": "04db73310627cd3af359eecb9e537c3eddbc06eea2c1bc49f0dc23dc230b205d",
+    "policy-source/references/change-capacity-dr.md": "5cdec0c49333cccff60459cb4d94354a6e9939fa3643054037c21af8817aa8ff",
+    "policy-source/references/k8s-platform-runbook.md": "cd2eb3266972181ae38dbedc305dbf5f64dcb6004850a4342250ec8889cd0189",
+    "policy-source/references/linux-runbook.md": "f249f27d9f09ed4a9be97924f2b524fb5621b1336c47294c0215a94bf18b7506",
+    "policy-source/references/observability-runbook.md": "99e7a82efdc2e6637709ac8ec4b9d7c779eea3e0e03c1c281d22e0c15d5e7f68",
+    "policy-source/references/oracle-runbook.md": "339c42393edc18efc2f47cfc416fc4b5d967104a3cffa5474202ddf08363b9b3",
+    "policy-source/references/telecom-crm-knowledge.md": "955cd0f19c5b330081736ed7915ca1be754b57cda1a12bd6190a38ffa69c7857",
+    "policy-source/roles-source.json": "4220cfb96e2dd7ac4c027ce8f7fd41482a43a750fe81b086498b2fd6888862bd",
+    "policy-source/routing-source.json": "f794a80e7530fb93d312897fa3865055dae79ba1fe5190acc16856f34fdde0a9",
+    "tools/build_bundle.py": "670ac549002a6b677718e5dc646bd9f73c3fe8ebb0b92a822ba90f9048590d88",
+    "tools/dsh_bundle.py": "8a81c246de7047c891234a9c1a984ddc4b3c793149b615cfba2c378c955c6141",
+    "tools/release_rules.py": "e0cc604ba4b09dce5dc0bbf8420917a3e8eea228bc3b9537a0e3219be1114cb7"
+  },
+  "upstream_install": "EXPLICIT_SEPARATE_INSTALL_REQUIRED_NOT_AUTO_DISCOVERED",
+  "upstream_plugin": "@nanmicoder/dsh-agent-teams",
+  "version": "2.8.0-dsh.1"
+}

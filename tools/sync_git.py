@@ -31,7 +31,7 @@ import release_rules  # noqa: E402
 # Paths that the build owns and regenerates from policy-source. Syncing these
 # as ordinary files would let a remote copy overwrite generated truth, so they
 # are only ever carried by a build, never applied file-by-file.
-GENERATED_PREFIXES = ("agents/", "skills/", "templates/", "manual-mode/", "individual-packages/")
+GENERATED_PREFIXES = ("agents/", "skills/", "templates/", "manual-mode/", "individual-packages/", "dsh/")
 GENERATED_EXACT = {"prompt-bundles.lock"}
 LEDGER_DIR = "reports"
 PLAN_SUFFIX = ".sync-plan.json"

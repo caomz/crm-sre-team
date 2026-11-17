@@ -140,7 +140,7 @@ class IndividualZipSafetyTests(unittest.TestCase):
         write_zip(zpath, members)
         spec = importlib.util.spec_from_file_location("vb_under_test", work / "tools/validate_bundle.py")
         vb = importlib.util.module_from_spec(spec); spec.loader.exec_module(vb)
-        report = vb.run(work)
+        report = vb.run(work, target="workbuddy")
         joined = "\n".join(report["errors"])
         self.assertEqual(report["result"], "FAIL")
         self.assertIn("individual_zip_content:" + sid, joined)

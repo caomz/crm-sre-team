@@ -30,7 +30,7 @@ class FdeDeliveryTests(unittest.TestCase):
         self.assertEqual(files, sorted(set(files)))
         self.assertIn("docs/14-fde-delivery.md", files)
         self.assertIn("tests/test_fde_delivery.py", files)
-        self.assertIn("docs/14-fde-delivery.md", (ROOT / "README.md").read_text(encoding="utf-8"))
+        self.assertIn("docs/14-fde-delivery.md", (ROOT / "docs/history/README-workbuddy-2.8.0-rc10.md").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

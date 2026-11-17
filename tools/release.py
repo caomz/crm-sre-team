@@ -19,6 +19,9 @@ from pathlib import Path
 from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+import release_rules  # noqa: E402
+
 TEST_PATHS = ("tests", "tools/oncall")
 REPORT_SCOPE = "PYTEST_TESTS_AND_ONCALL"
 
@@ -258,6 +261,54 @@ def valid_determinism_report(report, version):
             and guard.get("detected") is True and bool(guard.get("failed_check_ids")))
 
 
+def dsh_source_version(root: Path):
+    """Active DSH identity source: policy-source/dsh/package-source.json."""
+    return json.loads((Path(root) / "policy-source/dsh/package-source.json")
+                      .read_text(encoding="utf-8")).get("version")
+
+
+def valid_dsh_bundle_report(report, dsh_version):
+    """Active-target validation report. It proves the DSH checker plus total
+    manifest/lock integrity passed; host/model behavior is never claimed."""
+    if not isinstance(report, dict):
+        return False
+    return (report.get("scope") == "DSH_STATIC_STRUCTURE_AND_BOUNDARY_CHECKS_NOT_RUNTIME_BEHAVIOR"
+            and report.get("target") == "dsh" and report.get("target_version") == dsh_version
+            and report.get("result") == "PASS_STATIC_ONLY"
+            and report.get("errors") == [] and positive_count(report.get("checks_total"))
+            and type(report.get("checks_passed")) is int
+            and report["checks_passed"] == report["checks_total"]
+            and positive_count(report.get("dsh_checker_checks_total"))
+            and report["dsh_checker_checks_passed"] == report["dsh_checker_checks_total"]
+            and report.get("model_or_host_runtime_test_status") == "NOT_RUN_IN_TARGET_HOST")
+
+
+def valid_dsh_determinism_report(report, dsh_version):
+    """DSH determinism: repeated dsh outputs, total lock and DSH ZIP bytes in
+    isolated copies; no WorkBuddy gate is accepted as DSH evidence."""
+    if not isinstance(report, dict):
+        return False
+    flags = ["pass", "generated_artifacts_deterministic", "release_tree_deterministic",
+             "input_release_already_built", "validation_output_deterministic",
+             "validation_tree_deterministic", "source_tree_unchanged_during_comparisons",
+             "zip_deterministic"]
+    guard = report.get("sorting_guard_negative_test")
+    return (report.get("scope") == "TEMPORARY_RELEASE_COPY_SAME_ENVIRONMENT_NO_MODEL_OR_HOST_CALLS"
+            and report.get("target") == "dsh" and report.get("version") == dsh_version
+            and all(report.get(k) is True for k in flags)
+            and positive_count(report.get("checked_files")) and isinstance(report.get("hashes"), dict)
+            and len(report["hashes"]) == report["checked_files"]
+            and all(isinstance(h, str) and re.fullmatch(r"[0-9a-f]{64}", h) for h in report["hashes"].values())
+            and positive_count(report.get("release_tree_file_count"))
+            and report["release_tree_file_count"] >= report["checked_files"]
+            and report.get("build_exit_codes") == [0, 0]
+            and report.get("zip_exit_codes") == [0, 0]
+            and report.get("validate_zip_exit_code") == 0
+            and report.get("validation_exit_codes") == [0, 0, 0]
+            and isinstance(guard, dict) and guard.get("exit_code") == 1
+            and guard.get("detected") is True and bool(guard.get("failed_check_ids")))
+
+
 class Pipeline:
     """10-step serial pipeline. Fail-stop. Staging->promote-last."""
 
@@ -275,6 +326,8 @@ class Pipeline:
         self.release_sha256 = None
         self.tree_digest = None
         self.version = None
+        self.target = None
+        self.root_version = None
         self.timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         self.run_id = self.timestamp + "-" + uuid.uuid4().hex
 
@@ -334,12 +387,24 @@ class Pipeline:
     # --- 10 steps ---
 
     def _step_preflight(self):
-        required = [
-            "VERSION",
-            ".codebuddy-plugin/plugin.json",
-            "release-manifest.json",
-            "prompt-bundles.lock",
-        ]
+        try:
+            self.target = release_rules.target_name(self.root)
+        except (OSError, ValueError) as exc:
+            return {"ok": False, "error": "invalid release target: " + str(exc)}
+        if self.target == "dsh":
+            required = [
+                "VERSION",
+                "release-manifest.json",
+                "prompt-bundles.lock",
+                "policy-source/dsh/package-source.json",
+            ]
+        else:
+            required = [
+                "VERSION",
+                ".codebuddy-plugin/plugin.json",
+                "release-manifest.json",
+                "prompt-bundles.lock",
+            ]
         for name in required:
             if not (self.root / name).exists():
                 return {"ok": False, "error": "missing required file: " + name}
@@ -351,19 +416,52 @@ class Pipeline:
         return {"ok": True}
 
     def _step_version_validation(self):
-        version = (self.root / "VERSION").read_text(encoding="utf-8").strip()
+        self.root_version = (self.root / "VERSION").read_text(encoding="utf-8").strip()
+        if self.target == "dsh":
+            # Active identity is the DSH source version; the root VERSION is a
+            # frozen historical base and the lock must carry both explicitly.
+            try:
+                dsh_version = dsh_source_version(self.root)
+            except (OSError, ValueError) as exc:
+                return {"ok": False, "error": "dsh source version unreadable: " + str(exc)}
+            if not isinstance(dsh_version, str) or not dsh_version.strip():
+                return {"ok": False, "error": "dsh source version missing in policy-source/dsh/package-source.json"}
+            package_path = self.root / "dsh/package.json"
+            if package_path.is_file():
+                try:
+                    package = json.loads(package_path.read_text(encoding="utf-8"))
+                except (OSError, ValueError) as exc:
+                    return {"ok": False, "error": "dsh/package.json unreadable: " + str(exc)}
+                if package.get("version") != dsh_version:
+                    return {"ok": False, "error": "dsh/package.json version="
+                            + repr(package.get("version")) + " != dsh source version=" + repr(dsh_version)}
+            try:
+                lock = json.loads((self.root / "prompt-bundles.lock").read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                return {"ok": False, "error": "prompt-bundles.lock unreadable: " + str(exc)}
+            if lock.get("version") != self.root_version:
+                return {"ok": False, "error": "lock VERSION=" + repr(lock.get("version"))
+                        + " != frozen root VERSION=" + repr(self.root_version)}
+            if lock.get("target") != "dsh" or lock.get("target_version") != dsh_version:
+                return {"ok": False, "error": "lock target identity missing: target="
+                        + repr(lock.get("target")) + " target_version=" + repr(lock.get("target_version"))
+                        + " expected dsh/" + repr(dsh_version)}
+            self.version = dsh_version
+            return {"ok": True}
         plugin = json.loads(
             (self.root / ".codebuddy-plugin/plugin.json").read_text(encoding="utf-8"))
-        if version != plugin.get("version"):
-            return {"ok": False, "error": "VERSION=" + repr(version) + " != plugin.json version=" + repr(plugin.get("version"))}
-        self.version = version
+        if self.root_version != plugin.get("version"):
+            return {"ok": False, "error": "VERSION=" + repr(self.root_version) + " != plugin.json version=" + repr(plugin.get("version"))}
+        self.version = self.root_version
         return {"ok": True}
 
     def _step_input_consistency(self):
         exit_code, result = self.runner.run_validate_bundle(self.root)
         if exit_code != 0:
             return {"ok": False, "error": "validate_bundle exit_code=" + str(exit_code), "exit_code": exit_code}
-        if not valid_bundle_report(result, self.version):
+        valid = (valid_dsh_bundle_report(result, self.version) if self.target == "dsh"
+                 else valid_bundle_report(result, self.version))
+        if not valid:
             label = result.get("result") if isinstance(result, dict) else None
             return {"ok": False, "error": "validate_bundle invalid report, result=" + str(label), "exit_code": exit_code}
         self.tree_digest = compute_tree_digest(self.root)
@@ -397,7 +495,9 @@ class Pipeline:
         exit_code, result = self.runner.run_determinism(self.root)
         if exit_code != 0:
             return {"ok": False, "error": "determinism exit_code=" + str(exit_code), "exit_code": exit_code}
-        if not valid_determinism_report(result, self.version):
+        valid = (valid_dsh_determinism_report(result, self.version) if self.target == "dsh"
+                 else valid_determinism_report(result, self.version))
+        if not valid:
             return {"ok": False, "error": "determinism invalid report", "exit_code": exit_code}
         return {"ok": True, "exit_code": exit_code}
 
@@ -449,10 +549,17 @@ class Pipeline:
             unpacked_root = unpack_dir / "crm-sre-team"
             if not unpacked_root.exists():
                 return {"ok": False, "error": "unpacked ZIP does not contain crm-sre-team/ prefix"}
+            if self.target == "dsh":
+                from validate_release import validate_installation
+                installed = validate_installation(self.root, unpacked_root)
+                return {"ok": installed["pass"], "error": "; ".join(installed["errors"]) or None,
+                        "scope": installed["scope"], "exit_code": 0 if installed["pass"] else 1}
             exit_code, result = self.runner.run_validate_bundle(unpacked_root)
             if exit_code != 0:
                 return {"ok": False, "error": "unpack revalidate exit_code=" + str(exit_code), "exit_code": exit_code}
-            if not valid_bundle_report(result, self.version):
+            valid = (valid_dsh_bundle_report(result, self.version) if self.target == "dsh"
+                     else valid_bundle_report(result, self.version))
+            if not valid:
                 return {"ok": False, "error": "unpack revalidate invalid report", "exit_code": exit_code}
         except Exception as exc:
             return {"ok": False, "error": "unpack failed: " + type(exc).__name__ + ": " + str(exc)}
@@ -463,6 +570,8 @@ class Pipeline:
     def _step_generate_report(self):
         report = {
             "version": self.version,
+            "target": self.target,
+            "root_version": self.root_version,
             "timestamp": self.timestamp,
             "tree_digest": self.tree_digest,
             "release_zip": self.release_zip.name if self.release_zip else None,
@@ -496,7 +605,9 @@ class Pipeline:
             "## Scope",
             "",
             "OFFLINE_BUILD_CONSISTENCY_RELEASE_GATE",
-            "WorkBuddy host acceptance remains unfinished.",
+            "Active delivery target: " + str(self.target),
+            "DSH host acceptance remains NOT_RUN until executed on the target host;",
+            "WorkBuddy history stays available but is not the active delivery proof.",
         ])
         (self.staging_dir / "validation-report.md").write_text(
             "\n".join(lines), encoding="utf-8")

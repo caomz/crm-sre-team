@@ -71,7 +71,7 @@ BOMC_EXIT3_PROMPTS = (
 def test_fix11_exit3_sources_generated_prompts_and_readme_quote_reviewed_line():
     assert checker.BOMC_SKILL_CONFIG_FAILURE_RULE == BOMC_EXIT3_VERBATIM_RULE
     assert set(checker.BOMC_CONFIG_FAILURE_PROMPTS) == set(BOMC_EXIT3_PROMPTS)
-    for rel in (*BOMC_EXIT3_PROMPTS, 'README.md'):
+    for rel in (*BOMC_EXIT3_PROMPTS, 'docs/history/README-workbuddy-2.8.0-rc10.md'):
         text = read(rel)
         assert text.splitlines().count(BOMC_EXIT3_VERBATIM_RULE) == 1, rel
         assert BOMC_FIX10_EXIT3_RULE not in text, rel

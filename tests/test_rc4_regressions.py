@@ -97,7 +97,7 @@ class Rc4RegressionTests(unittest.TestCase):
                         self.assertIn(phrase, read(rel))
 
     def test_mac_tests_precede_accepted_windows_install_and_verify(self):
-        for rel in ("README.md", "MIGRATION.md", "docs/07-reproducible-validation.md",
+        for rel in ("docs/history/README-workbuddy-2.8.0-rc10.md", "MIGRATION.md", "docs/07-reproducible-validation.md",
                     "docs/11-workbuddy-host-acceptance.md", "docs/12-native-vs-single-comparison.md",
                     "docs/13-oncall-gate-materials.md"):
             with self.subTest(rel=rel):
@@ -165,7 +165,7 @@ class Rc4RegressionTests(unittest.TestCase):
                     self.assertIn(phrase, text)
 
     def test_mac_memory_and_conversation_history_checked_outside_sessions(self):
-        for rel, text in workflow_documents(("AGENTS.md", "README.md", "docs/11-workbuddy-host-acceptance.md",
+        for rel, text in workflow_documents(("AGENTS.md", "docs/history/README-workbuddy-2.8.0-rc10.md", "docs/11-workbuddy-host-acceptance.md",
                     "docs/12-native-vs-single-comparison.md", "docs/13-oncall-gate-materials.md",
                     "tools/oncall/README.md")):
             with self.subTest(rel=rel):
@@ -212,7 +212,7 @@ class Rc4RegressionTests(unittest.TestCase):
     def test_current_version_is_rc10_and_frozen_acceptance_version_is_explicit(self):
         self.assertEqual(read("VERSION").strip(), "2.8.0-rc10")
         self.assertEqual(json.loads(read("policy-source/acceptance/oncall-cases.json"))["version"], "2.8.0-rc3")
-        for rel in ("README.md", "docs/12-native-vs-single-comparison.md", "docs/13-oncall-gate-materials.md"):
+        for rel in ("docs/history/README-workbuddy-2.8.0-rc10.md", "docs/12-native-vs-single-comparison.md", "docs/13-oncall-gate-materials.md"):
             with self.subTest(rel=rel):
                 text = read(rel)
                 self.assertIn("oncall-cases.json 保留 2.8.0-rc3", text)

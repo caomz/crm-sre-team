@@ -95,7 +95,9 @@ git checkout-index -a --prefix="$export_dir/"
 cd "$export_dir"
 
 owned_find() {
-    for owned_dir in agents skills templates manual-mode individual-packages; do
+    # dsh/ is the active build-owned delivery; the older trees stay monitored
+    # so retained historical fixtures and regression builds keep working.
+    for owned_dir in agents skills templates manual-mode individual-packages dsh; do
         if [ -e "$owned_dir" ] || [ -L "$owned_dir" ]; then
             find "$owned_dir" -type f || return 1
         fi
@@ -149,7 +151,8 @@ if ! cmp -s "$tmp_base/before.txt" "$tmp_base/after.txt"; then
     diff "$tmp_base/before.txt" "$tmp_base/after.txt" \
         | grep '^>' | sed -e 's/^> [0-9a-f]*  /pre-commit:   /' >&2 || true
     echo "pre-commit: run the build yourself, then re-stage the rebuilt files and commit again:" >&2
-    echo "pre-commit:   python tools/build_bundle.py && git add agents skills templates manual-mode individual-packages prompt-bundles.lock" >&2
+    echo "pre-commit:   python tools/build_bundle.py && git add agents skills templates manual-mode individual-packages dsh prompt-bundles.lock" >&2
+    echo "pre-commit: the default build resolves the manifest default_target (dsh); pass --target workbuddy only for historical regression." >&2
     echo "pre-commit: the working tree was NOT modified by this hook." >&2
     exit 1
 fi

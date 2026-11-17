@@ -25,7 +25,7 @@ def iter_test_cases(suite):
         else:
             yield test
 
-def run(root: Path) -> dict:
+def _run_workbuddy(root: Path) -> dict:
     checks=[];errors=[]
     def check(name: str, ok: bool, detail=""):
         checks.append({"id":name,"passed":bool(ok),"detail":detail})
@@ -297,10 +297,152 @@ def run(root: Path) -> dict:
     errors.sort()
     return {"version":version,"scope":"STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY","result":"PASS_STATIC_ONLY" if not errors else "FAIL","checks_total":len(checks),"checks_passed":sum(x["passed"] for x in checks),"relative_links_checked":links,"offline_contract_tests_run":result.testsRun,"offline_contract_test_failures":len(result.failures),"offline_contract_test_errors":len(result.errors),"reasoning_matrix_test_methods":matrix_result.testsRun,"reasoning_matrix_test_failures":len(matrix_result.failures),"reasoning_matrix_test_errors":len(matrix_result.errors),"reasoning_matrix_cases":matrix_report["cases_total"],"reasoning_matrix_mismatches":matrix_report["mismatches_total"],"judgment_contract_tests_run":judgment_result.testsRun,"judgment_contract_test_failures":len(judgment_result.failures),"judgment_contract_test_errors":len(judgment_result.errors),"judgment_matrix_test_methods":judgment_matrix_result.testsRun,"judgment_matrix_test_failures":len(judgment_matrix_result.failures),"judgment_matrix_test_errors":len(judgment_matrix_result.errors),"judgment_matrix_cases":judgment_matrix_report["cases_total"],"judgment_matrix_mismatches":judgment_matrix_report["mismatches_total"],"thinking_tools_defined":thinking_report["course_tools"],"thinking_tools_role_assignments":thinking_report["roles"],"thinking_tool_tests_run":thinking_result.testsRun,"thinking_tool_test_failures":len(thinking_result.failures),"thinking_tool_test_errors":len(thinking_result.errors),"thinking_tool_case_specs_not_run":thinking_report["case_specs"],"additional_static_tests":extra_tests_run,"offline_unit_tests_total":extra_tests_run+result.testsRun+matrix_result.testsRun+judgment_result.testsRun+judgment_matrix_result.testsRun+thinking_result.testsRun,"model_or_host_runtime_test_status":"NOT_RUN_IN_TARGET_HOST","production_access":"NONE","errors":errors,"checks":checks}
 
+DSH_TARGET_SUBSET = [
+    "PROJECT.md",
+    "README.md",
+    "docs/17-dsh-agent-teams.md",
+    "dsh/build-info.json",
+    "dsh/cordis.patch.yml",
+    "dsh/package.json",
+    "policies/runtime-contract.json",
+]
+
+
+def _run_dsh(root: Path) -> dict:
+    """Active DSH validation: DSH structure/checker plus exact total
+    manifest/lock integrity and target identity. It never runs the WorkBuddy
+    artifact validation as DSH proof; WorkBuddy stays available under the
+    explicit workbuddy target for historical regression only."""
+    checks=[];errors=[]
+    def check(name: str, ok: bool, detail=""):
+        checks.append({"id":name,"passed":bool(ok),"detail":str(detail)})
+        if not ok: errors.append(name+": "+str(detail))
+    version=(root/"VERSION").read_text(encoding="utf-8").strip()
+    spec=importlib.util.spec_from_file_location("dsh_integration_checker",root/"tools/check_dsh.py")
+    dsh_checker=importlib.util.module_from_spec(spec);spec.loader.exec_module(dsh_checker)
+    rule_spec=importlib.util.spec_from_file_location("dsh_integration_rules",root/"tools/release_rules.py")
+    rules=importlib.util.module_from_spec(rule_spec);rule_spec.loader.exec_module(rules)
+    builder_spec=importlib.util.spec_from_file_location("dsh_integration_builder",root/"tools/build_bundle.py")
+    builder=importlib.util.module_from_spec(builder_spec);builder_spec.loader.exec_module(builder)
+    manifest=read(root/"release-manifest.json")
+    names=manifest.get("files") or []
+    try:
+        rules.manifest_names(root)
+        check("release_manifest_sorted_safe_exact",True)
+    except (OSError,ValueError,KeyError,TypeError) as exc:
+        check("release_manifest_sorted_safe_exact",False,exc)
+    check("dsh_default_target",manifest.get("default_target")=="dsh",manifest.get("default_target"))
+    subset=(manifest.get("targets") or {}).get("dsh",{}).get("files")
+    check("dsh_target_subset_exact",subset==DSH_TARGET_SUBSET,subset)
+    check("dsh_target_subset_enrolled",isinstance(subset,list) and set(subset)<=set(names))
+    missing=[rel for rel in names if not (root/rel).is_file()]
+    check("declared_files_present",not missing,missing[:20])
+    try:
+        package_source=read(root/"policy-source/dsh/package-source.json")
+        target_version=package_source.get("version")
+        check("dsh_source_version_present",isinstance(target_version,str) and target_version.strip()=="2.8.0-dsh.1",target_version)
+    except (OSError,ValueError,KeyError) as exc:
+        target_version=None
+        check("dsh_source_version_present",False,exc)
+    check("version_identity_separate",target_version is not None and target_version!=version)
+    try:
+        lock=read(root/"prompt-bundles.lock")
+        expected={p.relative_to(root).as_posix():p for p in builder.lock_files(root)}
+        check("root_lock_set",set(lock.get("files") or {})==set(expected))
+        check("root_lock_hashes",all(n in expected and digest(expected[n])==h for n,h in (lock.get("files") or {}).items()))
+        check("lock_identity",lock.get("version")==version and lock.get("target")=="dsh"
+              and lock.get("target_version")==target_version,
+              {"version":lock.get("version"),"target":lock.get("target"),"target_version":lock.get("target_version")})
+    except (OSError,ValueError,KeyError) as exc:
+        check("root_lock_set",False,exc)
+        check("root_lock_hashes",False,exc)
+        check("lock_identity",False,exc)
+    try:
+        report=dsh_checker.run(root)
+        check("dsh_bundle_checker",report["pass"],report["errors"])
+    except (OSError,ValueError) as exc:
+        report={"checks_total":0,"checks_passed":0}
+        check("dsh_bundle_checker",False,exc)
+    try:
+        runtime=read(root/"policies/runtime-contract.json")
+        check("production_boundary",runtime.get("production_executor") is False
+              and runtime.get("production_tools")==[]
+              and runtime.get("implementation_status")=="NOT_IMPLEMENTED")
+        check("production_write_boundary",runtime.get("read_only_boundary",{}).get("production_write")=="SEPARATE_CHANGE_APPROVAL_REQUIRED")
+        native=runtime.get("dsh_native_mode") or {}
+        compat=runtime.get("dsh_compat_mode") or {}
+        check("dsh_native_mode_pins",
+              native.get("entry")=="DSH_AGENT_TEAMS"
+              and native.get("attempt_id_source")=="SCHEDULER_AND_CLAIM_RECEIPTS"
+              and native.get("member_file_access") is False
+              and native.get("member_may_dispatch") is False
+              and native.get("lead_may_self_dispatch") is False
+              and native.get("verification_failure_fallback") is False
+              and native.get("quota_enforcement")=="PROTOCOL_AND_PLAN_RECEIPT_CHECK_NOT_RUNTIME_HARD_GATE"
+              and native.get("member_tool_allow")==["agent_teams_claim_task","agent_teams_update_task","agent_teams_send_message","agent_teams_status"])
+        check("dsh_compat_mode_pins",compat.get("entry")=="DSH_SINGLE_MODEL"
+              and compat.get("behavior")=="SINGLE_MODEL_ANALYSIS_NO_DISPATCH")
+        check("dsh_modes_no_production_read",native.get("production_read")=="NONE_IN_V1"
+              and compat.get("production_read")=="NONE_IN_V1")
+        check("dsh_not_in_wb_read_only_boundary","DSH_AGENT_TEAMS" not in runtime.get("read_only_boundary",{}).get("applies_only_to",[]))
+    except (OSError,ValueError,KeyError,TypeError) as exc:
+        check("production_boundary",False,exc)
+    for p in sorted(root/n for n in names if n.endswith(".json")):
+        if "__pycache__" in p.parts: continue
+        try: read(p);check("json:"+p.relative_to(root).as_posix(),True)
+        except (OSError,ValueError) as exc:check("json:"+p.name,False,str(exc))
+    for folder in ["tools","tests"]:
+        for path in sorted((root/folder).glob("*.py")):
+            tree=ast.parse(path.read_text(encoding="utf-8"))
+            missing_enc=[]
+            for node in ast.walk(tree):
+                if isinstance(node,ast.Call) and isinstance(node.func,ast.Attribute) and node.func.attr=="read_text":
+                    if not any(k.arg=="encoding" for k in node.keywords):missing_enc.append(node.lineno)
+            check("explicit_read_encoding:"+path.relative_to(root).as_posix(),not missing_enc,missing_enc)
+    validator_tree=ast.parse((root/"tools/validate_bundle.py").read_text(encoding="utf-8"))
+    parents={child:parent for parent in ast.walk(validator_tree) for child in ast.iter_child_nodes(parent)}
+    unsorted=[]
+    for node in ast.walk(validator_tree):
+        if isinstance(node,ast.Call) and isinstance(node.func,ast.Attribute) and node.func.attr in {"glob","rglob","iterdir"}:
+            parent=parents.get(node)
+            if not (isinstance(parent,ast.Call) and isinstance(parent.func,ast.Name) and parent.func.id=="sorted"):
+                unsorted.append(node.lineno)
+    check("validator_sorted_filesystem_traversal",not unsorted,sorted(unsorted))
+    checks.sort(key=lambda item:(item["id"],json.dumps(item["detail"],ensure_ascii=False,sort_keys=True),item["passed"]))
+    errors.sort()
+    return {"version":version,"target":"dsh","target_version":target_version,
+            "scope":"DSH_STATIC_STRUCTURE_AND_BOUNDARY_CHECKS_NOT_RUNTIME_BEHAVIOR",
+            "result":"PASS_STATIC_ONLY" if not errors else "FAIL",
+            "checks_total":len(checks),"checks_passed":sum(x["passed"] for x in checks),
+            "dsh_checker_checks_total":report.get("checks_total",0),
+            "dsh_checker_checks_passed":report.get("checks_passed",0),
+            "model_or_host_runtime_test_status":"NOT_RUN_IN_TARGET_HOST",
+            "production_access":"NONE","errors":errors,"checks":checks}
+
+
+def run(root: Path, *, target: str | None = None) -> dict:
+    """Dispatch on the resolved release target. Default delivery is dsh; the
+    historical workbuddy validation remains available explicitly for old
+    fixtures and regression, never as DSH proof."""
+    root = Path(root).resolve(strict=True)
+    rule_spec=importlib.util.spec_from_file_location("validate_bundle_target_rules",root/"tools/release_rules.py")
+    rule_module=importlib.util.module_from_spec(rule_spec);rule_spec.loader.exec_module(rule_module)
+    resolved=rule_module.target_name(root,target)
+    if resolved=="dsh":
+        return _run_dsh(root)
+    if resolved=="workbuddy":
+        return _run_workbuddy(root)
+    raise ValueError("Unknown release target: "+str(resolved))
+
+
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument("--root",type=Path,default=ROOT);args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root",type=Path,default=ROOT)
+    parser.add_argument("--target",choices=["dsh","workbuddy"],default=None,
+                        help="Override the manifest default_target (default: dsh)")
+    args=parser.parse_args()
     root=args.root.resolve()
-    try:report=run(root)
+    try:report=run(root,target=args.target)
     except Exception as exc:
         raise SystemExit(f"Static validation failed before completion: {type(exc).__name__}: {exc}") from exc
     (root/"tests/static-checks.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8", newline="\n")

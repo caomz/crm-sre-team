@@ -172,7 +172,9 @@ class KnowledgeDocumentationTests(unittest.TestCase):
         sc=CURRENT_STATIC_COUNTS
         if sc is None:
             sc=json.loads((ROOT/"tests/static-checks.json").read_text(encoding="utf-8"))
-        m=re.search(r"静态校验 (\d+)/(\d+)",vmd)
+        # Current DSH checks and retained WorkBuddy checks have distinct counts.
+        pattern = r"DSH 静态校验 (\d+)/(\d+)" if sc.get("target") == "dsh" else r"WorkBuddy 历史静态校验 (\d+)/(\d+)"
+        m=re.search(pattern,vmd)
         self.assertTrue(m,"VALIDATION.md 缺少『静态校验 X/Y』字样")
         self.assertEqual(int(m.group(1)),sc["checks_passed"],
             "VALIDATION.md 静态校验通过数与 static-checks.json 不一致（落后于最后一次 validate）")

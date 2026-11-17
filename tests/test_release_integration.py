@@ -38,12 +38,14 @@ class ReleaseIntegrationTests(unittest.TestCase):
         self.assertIn("sha256", result)
         self.assertEqual(len(result["sha256"]), 64, "sha256 should be 64 hex chars")
         self.assertEqual(result["scope"], "MANIFEST_CONTENT_INTEGRITY_NOT_HOST_VERIFICATION")
-        self.assertGreater(result["files"], 100, "Release should contain >100 files")
+        manifest = json.loads((ROOT / "release-manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(result["target"], "dsh")
+        self.assertEqual(result["files"], len(manifest["targets"]["dsh"]["files"]))
 
     def test_02_release_zip_file_set_matches_manifest(self):
         """Unpacked ZIP file set exactly matches release-manifest.json files list."""
         manifest = json.loads((ROOT / "release-manifest.json").read_text(encoding="utf-8"))
-        expected = set(manifest["files"])
+        expected = set(manifest["targets"]["dsh"]["files"])
 
         output = self.tmpdir / "fileset-check.zip"
         build_release(ROOT, output)
@@ -89,7 +91,7 @@ class ReleaseIntegrationTests(unittest.TestCase):
         self.assertEqual(len(skill_zips), 8, "Manifest should list 8 skill.zip files")
 
         output = self.tmpdir / "skill-zip-check.zip"
-        build_release(ROOT, output)
+        build_release(ROOT, output, target="workbuddy")
 
         with ZipFile(output) as z:
             names = set(z.namelist())

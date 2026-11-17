@@ -1,0 +1,10 @@
+{
+  "name": "crm-sre-dsh-team",
+  "version": "2.8.0-dsh.1",
+  "description": "CRM SRE 稳定性专家团队 DSH 领域配置包：仅配置与提示词，无自有 JS 运行时；上游 Agent Teams 插件须先显式单独安装，不作为传递依赖自动发现。",
+  "bundle_patch": "./cordis.patch.yml",
+  "profile": "crm-sre",
+  "system_prompt_plugin": "@deepseek-ai/dsh-system-prompt",
+  "upstream_plugin": "@nanmicoder/dsh-agent-teams",
+  "upstream_install": "EXPLICIT_SEPARATE_INSTALL_REQUIRED_NOT_AUTO_DISCOVERED"
+}

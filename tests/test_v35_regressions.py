@@ -293,13 +293,13 @@ class V35Regressions(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             base = Path(td)
             archive = base / "release.zip"
-            build_release.build_release(ROOT, archive)
+            build_release.build_release(ROOT, archive, target="workbuddy")
             with zipfile.ZipFile(archive) as z:
                 z.extractall(base / "unpack")
             root = base / "unpack/crm-sre-team"
             self.assertFalse((root / "tests/static-checks.json").exists())
             def validate():
-                proc = subprocess.run([sys.executable, str(root / "tools/validate_bundle.py")],
+                proc = subprocess.run([sys.executable, str(root / "tools/validate_bundle.py"), "--target", "workbuddy"],
                                       capture_output=True, text=True, encoding="utf-8", timeout=120)
                 return proc, json.loads(proc.stdout)
             proc, report = validate()
@@ -311,7 +311,7 @@ class V35Regressions(unittest.TestCase):
             self.assertIn(expected, text)
             p.write_text(text.replace(expected, "静态校验 1/1", 1), encoding="utf-8")
             # Rebuild integrity locks so a documentation regression cannot hide behind stale locks.
-            subprocess.run([sys.executable, str(root / "tools/build_bundle.py")],
+            subprocess.run([sys.executable, str(root / "tools/build_bundle.py"), "--target", "workbuddy"],
                            capture_output=True, check=True, timeout=120)
             proc, report = validate()
             self.assertNotEqual(proc.returncode, 0)

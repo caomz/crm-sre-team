@@ -10,6 +10,7 @@ import os
 import tempfile
 import importlib.util
 import re
+import stat
 import yaml
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
@@ -177,17 +178,158 @@ def _build_in_place(root: Path) -> dict:
     write_json(root/"prompt-bundles.lock",{"version":version,"algorithm":"sha256","scope":"INTEGRITY_ONLY_NOT_AUTHENTICITY_OR_RUNTIME_PROOF","files":hashes})
     return {"version":version,"agents":len(roles),"skills":len(roles)+1,"individual_packages":len(roles),"locked_files":len(hashes)}
 
-OWNED = ("agents", "skills", "templates", "manual-mode", "individual-packages", "prompt-bundles.lock")
+OWNED_WORKBUDDY = ("agents", "skills", "templates", "manual-mode", "individual-packages", "prompt-bundles.lock")
+OWNED_DSH = ("dsh", "prompt-bundles.lock")
+RELEASE_TARGETS = ("dsh", "workbuddy")
 
 
-def build(root: Path) -> dict:
-    """Build in isolation and replace owned outputs with rollback on write failure.
+def resolve_target(root: Path, target: str | None) -> str:
+    """Explicit argument wins; otherwise the trusted manifest default_target;
+    historical manifests without any target declaration use workbuddy."""
+    if target is not None:
+        if target not in RELEASE_TARGETS:
+            raise ValueError("Unknown release target: " + str(target))
+        return target
+    return _target_from_manifest(root)
 
-    Does not modify canonical source, root settings, user permissions or Git state.
-    A crash/power loss is not a filesystem transaction: retain backups if recovery
-    itself fails. Normal Python exceptions trigger rollback of every replaced tree.
+
+def _target_from_manifest(root: Path) -> str:
+    rule_module = _root_module(root, "tools/release_rules.py", "bundle_target_rules")
+    return rule_module.target_name(root)
+
+
+def _root_module(root: Path, rel: str, name: str):
+    file = root / rel
+    for item in [file, *file.parents]:
+        if item.is_relative_to(root):
+            if item.is_symlink() or getattr(item, "is_junction", lambda: False)():
+                raise ValueError("Linked build helper: " + rel)
+            if getattr(item.lstat(), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                raise ValueError("Reparse build helper: " + rel)
+    if not file.is_file() or not file.resolve(strict=True).is_relative_to(root):
+        raise ValueError("Missing or escaping build helper: " + rel)
+    spec = importlib.util.spec_from_file_location(name, file)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _atomic_write(root: Path, rel: str, data: bytes) -> None:
+    descriptor, temporary = tempfile.mkstemp(prefix=".crm-lock-", suffix=".tmp", dir=root)
+    temp_path = Path(temporary)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(data)
+        os.replace(temp_path, root / rel)
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
+def _build_dsh(root: Path) -> dict:
+    """Stage the exact declared source snapshot, then replace dsh and lock
+    together. Ordinary failures restore both current-byte backups. Unexpected
+    concurrent output edits are preserved with recovery data, never erased.
+    This is not a power-loss-safe filesystem transaction.
     """
-    root = root.resolve(strict=True)
+    dsh_module = _root_module(root, "tools/dsh_bundle.py", "isolated_dsh_builder")
+    rules = _root_module(root, "tools/release_rules.py", "isolated_dsh_release_rules")
+    names = rules.manifest_names(root)
+    generated = {"dsh/" + name for name in dsh_module.GENERATED_FILES}
+    for rel in names:
+        file = root / rel
+        if rules.is_link(file) or any(rules.is_link(a) for a in file.parents if a.is_relative_to(root)):
+            raise ValueError("Symlink input: " + rel)
+        if rel not in generated and rel != "prompt-bundles.lock" and not file.is_file():
+            raise ValueError("Missing canonical input: " + rel)
+    roles = json.loads(dsh_module._read(root, "policy-source/roles-source.json"))
+    dsh_module._assert_inputs_safe(root, roles)
+
+    def fingerprint(base: Path, rel: str):
+        file = base / rel
+        if rules.is_link(file):
+            raise ValueError("Linked owned output: " + rel)
+        if not file.exists():
+            return None
+        if rel == "dsh":
+            if not file.is_dir():
+                raise ValueError("Owned output is not a directory: dsh")
+            values = {}
+            for item in sorted(file.iterdir()):
+                if (item.name not in dsh_module.GENERATED_FILES
+                        or rules.is_link(item) or not item.is_file()):
+                    raise ValueError("Unknown or nonregular owned output: " + str(item))
+                values[item.name] = digest(item)
+            return values
+        if not file.is_file():
+            raise ValueError("Nonregular owned output: " + rel)
+        return digest(file)
+
+    before = {rel: fingerprint(root, rel) for rel in OWNED_DSH}
+    temporary = Path(tempfile.mkdtemp(prefix=".crm-build-dsh-", dir=root.parent))
+    staged, backup, discard = (temporary / name for name in ("staged", "backup", "discard"))
+    keep_backup = False
+    try:
+        staged.mkdir(); backup.mkdir(); discard.mkdir()
+        for rel in names:
+            if rel == "prompt-bundles.lock" or rel.startswith("dsh/"):
+                continue
+            target = staged / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(root / rel, target)
+        staged_builder = _root_module(staged, "tools/dsh_bundle.py", "staged_dsh_builder")
+        summary = staged_builder.build(staged)
+        version = (staged / "VERSION").read_text(encoding="utf-8").strip()
+        target_version = summary["version"]
+        hashes = {p.relative_to(staged).as_posix(): digest(p) for p in lock_files(staged)}
+        write_json(staged / "prompt-bundles.lock", {
+            "version": version, "algorithm": "sha256",
+            "scope": "INTEGRITY_ONLY_NOT_AUTHENTICITY_OR_RUNTIME_PROOF",
+            "target": "dsh", "target_version": target_version, "files": hashes,
+        })
+        produced = {rel: fingerprint(staged, rel) for rel in OWNED_DSH}
+        try:
+            for rel in OWNED_DSH:
+                if fingerprint(root, rel) != before[rel]:
+                    raise OSError("Concurrent owned-output change: " + rel)
+                if before[rel] is not None:
+                    os.replace(root / rel, backup / rel)
+                    # Verify the moved bytes too: a writer can race the check
+                    # immediately above. Restore its changed bytes on conflict.
+                    if fingerprint(backup, rel) != before[rel]:
+                        raise OSError("Concurrent change captured in backup: " + rel)
+                os.replace(staged / rel, root / rel)
+            for rel in OWNED_DSH:
+                if (backup / rel).exists() and fingerprint(backup, rel) != before[rel]:
+                    raise OSError("Concurrent backup change: " + rel)
+        except BaseException:
+            try:
+                for rel in reversed(OWNED_DSH):
+                    old = backup / rel
+                    destination = root / rel
+                    # A backup exists only after this output was moved. For an
+                    # initially absent output, only our staged bytes may go.
+                    if old.exists() or (before[rel] is None and destination.exists()):
+                        if destination.exists():
+                            if fingerprint(root, rel) != produced[rel]:
+                                raise RuntimeError("Concurrent output preserved: " + rel)
+                            os.replace(destination, discard / rel)
+                        if old.exists():
+                            os.replace(old, destination)
+            except BaseException as error:
+                keep_backup = True
+                raise RuntimeError("Build recovery incomplete; preserve " + str(temporary)) from error
+            raise
+        return {"version": version, "target": "dsh", "target_version": target_version,
+                "package": summary["package"], "members": summary["members"],
+                "locked_files": len(hashes), "scope": "OFFLINE_DETERMINISTIC_CONFIG_BUILD_ONLY"}
+    finally:
+        if not keep_backup:
+            shutil.rmtree(temporary)
+
+
+def _build_workbuddy(root: Path) -> dict:
+    """Historical WorkBuddy whole-manifest build, retained primarily for
+    regression on old fixtures; not a claimed tested delivery target."""
     settings = read_json(root / "settings.json")
     roles = read_json(root / "policy-source/roles-source.json")
     if not isinstance(settings, dict) or settings.get("agent") != roles["stability-director"]["agent"]:
@@ -207,10 +349,10 @@ def build(root: Path) -> dict:
         p = root / q
         if rule_module.is_link(p) or any(rule_module.is_link(a) for a in p.parents if a.is_relative_to(root)):
             raise ValueError("Symlink input: " + rel)
-        if not p.exists() and not any(rel == n or rel.startswith(n + "/") for n in OWNED):
+        if not p.exists() and not any(rel == n or rel.startswith(n + "/") for n in OWNED_WORKBUDDY):
             raise ValueError("Missing canonical input: " + rel)
     declared = set(from_paths)
-    for folder in OWNED[:-1]:
+    for folder in OWNED_WORKBUDDY[:-1]:
         directory = root / folder
         if rule_module.is_link(directory): raise ValueError("Link generated directory: " + folder)
         if directory.exists():
@@ -228,7 +370,7 @@ def build(root: Path) -> dict:
         staged.mkdir()
         # Never traverse/copy unknown workspace data, even into a temporary build.
         for rel in from_paths:
-            if any(rel == n or rel.startswith(n + "/") for n in OWNED):
+            if any(rel == n or rel.startswith(n + "/") for n in OWNED_WORKBUDDY):
                 continue
             source_path = root / rel
             target_path = staged / rel
@@ -239,7 +381,7 @@ def build(root: Path) -> dict:
         backup = temporary / "backup"
         backup.mkdir()
         try:
-            for rel in OWNED:
+            for rel in OWNED_WORKBUDDY:
                 destination = root / rel
                 if destination.exists():
                     os.replace(destination, backup / rel)
@@ -263,12 +405,30 @@ def build(root: Path) -> dict:
         if not keep_backup:
             shutil.rmtree(temporary, ignore_errors=True)
 
+
+def build(root: Path, *, target: str | None = None) -> dict:
+    """Dispatch the resolved release target. Default delivery is dsh: generate
+    the dsh/ configuration pack and refresh the total lock. The historical
+    workbuddy path rebuilds the old generated trees in isolation with rollback.
+    Neither path modifies canonical sources, root settings, user permissions or
+    Git state; a crash or power loss is not a filesystem transaction."""
+    root = root.resolve(strict=True)
+    resolved = resolve_target(root, target)
+    if resolved == "dsh":
+        return _build_dsh(root)
+    if resolved == "workbuddy":
+        return _build_workbuddy(root)
+    raise ValueError("Unknown release target: " + str(resolved))
+
+
 def main() -> None:
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root",type=Path,default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--target",choices=RELEASE_TARGETS,default=None,
+                        help="Override the manifest default_target (default: dsh)")
     args=parser.parse_args()
     try:
-        print(json.dumps(build(args.root),ensure_ascii=False,indent=2))
+        print(json.dumps(build(args.root,target=args.target),ensure_ascii=False,indent=2))
     except (OSError,ValueError,KeyError) as exc:
         raise SystemExit(f"Build failed: {exc}") from exc
 

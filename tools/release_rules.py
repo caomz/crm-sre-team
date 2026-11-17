@@ -52,15 +52,86 @@ def manifest_names(root: Path) -> list[str]:
         raise ValueError("Unsafe or non-release path in manifest")
     if names != sorted(names) or len(names) != len(set(names)) or len({n.casefold() for n in names}) != len(names):
         raise ValueError("Manifest must be sorted and collision-free")
+    manifest_targets(manifest, names)
     required = {"VERSION", "settings.json", ".codebuddy-plugin/plugin.json", "release-manifest.json", "prompt-bundles.lock"}
     if not required.issubset(names): raise ValueError("Manifest is missing required entry files")
     return names
 
 
-def release_files(root: Path) -> list[Path]:
+TARGETS = ("dsh", "workbuddy")
+
+
+def manifest_targets(manifest: dict, names: list[str]) -> dict:
+    """Validate the optional release-target declaration.
+
+    Historical manifests without any target field return an empty mapping and
+    keep the legacy whole-manifest payload. Declared targets are named exactly,
+    sorted, duplicate-free exact subsets of the total manifest; default_target,
+    when present, must name one of them. This remains an exact allowlist check:
+    no directory scans ever substitute for the declared file lists."""
+    default_target = manifest.get("default_target")
+    targets = manifest.get("targets")
+    if default_target is None and targets is None:
+        return {}
+    if default_target is not None and default_target not in TARGETS:
+        raise ValueError("Unknown manifest default_target: " + str(default_target))
+    if not isinstance(targets, dict) or not targets:
+        raise ValueError("Manifest with a target declaration must define targets as an object")
+    all_names = set(names)
+    for name, spec in targets.items():
+        if name not in TARGETS:
+            raise ValueError("Unknown release target: " + str(name))
+        if not isinstance(spec, dict):
+            raise ValueError("Target spec must be an object: " + str(name))
+        files = spec.get("files")
+        if not isinstance(files, list) or not files:
+            raise ValueError("Target must declare a non-empty exact file subset: " + str(name))
+        if files != sorted(files) or len(files) != len(set(files)):
+            raise ValueError("Target files must be sorted and duplicate-free: " + str(name))
+        if not set(files) <= all_names:
+            raise ValueError("Target files must be a subset of the total manifest: " + str(name))
+    if default_target is not None and default_target not in targets:
+        raise ValueError("default_target must be a declared target: " + str(default_target))
+    return targets
+
+
+def target_name(root: Path, target: str | None = None) -> str:
+    """Resolve the delivery target. An explicit argument wins; otherwise the
+    trusted manifest default_target applies; historical manifests without any
+    target declaration fall back to workbuddy so old fixtures keep working."""
+    if target is not None:
+        if target not in TARGETS:
+            raise ValueError("Unknown release target: " + str(target))
+        return target
+    manifest_path = root / "release-manifest.json"
+    if is_link(manifest_path):
+        raise ValueError("Manifest must not be a link")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_targets(manifest, manifest.get("files") or [])
+    default_target = manifest.get("default_target")
+    if default_target is None and (root / "policy-source/dsh").exists():
+        raise ValueError("DSH sources require an explicit manifest default_target")
+    return default_target if default_target is not None else "workbuddy"
+
+
+def target_files(root: Path, target: str | None = None) -> list[str]:
+    """Exact payload for the resolved target: workbuddy keeps the historical
+    whole-manifest allowlist; any declared target returns its exact subset."""
+    resolved = target_name(root, target)
+    names = manifest_names(root)
+    if resolved == "workbuddy":
+        return names
+    manifest = json.loads((root / "release-manifest.json").read_text(encoding="utf-8"))
+    subset = list(manifest["targets"][resolved]["files"])
+    if not set(subset) <= set(names):
+        raise ValueError("Target files escaped the total manifest: " + resolved)
+    return subset
+
+
+def release_files(root: Path, *, target: str | None = None) -> list[Path]:
     root = root.resolve(strict=True)
     files = []
-    for rel in manifest_names(root):
+    for rel in target_files(root, target):
         p = root / rel
         if is_link(p) or any(is_link(parent) for parent in p.parents if parent.is_relative_to(root)):
             raise ValueError("Symlink release input: " + rel)

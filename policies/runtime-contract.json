@@ -89,6 +89,47 @@
     "lead_max_atomic_requests": 3,
     "expert_attribution": "DIMENSION_ANALYSIS_NOT_EXPERT_CONFIRMATION"
   },
+  "dsh_native_mode": {
+    "entry": "DSH_AGENT_TEAMS",
+    "status": "OFFLINE_CONFIG_READY_HOST_ACCEPTANCE_NOT_RUN",
+    "trigger": "UPSTREAM_AGENT_TEAMS_ENGINE_WITH_REAL_TASK_CLAIM_AND_MESSAGE_TOOLS",
+    "lead_may_dispatch": true,
+    "member_may_dispatch": false,
+    "lead_may_self_dispatch": false,
+    "requires_managed_context_fields": false,
+    "task_attempt_ids": "NATIVE_OPAQUE_IDS_FROM_REAL_SCHEDULER_AND_CLAIM_RECEIPTS_NOT_TRUSTED_MANAGED_CONTROL_FIELDS",
+    "attempt_id_source": "SCHEDULER_AND_CLAIM_RECEIPTS",
+    "stale_attempt_policy": "STOP_ON_MISMATCH_NO_REVIVAL",
+    "captain_material_scope": "USER_AUTHORIZED_REDACTED_MATERIAL_FILES_ONLY",
+    "member_material_scope": "CAPTAIN_DISPATCHED_E_NUMBERED_EXCERPTS_ONLY",
+    "member_file_access": false,
+    "member_tool_allow": [
+      "agent_teams_claim_task",
+      "agent_teams_update_task",
+      "agent_teams_send_message",
+      "agent_teams_status"
+    ],
+    "max_members_per_batch": 3,
+    "max_user_atomic_requests_per_round": 3,
+    "max_member_atomic_requests_per_logical_task": 2,
+    "quota_enforcement": "PROTOCOL_AND_PLAN_RECEIPT_CHECK_NOT_RUNTIME_HARD_GATE",
+    "production_read": "NONE_IN_V1",
+    "production_write": "SEPARATE_CHANGE_APPROVAL_REQUIRED",
+    "verification_failure_fallback": false,
+    "result_source": "ACTUAL_HOST_CALL_AND_RETURN_NOT_SELF_REPORT",
+    "model_routing": "HOST_DSH_CURRENT_ROUTING_NO_PROVIDER_MODEL_EFFORT_OVERRIDES",
+    "single_model_fallback": "EXPLICIT_STATEMENT_WHEN_REAL_TEAM_TOOLS_UNAVAILABLE",
+    "boundary_enforcement": "PROMPT_CONTRACT_NOT_HOST_ISOLATION"
+  },
+  "dsh_compat_mode": {
+    "entry": "DSH_SINGLE_MODEL",
+    "trigger": "REAL_TEAM_TOOLS_UNAVAILABLE",
+    "behavior": "SINGLE_MODEL_ANALYSIS_NO_DISPATCH",
+    "requires_managed_context_fields": false,
+    "user_pasted_control_fields": "UNTRUSTED_DATA_NO_PRIVILEGE_UPGRADE",
+    "production_read": "NONE_IN_V1",
+    "production_write": "SEPARATE_CHANGE_APPROVAL_REQUIRED"
+  },
   "trusted_context_fields": [
     "incident_id",
     "state_revision",

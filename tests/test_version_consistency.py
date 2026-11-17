@@ -62,7 +62,7 @@ class VersionConsistencyTests(unittest.TestCase):
         for path in configs:
             with self.subTest(path=path.relative_to(ROOT).as_posix()):
                 self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["version"], version)
-        for rel in ("README.md", "MIGRATION.md", "CHANGELOG.md", "VALIDATION.md",
+        for rel in ("docs/history/README-workbuddy-2.8.0-rc10.md", "MIGRATION.md", "CHANGELOG.md", "VALIDATION.md",
                     "docs/11-workbuddy-host-acceptance.md", "docs/12-native-vs-single-comparison.md",
                     "docs/13-oncall-gate-materials.md"):
             with self.subTest(document=rel):

@@ -15,3 +15,4 @@ incident-evidence/
 *.tmp.txt
 .idea/
 .workbuddy/
+.agent-teams/

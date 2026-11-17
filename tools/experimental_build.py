@@ -21,7 +21,8 @@ def prepare_output(root: Path, output: Path) -> tuple[Path, list[Path], str]:
     if output.exists():
         raise ValueError("Output exists, refusing to overwrite: " + str(output))
     # Validate all exact inputs before creating anything; never copy unknown data.
-    files = release_files(root)
+    # Probe/comparison packages exercise the retained WorkBuddy assets only.
+    files = release_files(root, target="workbuddy")
     digest = hashlib.sha256()
     for path in files:
         digest.update(path.relative_to(root).as_posix().encode("utf-8") + b"\0")

@@ -282,7 +282,7 @@ def test_fix15_mac_scope_and_host_recovery_rules():
         assert marker in mechanism
 
 
-@pytest.mark.parametrize('rel', ('README.md', 'VALIDATION.md', 'CHANGELOG.md'))
+@pytest.mark.parametrize('rel', ('docs/history/README-workbuddy-2.8.0-rc10.md', 'VALIDATION.md', 'CHANGELOG.md'))
 def test_fix15_release_docs_record_host_facts_and_accepted_regression(rel):
     text = (ROOT / rel).read_text(encoding='utf-8')
     for marker in ('f5d2398', 'WorkBuddy 5.8.3', 'glm-5.3-flash',
@@ -367,7 +367,7 @@ def test_rc8_candidate_final_provenance_limits_and_audit_record():
         assert marker in record
 
 
-@pytest.mark.parametrize('rel', ('README.md', 'VALIDATION.md', 'CHANGELOG.md',
+@pytest.mark.parametrize('rel', ('docs/history/README-workbuddy-2.8.0-rc10.md', 'VALIDATION.md', 'CHANGELOG.md',
                                  'docs/14-fde-delivery.md', 'docs/15-bomc-readonly.md'))
 def test_rc8_candidate_release_status_and_handoff_are_current(rel):
     text = (ROOT / rel).read_text(encoding='utf-8')
