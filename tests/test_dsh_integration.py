@@ -329,6 +329,32 @@ class DshZipTests(unittest.TestCase):
         self.assertIn("installed_content_mismatch:dsh/cordis.patch.yml", report["errors"])
 
 
+    def test_25b_installed_payload_uses_canonical_order_under_windows_path_comparison(self):
+        output = self.base / "windows-order-install.zip"
+        build_release.build_release(self.root, output)
+        with ZipFile(output) as archive:
+            archive.extractall(self.base / "windows-order")
+        installed = self.base / "windows-order/crm-sre-team"
+
+        # Model the platform ordering that exposed the real Windows failure.
+        # Keep the manifest's case-sensitive POSIX order and byte checks intact.
+        def windows_path_less(left, right):
+            return left.as_posix().casefold() < right.as_posix().casefold()
+
+        with patch.object(Path, "__lt__", windows_path_less):
+            legacy_order = [item.relative_to(installed).as_posix()
+                            for item in sorted(installed.rglob("*")) if item.is_file()]
+            self.assertNotEqual(legacy_order, DSH_SUBSET)
+            self.assertCountEqual(legacy_order, DSH_SUBSET)
+            report = validate_release.validate_installation(self.root, installed)
+            self.assertTrue(report["pass"], report["errors"])
+            target = installed / "dsh/cordis.patch.yml"
+            target.write_bytes(target.read_bytes() + b"\n# synthetic Windows-order tamper\n")
+            report = validate_release.validate_installation(self.root, installed)
+            self.assertFalse(report["pass"])
+            self.assertIn("installed_content_mismatch:dsh/cordis.patch.yml", report["errors"])
+
+
 class IdentityTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()

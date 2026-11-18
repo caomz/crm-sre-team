@@ -366,6 +366,11 @@ class PreCommitHookTests(unittest.TestCase):
         temp_root.mkdir()
         self.temp_roots.append(temp_root)
         env["TMPDIR"] = str(temp_root)
+        # Direct runs test the gate logic with the interpreter running this
+        # suite, not whatever python3 the host PATH resolves first (macOS:
+        # /usr/bin/python3 3.9, which cannot run the build). Interpreter
+        # discovery is covered separately under controlled shims.
+        env["CRM_SRE_PYTHON"] = Path(sys.executable).as_posix()
         return env
 
     def git(self, repo: Path, *args: str, check: bool = True,
@@ -413,6 +418,25 @@ class PreCommitHookTests(unittest.TestCase):
             shim.chmod(0o755)
         return shim_dir
 
+    def runtime_shim(self, path: Path, kind: str) -> Path:
+        """A real interpreter (this suite's) with one controlled capability."""
+        executable = shlex.quote(Path(sys.executable).as_posix())
+        if kind == "capable":
+            body = f'exec {executable} "$@"\n'
+        elif kind == "no-yaml":
+            # -I -S drops site-packages: a working Python without PyYAML.
+            body = f'exec {executable} -I -S "$@"\n'
+        elif kind == "old":
+            # Reports 3.9.6 to the probe, like the macOS system python3.
+            fake = ('import sys; sys.version_info = (3, 9, 6, "final", 0); '
+                    'code = sys.argv[1]; del sys.argv[1]; exec(compile(code, "<probe>", "exec"))')
+            body = f'[ "$1" = "-c" ] || exit 126\nexec {executable} -c {shlex.quote(fake)} "$2"\n'
+        else:
+            raise ValueError(kind)
+        path.write_text("#!/bin/sh\n" + body, encoding="utf-8", newline="\n")
+        path.chmod(0o755)
+        return path
+
     def shell_command_path(self, command: str) -> str:
         if command == "git":
             return GIT_PATH
@@ -455,6 +479,9 @@ class PreCommitHookTests(unittest.TestCase):
                 shim.chmod(0o755)
         controlled = env.copy()
         controlled["PATH"] = str(shim_dir)
+        # The shims define every interpreter candidate; an inherited explicit
+        # override would bypass them.
+        controlled.pop("CRM_SRE_PYTHON", None)
         return controlled
 
     def require_git_runner_shims(self, env: dict[str, str], shim_dir: Path, commands) -> None:
@@ -813,6 +840,78 @@ class PreCommitHookTests(unittest.TestCase):
                                      "PATH preparation must not modify the host environment")
         with patch("os.name", "posix"):
             self.assertEqual(direct_shell_environment(), os.environ.copy())
+
+    @requires_sh
+    def test_27_interpreters_are_selected_by_capability_not_name(self):
+        """A runnable but incapable python3 (e.g. macOS 3.9) must not be chosen."""
+        env = self.hook_environment("capability-temp")
+        shim_dir = self.interpreter_shims("capability-bin")
+        self.runtime_shim(shim_dir / "python3", "no-yaml")
+        self.runtime_shim(shim_dir / "python", "capable")
+        env = self.controlled_environment(env, shim_dir)
+        allowed = self.run_hook(self.repo, env=env)
+        self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
+        self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
+
+        env = self.hook_environment("incapable-temp")
+        # interpreter_shims leaves py as a silent "exit 127" stub, so all three
+        # rejection paths (old version, missing PyYAML, not runnable) appear.
+        shim_dir = self.interpreter_shims("incapable-bin")
+        self.runtime_shim(shim_dir / "python3", "old")
+        self.runtime_shim(shim_dir / "python", "no-yaml")
+        env = self.controlled_environment(env, shim_dir)
+        before_head = self.git(self.repo, "rev-parse", "HEAD").stdout
+        before_index = self.git(self.repo, "write-tree").stdout
+        blocked = self.run_hook(self.repo, env=env)
+        self.assertNotEqual(blocked.returncode, 0, blocked.stdout + blocked.stderr)
+        self.assertIn("no working python3/python/py -3", blocked.stderr)
+        self.assertIn("python3: Python 3.9.6 is older than 3.11", blocked.stderr)
+        self.assertIn("python: ModuleNotFoundError: No module named 'yaml'", blocked.stderr)
+        self.assertIn("py -3: exited non-zero without output", blocked.stderr)
+        self.assertIn("commit aborted", blocked.stderr)
+        self.assertNotIn("exited non-zero on the staged tree", blocked.stderr)
+        self.assertEqual(before_head, self.git(self.repo, "rev-parse", "HEAD").stdout)
+        self.assertEqual(before_index, self.git(self.repo, "write-tree").stdout)
+        self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [],
+                         "an incapable interpreter must abort before exporting the staged tree")
+
+    @requires_sh
+    def test_28_explicit_interpreter_is_exclusive_and_repo_anchored(self):
+        """A non-empty CRM_SRE_PYTHON wins over PATH and never silently falls back to it."""
+        env = self.hook_environment("override-temp")
+        shim_dir = self.interpreter_shims("override-bin")
+        self.runtime_shim(shim_dir / "python3", "capable")
+        env = self.controlled_environment(env, shim_dir)
+        env["CRM_SRE_PYTHON"] = self.runtime_shim(Path(self.tmp.name) / "old-python", "old").as_posix()
+        blocked = self.run_hook(self.repo, env=env)
+        self.assertNotEqual(blocked.returncode, 0, blocked.stdout + blocked.stderr)
+        self.assertIn("CRM_SRE_PYTHON does not meet the project runtime", blocked.stderr)
+        self.assertIn("Python 3.9.6 is older than 3.11", blocked.stderr)
+        self.assertIn("commit aborted", blocked.stderr)
+        self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
+
+        env = self.hook_environment("override-relative-temp")
+        shim_dir = self.interpreter_shims("override-relative-bin")
+        self.runtime_shim(shim_dir / "python3", "no-yaml")
+        env = self.controlled_environment(env, shim_dir)
+        # Relative to the repository root even though the build later runs in
+        # the export directory; the untracked shim itself is never exported.
+        self.runtime_shim(self.repo / "project-python", "capable")
+        env["CRM_SRE_PYTHON"] = "./project-python"
+        allowed = self.run_hook(self.repo, env=env)
+        self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
+        self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
+
+        env = self.hook_environment("override-empty-temp")
+        shim_dir = self.interpreter_shims("override-empty-bin")
+        self.runtime_shim(shim_dir / "python3", "capable")
+        env = self.controlled_environment(env, shim_dir)
+        # Empty counts as unset (`CRM_SRE_PYTHON= git commit` bypasses an
+        # exported override); the PATH candidate still faces the same probe.
+        env["CRM_SRE_PYTHON"] = ""
+        allowed = self.run_hook(self.repo, env=env)
+        self.assertEqual(allowed.returncode, 0, allowed.stdout + allowed.stderr)
+        self.assertEqual(list(Path(env["TMPDIR"]).iterdir()), [])
 
 
 if __name__ == "__main__":

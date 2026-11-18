@@ -12,7 +12,7 @@
     "MODIFICATIONS.md": "d63c9198631c60d3adab611103061bd8b841d51f3cfab478f9c553e06b60da26",
     "PROJECT.md": "36c1f9a80bec846b8b565bf089432229d12af68dd5105b0e33019d5ac3e85622",
     "README.md": "7c2121303d07bcb992f37406c38b48b4113d6d550fba573553edce5431b71004",
-    "VALIDATION.md": "43f4e3f5e9eacfe7275b67744ed2b60bf90fb6eab4d25f96047fa3ec4adc34dd",
+    "VALIDATION.md": "9dd64592f33c14c5d562f22d2109691eca2d5c275f2c96a5df5493c340057397",
     "VERSION": "b8f005983614d0c45318a4ef101d0eaed8339344549566864b6afb14b9ce94dc",
     "agents/telecom-crm-change-capacity-dr.md": "b9704bbad4e8015eb910788b62adef1a524dd242b5c83f869c6ed2ba44d07696",
     "agents/telecom-crm-crm-business-flow.md": "3573a5400e66c14c2c0e0455b83b3ce29fc3feb9ee009301a9b77b7529cb23ca",
@@ -512,10 +512,10 @@
     "tests/test_bomc_readonly.py": "973bc0a455fcb65b3e312282ff38a3b95e55e350a72d4ea99c7d172ff03d8291",
     "tests/test_comparison_build.py": "0b5b2dc78c3e9187d40e23a9831356a4aeb725e3acdfc4855b8bcb93c2654734",
     "tests/test_contracts.py": "85e6f30902704be775b03a8423cd8c067e1ced9653896a9f38d5685698f75698",
-    "tests/test_dsh.py": "97af8e8c78b458f754e6f54911aef91a8df842135b9b1d426417bc2c218cc59c",
-    "tests/test_dsh_integration.py": "7e9e9cf88dd42deb6ac96a81d5b87fbf7564971c79912add71d5333766579421",
+    "tests/test_dsh.py": "c74330029af2eded25780314fd6c135c7d2ff97c6d62065b2c456a8e66d6c8c8",
+    "tests/test_dsh_integration.py": "7aac61ad2ae7172092e465c6247c890b2a26c91c2be8ebeb7584c29865bc20a9",
     "tests/test_fde_delivery.py": "8422215be6f9161a5e935bb2beb4ddbc9ba2d365e474a5d6fd9f6dfd90cc670a",
-    "tests/test_git_hooks.py": "7b9c16a20783ac9031821f84d65bb0ef26f269130ea95d145c4b9401ac399fd4",
+    "tests/test_git_hooks.py": "33ecf9dc14b3f3037336285b901082cbbc80687783e6135711610c6b9956d2bb",
     "tests/test_git_sync.py": "3f27530ee0f0b5cebd6ae70ab6d5fe06d726bdc2e750ef500466ffd53fcded15",
     "tests/test_host_observed.py": "9743d5a3e2015c85510121885b78c1c06685fa9535c0f7a4534f514615bcf606",
     "tests/test_individual_zip_safety.py": "79971a01a9de701af7e4b1bd157b30343bc12ee27ad525f4a9afafcee271bb23",
@@ -570,6 +570,6 @@
     "tools/sync_git.py": "9e89d4796c6122c29b1aa1212a6c2fd51b3d7d81c86fbdf2bf62b80e5c18e10d",
     "tools/validate_bundle.py": "b5a8e3e51b189be2c539cb2e663bb2a1ddb6cab6b5c08ffc7ca5d0516b8dd2be",
     "tools/validate_individual_zip.py": "569b85fc5beb4ad9663956d2eae2fed53dccf5d95722ea52f25bf304374f04b7",
-    "tools/validate_release.py": "688575de72e92aa5f5229d4f1fb3ac28340de34981bc850d4e8ab58afdb52dba"
+    "tools/validate_release.py": "8b08f821b51fb9478fe387c058b8d1625c39bb846f50e86bb9b7106004352fb3"
   }
 }

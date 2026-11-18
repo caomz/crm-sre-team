@@ -4,6 +4,24 @@
 
 离线检查：DSH 静态校验 183/183，领域检查 102/102；专项回归 58 passed、66 subtests passed。最终完整回归、确定性、七文件 ZIP 与解包复验由 tools/release.py 的本次机器回执逐项记录；这些源码门禁不代表模型行为通过。未在本分支 commit、push 或部署。
 
+## 2026-11-18 pre-commit 解释器选择修复
+
+复核 11-17 修复时，用锁定依赖（pytest 9.1.1、PyYAML 6.0.3、jsonschema 4.26.0）的 Python 3.11.15 在隔离副本跑完整 pytest：失败 11 项全部在 test_git_hooks，其余通过。另一轮复核报告的 31 项失败来自不含 pytest 的解释器与 unittest 运行器，不是本仓库问题；test_git_hooks 的失败则是真实缺陷。钩子只按名称取 PATH 上第一个 python3，并只检查能否运行 import sys；本机 PATH 的 python3 是 macOS 自带的 3.9.6，不支持构建所用的 Path.write_text(newline=)（3.10 起提供）。真实 build_bundle.py 与测试假构建都在此处 TypeError，而钩子丢弃构建输出，只报“exited non-zero”，所以本机真实 git commit 同样会被拦下。此前 Mac 运行能通过，是因为显式把 venv 放在 PATH 前面。
+
+修复：钩子改为按能力选择解释器，要求 Python 3.11+（README 声明）且能导入构建唯一的第三方依赖 PyYAML。CRM_SRE_PYTHON 非空时只用它，含 / 或 \ 的相对路径按仓库根解析，不合格即拒绝提交、不回退 PATH；为空等同未设置。候选全部不合格时逐个列出原因。test_git_hooks 的直接运行改用测试自身的解释器，受控 shim 环境移除这一覆盖。新增两项回归，覆盖按能力回退、版本下限、缺 PyYAML、覆盖独占、相对路径与空值；它们在旧钩子上失败，在新钩子上通过。
+
+复验在全新副本中进行，PATH 上的 python3 仍为 3.9.6：完整 pytest 2117 passed、1 skipped、2171 subtests passed；oncall 100 passed、269 subtests passed；check_dsh 102/102，validate_bundle 183/183，check_workbuddy 通过，DSH ZIP 构建与校验通过，重建零差异。真实 git commit 未设 CRM_SRE_PYTHON 时被拒且 HEAD 不变，设置后通过。以 dash 作 sh 时钩子测试同样全过，直接运行时也能选中 py -3。Windows/MSYS 实机未复验，包括 py launcher 与反斜杠路径。本机提交需把 CRM_SRE_PYTHON 指向项目环境，或把该环境放在 PATH 前面。
+
+## 2026-11-17 Windows 回报复核与可移植性修复
+
+收到 Windows CLI/Web 的安装与单成员探索报告，但其 Node 22.20.0 低于指定的 24.9.0 下限，偏离“停止后续安装/短测”的前置条件，不能登记为目标 Windows VERIFY 通过。原始 Windows 文件尚未交回；UI 归一化文本、lastUsed 路由、截断 SHA256 和未归属的并发 profile 写入，均按其证据范围保留，不提升为原生字节、实际模型请求或写者证明。
+
+本地确认并修复两处兼容问题：安装校验按规范相对 POSIX 字符串排序，避免 WindowsPath 的大小写不敏感排序误拒合法载荷；test_30c 用原始字节保存和还原，避免 LF/CRLF 改变产物哈希。新增模拟 Windows 比较语义的合法/篡改回归，旧函数可复现误拒，修复后仍拒绝真实字节篡改。专项实际为 59 passed、66 subtests passed；这属于 Mac 上的模拟与回归，Windows 实机复验仍待进行。
+
+提交后的 HEAD 已默认 DSH，还暴露了历史 WorkBuddy 功能夹具的目标依赖。夹具现显式选择历史目标，冻结 verifier 通过真实 release_files 的 workbuddy 参数运行；没有修改 clone 的 manifest、HEAD、源字节、冻结 updater 或任何完整性断言。该夹具验证不等于旧 updater 可用于 DSH 安装。针对性验证为 10 passed、50 subtests passed。
+
+本次完整回归与发布检查以同轮机器回执记录；原 Mac 三项行为 FAIL 保留，下一轮 Windows 须先满足实际 Node 版本，再在准确修复提交上复验。尚无正式验收或生产可用结论。
+
 ## 2026-11-17 Mac 现场记录（CLI/Web）
 
 实际 carrier `0.2.2-rc.1`，Agent Teams `0.1.30`；团长及实际执行成员的原生请求均为 `zhipu-bigmodel/glm-5.3-flash`。使用独立验收宿主 profile 与合成材料工作区；本记录未另行验证独立桌面安装包的 core，也不替代 Windows 验收。

@@ -30,7 +30,11 @@ def validate_installation(source_root: Path, installed_root: Path) -> dict:
     try:
         expected = release_rules.target_files(source_root, "dsh")
         actual = []
-        for item in sorted(installed_root.rglob("*")):
+        # Sort by the POSIX relative string actually compared below: Path
+        # sorting is case-insensitive on Windows, which would falsely
+        # reject a valid installation against the manifest's canonical order.
+        for item in sorted(installed_root.rglob("*"),
+                           key=lambda item: item.relative_to(installed_root).as_posix()):
             if release_rules.is_link(item):
                 raise ValueError("Linked installed entry")
             if item.is_file():

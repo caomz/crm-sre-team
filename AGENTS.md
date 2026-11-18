@@ -31,6 +31,8 @@ python3 tools/install_git_hooks.py
 
 它把 `core.hooksPath` 指向 `tools/git-hooks`，之后每次 `git commit` 都会先重建产物；若产物与源不一致，提交被拒绝并提示重新暂存。
 
+钩子按能力选择运行构建的解释器：`CRM_SRE_PYTHON` 非空时只用它（含路径分隔符的相对路径按仓库根解析，裸命令名按 PATH 查找；不合格直接拒绝提交，不回退 PATH；为空等同未设置）；否则依次尝试 PATH 上的 `python3`、`python`、`py -3`，只接受 Python 3.11+ 且能导入 PyYAML 的解释器，全部不合格时逐个列出原因。macOS 自带的 `/usr/bin/python3` 是 3.9，会被拒绝；请把 `CRM_SRE_PYTHON` 指向按 `requirements-dev.txt` 安装的项目环境（例如 `.venv/bin/python`），或把该环境放到 PATH 最前。
+
 已装过后重复执行是安全的（幂等）。卸载：
 
 ```powershell

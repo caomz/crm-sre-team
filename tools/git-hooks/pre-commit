@@ -22,22 +22,78 @@ set -eu
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
-# Find a real python: try python3, python, then py -3 (Windows launcher).
-# Each candidate must actually run (-c "import sys") so the Windows Store
-# python3 stub does not silently pass the command -v check.
-PY=""
-if command -v python3 >/dev/null 2>&1 && python3 -c "import sys" >/dev/null 2>&1; then
-    PY="python3"
-elif command -v python >/dev/null 2>&1 && python -c "import sys" >/dev/null 2>&1; then
-    PY="python"
-elif command -v py >/dev/null 2>&1 && py -3 -c "import sys" >/dev/null 2>&1; then
-    PY="py -3"
+# Choose the interpreter by capability, not by name. The staged build needs
+# the project's declared runtime: Python 3.11+ (README) with PyYAML, the only
+# third-party module the build imports (requirements-build.txt). A name-only
+# check accepted, for example, the macOS system /usr/bin/python3 (3.9): it
+# runs "import sys" but cannot run the build, so every commit failed with an
+# unexplained "exited non-zero". Running the probe also rejects the Windows
+# Store python3 stub. CRM_SRE_PYTHON, when non-empty, is the only candidate:
+# an explicit choice must not silently fall back to PATH. Empty counts as
+# unset, so `CRM_SRE_PYTHON= git commit` bypasses an exported override; PATH
+# candidates still face the same probe. Otherwise try python3, python, then
+# py -3 (Windows launcher). The probe stays on one line so native Windows
+# interpreters receive it unchanged.
+py_probe='import sys; v = sys.version_info; sys.exit("Python %d.%d.%d is older than 3.11" % tuple(v[:3])) if v < (3, 11) else None; import yaml'
+nl='
+'
+cr=$(printf '\r')
+py_rejected=""
+python_found() {
+    if command -v "$1" >/dev/null 2>&1; then
+        return 0
+    fi
+    py_rejected="$py_rejected${nl}pre-commit:   $1: not found on PATH"
+    return 1
+}
+python_works() {
+    # $1 labels the candidate in diagnostics; the remaining words run it.
+    py_label=$1
+    shift
+    if py_out=$("$@" -c "$py_probe" 2>&1); then
+        return 0
+    fi
+    py_out=${py_out##*"$nl"}
+    py_out=${py_out%"$cr"}
+    py_rejected="$py_rejected${nl}pre-commit:   $py_label: ${py_out:-exited non-zero without output}"
+    return 1
+}
+py_choice=""
+if [ -n "${CRM_SRE_PYTHON:-}" ]; then
+    case "$CRM_SRE_PYTHON" in
+        /*|[A-Za-z]:/*|[A-Za-z]:\\*) ;;
+        # A relative path (either separator) names a file in the repository;
+        # the build runs later from the export directory, so anchor it now.
+        # Bare names use PATH. Anything else fails visibly at the probe.
+        */*|*\\*) CRM_SRE_PYTHON="$repo_root/$CRM_SRE_PYTHON" ;;
+    esac
+    if python_works "CRM_SRE_PYTHON ($CRM_SRE_PYTHON)" "$CRM_SRE_PYTHON"; then
+        py_choice=override
+    fi
+elif python_found python3 && python_works python3 python3; then
+    py_choice=python3
+elif python_found python && python_works python python; then
+    py_choice=python
+elif python_found py && python_works "py -3" py -3; then
+    py_choice=py
 fi
-if [ -z "$PY" ]; then
-    echo "pre-commit: FAILED - no working python3/python/py -3 on PATH; commit aborted." >&2
-    echo "pre-commit: activate an existing Python environment and retry; the gate cannot run without Python." >&2
-    exit 1
-fi
+# The positional parameters hold the selected command (one or two words).
+case "$py_choice" in
+    override) set -- "$CRM_SRE_PYTHON" ;;
+    python3) set -- python3 ;;
+    python) set -- python ;;
+    py) set -- py -3 ;;
+    *)
+        if [ -n "${CRM_SRE_PYTHON:-}" ]; then
+            echo "pre-commit: FAILED - CRM_SRE_PYTHON does not meet the project runtime (Python 3.11+ with PyYAML); commit aborted." >&2
+        else
+            echo "pre-commit: FAILED - no working python3/python/py -3 on PATH meets the project runtime (Python 3.11+ with PyYAML); commit aborted." >&2
+        fi
+        printf '%s\n' "${py_rejected#"$nl"}" >&2
+        echo "pre-commit: point CRM_SRE_PYTHON at the project environment's interpreter (installed from requirements-dev.txt), or put it first on PATH, then retry; the gate cannot run without it." >&2
+        exit 1
+        ;;
+esac
 
 tmp_root=$(CDPATH= cd -P "${TMPDIR:-/tmp}" && pwd -P)
 tmp_base=$(mktemp -d "$tmp_root/crm-precommit.XXXXXX")
@@ -136,11 +192,10 @@ hashes > "$tmp_base/before.txt" || exit 1
 # Build from the exported staged tree; --root keeps every write inside it.
 # Run the STAGED copy of tools/build_bundle.py from the export dir (not the
 # working-tree one): an unstaged edit to the build script must not change
-# the verdict.
-# shellcheck disable=SC2086
-if ! $PY "$export_dir/tools/build_bundle.py" --root "$export_dir" >/dev/null 2>&1; then
+# the verdict. "$@" is the interpreter selected above.
+if ! "$@" "$export_dir/tools/build_bundle.py" --root "$export_dir" >/dev/null 2>&1; then
     echo "pre-commit: FAILED - tools/build_bundle.py (staged copy) exited non-zero on the staged tree." >&2
-    echo "pre-commit: run it manually to see the error; commit aborted; working tree untouched." >&2
+    echo "pre-commit: run it manually with the same interpreter ($*) to see the error; commit aborted; working tree untouched." >&2
     exit 1
 fi
 

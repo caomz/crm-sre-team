@@ -432,7 +432,9 @@ class DshBuildTests(unittest.TestCase):
     def test_30c_scoped_persona_registry_or_toolfs_drift_detected(self):
         dsh_bundle.build(self.root)
         patch_path = self.root / "dsh/cordis.patch.yml"
-        original = patch_path.read_text(encoding="utf-8")
+        # Keep the original as bytes: text-mode restore on Windows would turn
+        # LF into CRLF and the raw artifact hash would rightly reject it.
+        original_bytes = patch_path.read_bytes()
 
         def mutate_scoped_persona(data):
             data[3]["insert"][0]["config"]["plugins"][0]["config"]["prefix"] = "你是编码助手"
@@ -447,11 +449,12 @@ class DshBuildTests(unittest.TestCase):
                               ("registry_default_not_crm_sre", mutate_registry_default),
                               ("captain_tool_fs_write_enabled", mutate_tool_fs_write)):
             with self.subTest(case=label):
-                data = yaml.safe_load(original)
+                data = yaml.safe_load(original_bytes.decode("utf-8"))
                 mutate(data)
-                patch_path.write_text(yaml.dump(data, allow_unicode=True), encoding="utf-8")
+                patch_path.write_bytes(yaml.dump(data, allow_unicode=True).encode("utf-8"))
                 self.assertFalse(check_dsh.run(self.root)["pass"], label)
-        patch_path.write_text(original, encoding="utf-8")
+        patch_path.write_bytes(original_bytes)
+        self.assertEqual(patch_path.read_bytes(), original_bytes)
         self.assertTrue(check_dsh.run(self.root)["pass"])
 
     def test_30d_malformed_preset_rows_and_config_are_reported_without_crashing(self):

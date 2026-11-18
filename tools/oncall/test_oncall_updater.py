@@ -939,7 +939,10 @@ class ExperimentFunctionalTests(unittest.TestCase):
                  '--no-checkout', '--config', 'core.autocrlf=false', '--config',
                  'core.hooksPath=' + os.devnull, str(ROOT), str(cls.repo)])
         cls.run_command(['git', '-C', str(cls.repo), 'checkout', '-q', '--detach', cls.head])
-        cls.names = json.loads((cls.repo / 'release-manifest.json').read_text())['files']
+        manifest = json.loads((cls.repo / 'release-manifest.json').read_text())
+        cls.names = manifest['files']
+        cls.legacy_target_args = (['--target', 'workbuddy']
+                                  if 'default_target' in manifest else [])
         cls.before = {name: hashlib.sha256((cls.repo / name).read_bytes()).hexdigest() for name in cls.names}
         cls.verifier = cls.work / 'experiment-verifier.py'
         source = extracted_verifier(decode_script(SCRIPT.read_bytes()))
@@ -947,7 +950,7 @@ class ExperimentFunctionalTests(unittest.TestCase):
         cls.ns = {'__name__': 'extracted_experiment_verifier'}
         exec(compile(source, str(cls.verifier), 'exec'), cls.ns)
         cls.run_command([sys.executable, str(cls.repo / 'tools/build_release.py'), '--root', str(cls.repo),
-                 '--output', str(cls.artifacts / 'release.zip')])
+                 *cls.legacy_target_args, '--output', str(cls.artifacts / 'release.zip')])
         cls.zip_sha = hashlib.sha256((cls.artifacts / 'release.zip').read_bytes()).hexdigest()
         with ZipFile(cls.artifacts / 'release.zip') as archive:
             archive.extractall(cls.artifacts / 'install-clean')
@@ -977,11 +980,31 @@ class ExperimentFunctionalTests(unittest.TestCase):
         return result
 
     @classmethod
+    def verifier_command(cls, *arguments):
+        if not cls.legacy_target_args:
+            return [sys.executable, str(cls.verifier), *arguments]
+        # This frozen WorkBuddy verifier predates target selection. Keep its
+        # bytes, the HEAD clone and every provenance check unchanged; select
+        # its historical library default through the real public API. DSH
+        # delivery has separate integration tests and is not validated here.
+        runner = (
+            "import sys,functools,runpy; "
+            "sys.path.insert(0,sys.argv[1]); "
+            "import release_rules; "
+            "release_rules.release_files=functools.partial("
+            "release_rules.release_files,target='workbuddy'); "
+            "sys.argv=sys.argv[2:]; "
+            "runpy.run_path(sys.argv[0],run_name='__main__')"
+        )
+        return [sys.executable, '-c', runner, str(cls.repo / 'tools'),
+                str(cls.verifier), *arguments]
+
+    @classmethod
     def call_build(cls, artifacts):
-        return cls.run_command([sys.executable, str(cls.verifier), 'build', '--repo', str(cls.repo),
+        return cls.run_command(cls.verifier_command('build', '--repo', str(cls.repo),
                         '--artifacts', str(artifacts), '--head', cls.head, '--tag', cls.tag,
                         '--zip-sha', cls.zip_sha, '--script-sha', cls.script_sha, '--set-id', cls.set_id, '--dev-root', str(cls.repo.parent.parent),
-                        '--handoff-root', str(artifacts.parent), '--workbuddy-root', str(cls.work / 'host')], check=False)
+                        '--handoff-root', str(artifacts.parent), '--workbuddy-root', str(cls.work / 'host')), check=False)
 
     @classmethod
     def call_select(cls, set_path, set_sha, package, head=None, tag=None, zip_sha=None, script_sha=None, output=None):
@@ -989,11 +1012,11 @@ class ExperimentFunctionalTests(unittest.TestCase):
             directory = cls.work / ('update-' + uuid.uuid4().hex)
             directory.mkdir()
             output = directory / 'selection.json'
-        result = cls.run_command([sys.executable, str(cls.verifier), 'select', '--set', str(set_path),
+        result = cls.run_command(cls.verifier_command('select', '--set', str(set_path),
                         '--set-sha', set_sha, '--package', package, '--head', head or cls.head,
                         '--tag', tag or cls.tag, '--zip-sha', zip_sha or cls.zip_sha,
                         '--script-sha', script_sha or cls.script_sha, '--output', str(output), '--dev-root', str(cls.repo.parent.parent),
-                        '--handoff-root', str(Path(set_path).parent.parent), '--workbuddy-root', str(cls.work / 'host')], check=False)
+                        '--handoff-root', str(Path(set_path).parent.parent), '--workbuddy-root', str(cls.work / 'host')), check=False)
         return result, output
 
     @classmethod
