@@ -15,8 +15,8 @@ WB07 的 HOST_LIMIT 前提按实际运行该测试的机器的 WorkBuddy 版本�
 ## 文件与发布边界
 
 - `Update-CrmSreTeam.ps1` 使用 **UTF-8 BOM + LF**。保留 runbook 中文代码原文，避免 PS 5.1 按 ANSI/GBK 错读；新增编排的提示使用英文。下载后保持原字节，不用编辑器另存编码或换行。
-- 现有 `tools/release_rules.py` 不接受 `.ps1`，构建/打包器只读取 `release-manifest.json.files`。现有 `repository_only_files` 已精确登记这三个开发文件（脚本、本文、静态测试），由专项测试约束其排序、唯一性、存在性与不进入 ZIP。该字段是登记信息，**不会让插件安装或执行脚本**。
-- 三个文件随 Git 同步，插件 ZIP 不含它们。插件的期望文件数一律读取 `files`，没有固定成 517。rc7 沿用精确 manifest 白名单；版本与正文修改由新候选构建及交接哈希绑定。
+- `repository_only_files` 精确登记九个文件，包括本文、更新脚本、BOMC 哈希工具、两份值班手册、静态测试和 Windows 验证交接目录中的三个文件。专项测试核对清单的排序、唯一性、文件存在性及 ZIP 排除规则。
+- 这九个文件随 Git 同步，Windows 验证交接目录也只随仓库分发。构建和打包只读取 `release-manifest.json.files`，插件期望的文件数由 `files` 决定。rc7 沿用精确 manifest 白名单，版本与正文由候选构建及交接哈希绑定。
 - 脚本启动时若位于 Git 工作树内，先校验 `HEAD = ExpectedCommit`、工作树干净，以及该提交内脚本 blob 哈希与磁盘原字节哈希相同；任何不符立即停止。`PLAN` 仍比对目标标签内脚本 SHA256，后续模式绑定计划里的脚本哈希。`-ExpectedScriptSha256 <64-hex>` 是可选的额外交接核验，不要求手工传脚本或单独核对哈希。Mac 改完脚本后必须重新提交、验证并提供相应标签。
 
 ## rc7 起的可配置路径
@@ -407,3 +407,14 @@ formal SWITCH 不重建正式包；UPDATE 仍是完整重建路径。**每个计
 - **NOT_RUN**：全部新 PS 5.1 编排/解析、真实安装/客户端更新/版本拒绝、实验缓存选择/Skill/Agent 加载、宿主限权、WB09H/7A/7B/T02/18 runs、REAL 回退及新 R6 的 Windows 行为。不得据 Mac 测试写成宿主 PASS 或升级完成。
 
 代码回滚：丢弃这三个未提交的 tools/oncall 文件修改即可（需操作人决定；本任务不执行 restore/reset）；无提交、无生产写入。交接 patch 与原始检查记录在仓库外保留。Windows 现场恢复按各自计划、R6 与 runbook 5C，不删除任何输出或证据。
+
+## Windows 值班机验证交接包（2b4d70d）
+
+仓库路径为 `tools/oncall/win-verify-2b4d70d/`。该目录包含 `win_verify.py`、`WINDOWS-PROMPT.md` 和 `SHA256SUMS`，仅随仓库分发。
+
+| 文件 | SHA256 |
+| --- | --- |
+| `win_verify.py` | `d3c6b1c346581cb2a05152a7aed650746ce0e327011522a0e3cf3e4a9cffdecd` |
+| `WINDOWS-PROMPT.md` | `ce013207beadc480c80cb09584442bbc0c8358c8d1ed329fbf5c6ec488c82966` |
+
+在 Windows 值班机将整个目录复制到 `D:\crm-handoff\crm-dsh-win-verify-2b4d70d-github`，然后执行 [WINDOWS-PROMPT.md](win-verify-2b4d70d/WINDOWS-PROMPT.md) 中的粘贴块。Windows 现场运行状态为 **NOT_RUN**。

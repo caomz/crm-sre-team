@@ -40,10 +40,17 @@ FRAGMENT_SHA = {
     "block-22": "1774e3b4d40e778caad99946079a43a55690e81175aa9c47dabaa3a22cdaddad",
     "stage-17": "320a89cd94c2c53a553df95ea53ebe647bf27255fd9cb5cfab3f66a2a5be5c66",
 }
-REPO_ONLY = ["tools/oncall/README.md", "tools/oncall/Update-CrmSreTeam.ps1",
-             "tools/oncall/bomc_hashes.py",
-             "tools/oncall/runbooks/ONCALL_RUNBOOK.r6.md", "tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md",
-             "tools/oncall/test_oncall_updater.py"]
+REPO_ONLY = [
+    "tools/oncall/README.md",
+    "tools/oncall/Update-CrmSreTeam.ps1",
+    "tools/oncall/bomc_hashes.py",
+    "tools/oncall/runbooks/ONCALL_RUNBOOK.r6.md",
+    "tools/oncall/runbooks/ONCALL_RUNBOOK.r7.md",
+    "tools/oncall/test_oncall_updater.py",
+    "tools/oncall/win-verify-2b4d70d/SHA256SUMS",
+    "tools/oncall/win-verify-2b4d70d/WINDOWS-PROMPT.md",
+    "tools/oncall/win-verify-2b4d70d/win_verify.py",
+]
 
 
 def decode_script(raw):
