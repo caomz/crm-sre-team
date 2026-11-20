@@ -184,7 +184,7 @@ class DshRenderTests(unittest.TestCase):
         for m in self.members:
             with self.subTest(member=m["name"]):
                 prompt = m["executionPrompt"]
-                self.assertIn(discipline.strip(), prompt)
+                self.assertTrue(prompt.rstrip().endswith(discipline.strip()))
                 self.assertIn(QUADRANTS, prompt)
                 for tool in dsh_bundle.MEMBER_TOOLS:
                     self.assertIn(tool, prompt)
@@ -218,6 +218,7 @@ class DshRenderTests(unittest.TestCase):
         self.assertNotIn("运行时硬守卫已实现", protocol)
         self.assertIn("不是运行时硬守卫", protocol)
         self.assertIn("跨attempt累计", protocol)
+        self.assertIn("一项只写一份独立材料，零余量的待验证只写机制。", protocol)
         self.assertEqual(dsh_bundle.utf16_units("😀"), 2)
         self.assertEqual(dsh_bundle.utf16_units("a"), 1)
 
@@ -497,6 +498,17 @@ class DshBuildTests(unittest.TestCase):
             ("lead-rules.md", "向用户展示的待验证、建议采集、后续材料清单同样计入本轮 3 项，转述成员请求也计数；不得以“未新增”“仅转述”“额度未动用”绕过。"),
             ("lead-rules.md", "成员合计超过 3 项时只选择最多 3 项展示，其余不在其他段落暗列。一个编号不能捆绑可分别提供的多份材料。"),
             ("shared-discipline.md", "每项只指一份可独立提供的材料，不把多个指标时序、线程栈和基线捆成一项。"),
+            ("lead-rules.md", "先把成员回执中的合并项按独立材料拆开计数，再按各任务的可用额度和团长预留筛选"),
+            ("lead-rules.md", "全队本轮可用名额为 0 时，省略该清单，且在“待验证”、转交建议、局限和收尾中均不得暗列新增材料。"),
+            ("lead-rules.md", "零配额派单只要求成员给出候选机制与证据边界。"),
+            ("lead-rules.md", "句号后结束该条；不附理由、缺失项或括注。"),
+            ("shared-discipline.md", "JDBC 获取连接的等待时长时序和连接借出后的占用时长时序是两项。"),
+            ("shared-discipline.md", "当前任务剩余名额为 0 时省略该清单，且在“待验证”、转交建议和局限中均不得暗列新增材料"),
+            ("shared-discipline.md", "不要另设“机制差异说明”去回答需要哪些证据。"),
+            ("shared-discipline.md", "到句号即止，不附理由、缺失项或括注。"),
+            ("shared-discipline.md", "在提交 agent_teams_update_task 的 output、agent_teams_send_message 的 content 或任何会话回复前，逐项检查实际正文。"),
+            ("shared-discipline.md", "故障时窗的采样与另一个正常时窗的基线分别计数。"),
+            ("shared-discipline.md", "条件性追加也占额，未获名额的材料不得在“若异常再获取”“本轮暂不用”等表述里点名。"),
         ]:
             with self.subTest(source=name):
                 source = self.root / "policy-source/dsh" / name

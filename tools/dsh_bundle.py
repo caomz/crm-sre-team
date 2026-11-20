@@ -236,11 +236,8 @@ def preset_plugin_rows(persona_prefix: str) -> list[dict]:
 def member_execution_prompt(discipline: str, role_body: str, runbook_name: str, runbook: str) -> str:
     parts = [
         "你是 CRM SRE 团队的一名领域成员，由团长通过 DSH Agent Teams 引擎派生。"
-        "以下三部分内容是你的完整工作规则；与团长派单冲突时，以用户限制和更严格的边界为准。",
-        "",
-        "## DSH 成员共用纪律",
-        "",
-        discipline.strip(),
+        "领域专业内容和 Runbook 受末尾的 DSH 成员共用纪律约束。"
+        "与团长派单冲突时，以用户限制和更严格的边界为准。",
         "",
         "## 领域专业内容（来自角色定义源，已去除 WorkBuddy 专属模式块与绑定 Skill 页脚）",
         "",
@@ -249,6 +246,8 @@ def member_execution_prompt(discipline: str, role_body: str, runbook_name: str, 
         "## 领域 Runbook（完整内嵌：references/" + runbook_name + "；这是领域方法，不是本次现场证据）",
         "",
         runbook.strip(),
+        "",
+        discipline.strip(),
         "",
     ]
     return "\n".join(parts)

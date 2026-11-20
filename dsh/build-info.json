@@ -25,7 +25,7 @@
   ],
   "members": 7,
   "outputs": {
-    "cordis.patch.yml": "c7ba1849c817d01593d8d033f9f56a209de9064fe754248d936d2830cf66785d",
+    "cordis.patch.yml": "7ebefd71a6c037095f39d3826a02cbc2d34844cc90f428648ecd1e90577af568",
     "package.json": "bfe6a71f90c38967338ff0d238bc7a219016d7dc733be85e77ada54889d7726a"
   },
   "package": "crm-sre-dsh-team",
@@ -35,10 +35,10 @@
   "scope": "CONFIGURATION_AND_PROMPTS_ONLY_NO_JS_RUNTIME",
   "source_files": {
     "policies/runtime-contract.json": "16be90a2a2f2e459aacd38bbc104cb9488d1f192c22f19762c5d751b21be1dd8",
-    "policy-source/dsh/lead-rules.md": "e00c02c64688e4b14f72b37b33b6bc18b916b3aa651d05c9b41dc783c65428f0",
+    "policy-source/dsh/lead-rules.md": "92c3d7829e99eb6b8ba50d57728431fbb47f12e69400b3b8ee648e61472e010f",
     "policy-source/dsh/package-source.json": "33548b285c7cdd1b9a8e299e58fb2817e89ee16c26e5ef53704a257a0ae25426",
-    "policy-source/dsh/protocol-summary.md": "74d9873670e59834867648ae7495777f5bef83e3916cee126097e0f3e3519f9c",
-    "policy-source/dsh/shared-discipline.md": "6efdb1870537248a7291b288debcab1e727522205ca87e203569abd714dc15c5",
+    "policy-source/dsh/protocol-summary.md": "3f88e19218d9a957c1567b99412323da635ca81dfe47b2fb643d11edc8993a15",
+    "policy-source/dsh/shared-discipline.md": "8d81a8d75489dcb54606002d0ff3913ac04f4289949dd70a2bbc241d51e0538d",
     "policy-source/prompts/roles/telecom-crm-change-capacity-dr.md": "bdf79714edcd8dcf00b117a1365e6428ff9520fa8af61216ccc7297fbe37fc2f",
     "policy-source/prompts/roles/telecom-crm-crm-business-flow.md": "d54483c11e37a461320fc3e48604f665afe35f3df1149e93409dbe66edc68126",
     "policy-source/prompts/roles/telecom-crm-java-runtime.md": "d7a10ea351302af2318892058338e27646a26d93767447fc4ac51df3a819d098",
@@ -56,7 +56,7 @@
     "policy-source/roles-source.json": "4220cfb96e2dd7ac4c027ce8f7fd41482a43a750fe81b086498b2fd6888862bd",
     "policy-source/routing-source.json": "f794a80e7530fb93d312897fa3865055dae79ba1fe5190acc16856f34fdde0a9",
     "tools/build_bundle.py": "670ac549002a6b677718e5dc646bd9f73c3fe8ebb0b92a822ba90f9048590d88",
-    "tools/dsh_bundle.py": "8a81c246de7047c891234a9c1a984ddc4b3c793149b615cfba2c378c955c6141",
+    "tools/dsh_bundle.py": "83b87512f656d5a32de51d5fc29ddbf31a998bc3323e418fcec82f134c163d1b",
     "tools/release_rules.py": "e0cc604ba4b09dce5dc0bbf8420917a3e8eea228bc3b9537a0e3219be1114cb7"
   },
   "upstream_install": "EXPLICIT_SEPARATE_INSTALL_REQUIRED_NOT_AUTO_DISCOVERED",
