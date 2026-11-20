@@ -1,5 +1,5 @@
 """Guard executable tests with the repository's synthetic skill; never BOMC."""
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import ExitStack, redirect_stderr, redirect_stdout
 from datetime import datetime
 import builtins
 import hashlib
@@ -47,6 +47,15 @@ def invoke(args=ARGS):
     with redirect_stdout(out), redirect_stderr(err):
         code = guard.main(args)
     return code, out.getvalue(), err.getvalue()
+
+
+def symlink_or_skip(link, target, *, target_is_directory=False):
+    try:
+        link.symlink_to(target, target_is_directory=target_is_directory)
+    except OSError as exc:
+        if getattr(exc, "winerror", None) != 1314:
+            raise
+        pytest.skip("SKIPPED_CAPABILITY: no privilege to create a filesystem symlink (WinError 1314)")
 
 
 def assert_config_failure(setup, field, detail):
@@ -283,10 +292,10 @@ def test_config_parent_link_names_field_without_paths(setup, field):
         parent = selected.parent
         preserved = parent.with_name(parent.name + ".preserved")
         parent.rename(preserved)
-        parent.symlink_to(preserved, target_is_directory=True)
+        symlink_or_skip(parent, preserved, target_is_directory=True)
     else:
         parent = setup[0] / (field + "-parent-link")
-        parent.symlink_to(selected.parent, target_is_directory=True)
+        symlink_or_skip(parent, selected.parent, target_is_directory=True)
         setup[3][field] = str(parent / selected.name)
         setup[4].write_text(json.dumps(setup[3]), encoding="utf-8")
     assert_config_failure(setup, field, "路径含链接或重解析点；请人工复核并配置真实路径。")
@@ -347,11 +356,25 @@ def test_python_execution_check_names_field_without_paths(setup, kind):
 @pytest.mark.parametrize("operation", ["reserve_output", "Popen"])
 def test_query_stage_io_keeps_original_generic_fallback(setup, operation):
     target = guard.subprocess if operation == "Popen" else guard
-    with patch.object(target, operation, side_effect=OSError("FAKE-QUERY-SECRET " + str(setup[2]))):
+    windows_spawn = operation == "Popen" and guard.os.name == "nt"
+    with ExitStack() as stack:
+        if windows_spawn:
+            job = stack.enter_context(patch.object(guard, "WindowsJob")).return_value
+            job.assigned = False
+        io_failure = stack.enter_context(
+            patch.object(target, operation, side_effect=OSError("FAKE-QUERY-SECRET " + str(setup[2])))
+        )
         code, out, err = invoke()
+    io_failure.assert_called_once()
     assert code == 3 and not out
-    assert err == "BOMC_GUARD_ERROR 3: 配置/路径不可用或本地 IO 失败；未取得可用证据。\n"
-    for file in setup[2].glob("*.json"):
+    detail = "配置/路径不可用或本地 IO 失败"
+    if windows_spawn:
+        detail = "process_job 启动隔离失败"
+        job.close.assert_called_once_with()
+    assert err == f"BOMC_GUARD_ERROR 3: {detail}；未取得可用证据。\n"
+    receipts = list(setup[2].glob("*.json"))
+    assert len(receipts) == (1 if operation == "Popen" else 0)
+    for file in receipts:
         assert json.loads(file.read_text(encoding="utf-8"))["status"] == "FAILED_NO_USABLE_EVIDENCE"
 
 
@@ -392,11 +415,11 @@ def test_optional_skill_config_invalid_metadata_refused_before_process(setup, ki
         value = str(config_parent / ".." / config_parent.name / skill_config.name)
     elif kind == "file_link":
         link = home / "upstream-link.json"
-        link.symlink_to(skill_config)
+        symlink_or_skip(link, skill_config)
         value = str(link)
     elif kind == "parent_link":
         link = home / "upstream-link"
-        link.symlink_to(config_parent, target_is_directory=True)
+        symlink_or_skip(link, config_parent, target_is_directory=True)
         value = str(link / skill_config.name)
     config["skill_config"] = value
     path.write_text(json.dumps(config), encoding="utf-8")
@@ -520,7 +543,7 @@ def test_excluded_files_do_not_change_hash_and_are_never_opened(setup):
 ])
 def test_scripts_links_are_rejected_even_when_file_content_would_be_excluded(setup, name, directory):
     outside = setup[0] if directory else setup[4]
-    (setup[1] / "scripts" / name).symlink_to(outside, target_is_directory=directory)
+    symlink_or_skip(setup[1] / "scripts" / name, outside, target_is_directory=directory)
     assert_config_failure(setup, "scripts_sha256", "路径含链接或重解析点；请人工复核并配置真实路径。")
 
 
@@ -637,14 +660,14 @@ def test_symlink_escape_refused(setup, target):
     home, skill, output, config, path = setup
     if target in ("skill", "output"):
         link = home / (target + "-link")
-        link.symlink_to(skill if target == "skill" else output, target_is_directory=True)
+        symlink_or_skip(link, skill if target == "skill" else output, target_is_directory=True)
         config["skill_root" if target == "skill" else "output_dir"] = str(link)
         path.write_text(json.dumps(config), encoding="utf-8")
     else:
         selected = path if target == "config" else skill / ("SKILL.md" if target == "skill_md" else "scripts/run_query.py")
         moved = selected.with_suffix(".original")
         selected.rename(moved)
-        selected.symlink_to(moved)
+        symlink_or_skip(selected, moved)
     field = {"skill": "skill_root", "output": "output_dir", "entry": "scripts/run_query.py",
              "config": "bomc.json", "skill_md": "SKILL.md"}[target]
     assert_config_failure(setup, field, "路径含链接或重解析点；请人工复核并配置真实路径。")

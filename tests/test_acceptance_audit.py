@@ -5,9 +5,12 @@ import copy
 import json
 import os
 from pathlib import Path
+import stat
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -493,8 +496,25 @@ class AcceptanceTests(unittest.TestCase):
         self.assertFalse(read_allowed(str(self.root / "raw/private.md"), config, [], []))
         self.assertTrue(read_allowed(str(self.root / "raw/source.md"), config, [str(self.root / "raw/source.md")], []))
         self.assertFalse(read_allowed("/outside/page", config, [], []))
-        (self.root / "linked-wiki").symlink_to(self.root / "wiki")
-        self.assertFalse(read_allowed(str(self.root / "linked-wiki/topics/a.md"), config, [], []))
+        wiki = self.root / "wiki"
+        original_lstat = Path.lstat
+
+        def lstat_with_reparse(path, *args, **kwargs):
+            metadata = original_lstat(path, *args, **kwargs)
+            if path == wiki:
+                return SimpleNamespace(st_mode=metadata.st_mode, st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT)
+            return metadata
+
+        with patch.object(Path, "lstat", lstat_with_reparse):
+            self.assertFalse(read_allowed(page, config, [], []))
+        with self.subTest("real directory symlink"):
+            try:
+                (self.root / "linked-wiki").symlink_to(wiki, target_is_directory=True)
+            except OSError as exc:
+                if getattr(exc, "winerror", None) != 1314:
+                    raise
+                self.skipTest("SKIPPED_CAPABILITY: no privilege to create a filesystem symlink (WinError 1314)")
+            self.assertFalse(read_allowed(str(self.root / "linked-wiki/topics/a.md"), config, [], []))
 
     def test_knowledge_calls_positive_negative_and_user_restrictions(self):
         config = {"python": "/synthetic/python", "root": str(self.root), "allowed_read_dirs": ["wiki"], "config_path": str(self.root / "knowledge.json")}

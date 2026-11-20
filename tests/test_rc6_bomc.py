@@ -97,7 +97,7 @@ def test_fix11_exit3_missing_reverted_or_contradictory_rule_rejected_on_host_sur
             with ZipFile(target, 'w') as archive:
                 archive.writestr(name, text)
         else:
-            target.write_text(text, encoding='utf-8')
+            target.write_text(text, encoding='utf-8', newline='\n')
 
     write_prompt(original)
     assert checker.host_loaded_surface_errors(tmp_path) == []
@@ -683,6 +683,29 @@ def test_all_host_loaded_surfaces_keep_current_query_scope():
 
 def test_host_loaded_inputs_and_archives_keep_test_environment_in_docs():
     assert checker.host_loaded_surface_errors(ROOT) == []
+
+
+@pytest.mark.parametrize('newline', [b'\n', b'\r\n'], ids=['lf', 'crlf'])
+@pytest.mark.parametrize('misplaced', [False, True], ids=['ordered', 'misplaced'])
+def test_loose_host_prompt_newlines_and_reporting_position(tmp_path, newline, misplaced):
+    rel = 'agents/telecom-crm-sre-team-lead.md'
+    prompt = (ROOT / rel).read_bytes()
+    rule_pair = f'{checker.BOMC_FIXED_CONFIG_RULE}\n{checker.BOMC_CONFIG_USE_RULE}'.encode('utf-8')
+    assert prompt.count(rule_pair) == 1
+    if misplaced:
+        prompt = prompt.replace(rule_pair, rule_pair.replace(b'\n', b'\n\n', 1), 1)
+
+    (tmp_path / 'release-manifest.json').write_bytes(json.dumps({'files': [rel]}).encode('utf-8'))
+    target = tmp_path / rel
+    target.parent.mkdir()
+    target.write_bytes(prompt.replace(b'\n', newline))
+
+    expected = []
+    if misplaced:
+        expected.append(f'{rel}:bomc_reporting_rule_position:{checker.BOMC_CONFIG_USE_RULE}')
+    if newline == b'\r\n':
+        expected.append(f'{rel}:非规范换行（CRLF），宿主文本必须使用 LF')
+    assert checker.host_loaded_surface_errors(tmp_path) == sorted(expected)
 
 
 @pytest.mark.parametrize('rel', (

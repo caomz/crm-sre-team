@@ -18,7 +18,7 @@ from zipfile import ZipFile
 
 import pytest
 
-from test_bomc_readonly import ARGS, ROOT, guard, invoke, setup  # noqa: F401 (shared fixture)
+from test_bomc_readonly import ARGS, ROOT, guard, invoke, setup, symlink_or_skip  # noqa: F401 (shared fixture)
 from test_rc6_bomc import checker
 
 
@@ -110,7 +110,7 @@ def test_reporting_mutations_rejected_on_each_host_surface(tmp_path, rel, anchor
             with ZipFile(target, 'w') as archive:
                 archive.writestr('stability-director/SKILL.md', text)
         else:
-            target.write_text(text, encoding='utf-8')
+            target.write_text(text, encoding='utf-8', newline='\n')
 
     write_prompt(original)
     assert checker.host_loaded_surface_errors(tmp_path) == []
@@ -476,7 +476,7 @@ def test_non_utf8_manifest_name_is_a_fixed_field_error():
     assert exc.value.code == 3 and str(exc.value) == "code_sha256 源文件相对路径无效。"
 
 
-def test_excluded_venv_and_cache_trees_are_not_traversed_or_read(setup):
+def test_excluded_venv_and_cache_trees_are_not_traversed_or_read(setup, subtests):
     excluded = []
     for rel in (".venv", "library/custom-env", "__pycache__"):
         directory = setup[1] / rel
@@ -484,9 +484,10 @@ def test_excluded_venv_and_cache_trees_are_not_traversed_or_read(setup):
         if directory.name != "__pycache__":
             (directory / "pyvenv.cfg").write_bytes(b"FAKE-EXCLUDED")
         (directory / "ignored.py").write_bytes(b"FAKE-EXCLUDED")
-        # A link INSIDE an excluded tree is never inspected or followed.
-        (directory / "link").symlink_to(setup[0], target_is_directory=True)
         excluded.append(directory)
+    with subtests.test("real symlinks inside excluded trees"):
+        for directory in excluded:
+            symlink_or_skip(directory / "link", setup[0], target_is_directory=True)
     original_read, original_iter = Path.read_bytes, Path.iterdir
 
     def read(path):
@@ -525,7 +526,7 @@ def test_hash_helper_rejects_skill_root_venv_with_the_same_fixed_error(setup):
 
 @pytest.mark.parametrize("relative", ["linked.py", "linked.json", "__pycache__", "env"])
 def test_code_links_rejected_including_excluded_directory_itself(setup, relative):
-    (setup[1] / relative).symlink_to(setup[0], target_is_directory=True)
+    symlink_or_skip(setup[1] / relative, setup[0], target_is_directory=True)
     with patch.object(guard.subprocess, "Popen") as spawn:
         code, out, err = invoke()
     assert code == 3 and not out and "code_sha256 路径含链接或重解析点" in err
@@ -543,7 +544,7 @@ def test_code_metadata_anomalies_fail_before_reading(setup, kind):
             pytest.skip("FIFO unavailable")
         os.mkfifo(selected / "nonregular.py")
     if kind == "marker_link":
-        (selected / "pyvenv.cfg").symlink_to(setup[4])
+        symlink_or_skip(selected / "pyvenv.cfg", setup[4])
 
     def metadata(path):
         value = original_stat(path)

@@ -406,7 +406,7 @@ def bomc_reporting_errors(text: str) -> list[str]:
 
 
 def host_loaded_surface_errors(root: Path) -> list[str]:
-    """Reject test-environment prose and stale evidence rules, including ZIPs."""
+    """Reject CRLF in loose host text and check semantic rules, including in ZIPs."""
     manifest = json.loads((root / "release-manifest.json").read_text(encoding="utf-8"))
     errors = []
     for rel in manifest["files"]:
@@ -427,7 +427,10 @@ def host_loaded_surface_errors(root: Path) -> list[str]:
                                 errors += [rel + ":" + entry.filename + ":" + e
                                            for e in check_prompt(text, lead, runtime=True)]
             else:
-                text = path.read_bytes().decode("utf-8", errors="replace")
+                raw = path.read_bytes()
+                if b"\r\n" in raw:
+                    errors.append(rel + ":非规范换行（CRLF），宿主文本必须使用 LF")
+                text = raw.decode("utf-8", errors="replace").replace("\r\n", "\n")
                 errors += [rel + ":" + e for e in host_test_environment_errors(text) + stale_bomc_evidence_errors(text)
                            + bomc_config_failure_errors(text, required=rel in BOMC_CONFIG_FAILURE_PROMPTS)]
                 if rel in BOMC_CONFIG_FAILURE_PROMPTS:

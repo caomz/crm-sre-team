@@ -16,7 +16,7 @@ WB07 的 HOST_LIMIT 前提按实际运行该测试的机器的 WorkBuddy 版本�
 
 - `Update-CrmSreTeam.ps1` 使用 **UTF-8 BOM + LF**。保留 runbook 中文代码原文，避免 PS 5.1 按 ANSI/GBK 错读；新增编排的提示使用英文。下载后保持原字节，不用编辑器另存编码或换行。
 - `repository_only_files` 精确登记九个文件，包括本文、更新脚本、BOMC 哈希工具、两份值班手册、静态测试和 Windows 验证交接目录中的三个文件。专项测试核对清单的排序、唯一性、文件存在性及 ZIP 排除规则。
-- 这九个文件随 Git 同步，Windows 验证交接目录也只随仓库分发。构建和打包只读取 `release-manifest.json.files`，插件期望的文件数由 `files` 决定。rc7 沿用精确 manifest 白名单，版本与正文由候选构建及交接哈希绑定。
+- 这九个文件随 Git 同步，Windows 验证交接目录也只随仓库分发。`release-manifest.json` 的 `files` 是总白名单；DSH 构建与打包按 `targets.dsh.files` 取精确载荷，历史 WorkBuddy 按整份 `files` 打包并计算插件期望文件数。rc7 沿用精确 manifest 白名单，版本与正文由候选构建及交接哈希绑定。
 - 脚本启动时若位于 Git 工作树内，先校验 `HEAD = ExpectedCommit`、工作树干净，以及该提交内脚本 blob 哈希与磁盘原字节哈希相同；任何不符立即停止。`PLAN` 仍比对目标标签内脚本 SHA256，后续模式绑定计划里的脚本哈希。`-ExpectedScriptSha256 <64-hex>` 是可选的额外交接核验，不要求手工传脚本或单独核对哈希。Mac 改完脚本后必须重新提交、验证并提供相应标签。
 
 ## rc7 起的可配置路径
