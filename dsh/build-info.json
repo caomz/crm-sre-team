@@ -25,7 +25,7 @@
   ],
   "members": 7,
   "outputs": {
-    "cordis.patch.yml": "7ebefd71a6c037095f39d3826a02cbc2d34844cc90f428648ecd1e90577af568",
+    "cordis.patch.yml": "4fafcc7b5235bad139acec4640b592b939e1069b401cf3143a6e1c7c954b06eb",
     "package.json": "bfe6a71f90c38967338ff0d238bc7a219016d7dc733be85e77ada54889d7726a"
   },
   "package": "crm-sre-dsh-team",
@@ -35,10 +35,10 @@
   "scope": "CONFIGURATION_AND_PROMPTS_ONLY_NO_JS_RUNTIME",
   "source_files": {
     "policies/runtime-contract.json": "16be90a2a2f2e459aacd38bbc104cb9488d1f192c22f19762c5d751b21be1dd8",
-    "policy-source/dsh/lead-rules.md": "92c3d7829e99eb6b8ba50d57728431fbb47f12e69400b3b8ee648e61472e010f",
+    "policy-source/dsh/lead-rules.md": "4955272a67833c08366e12d85e96e1e8d300954b6d8c1cf3ce734fdd64cb6302",
     "policy-source/dsh/package-source.json": "33548b285c7cdd1b9a8e299e58fb2817e89ee16c26e5ef53704a257a0ae25426",
     "policy-source/dsh/protocol-summary.md": "3f88e19218d9a957c1567b99412323da635ca81dfe47b2fb643d11edc8993a15",
-    "policy-source/dsh/shared-discipline.md": "8d81a8d75489dcb54606002d0ff3913ac04f4289949dd70a2bbc241d51e0538d",
+    "policy-source/dsh/shared-discipline.md": "c99422ec3aa2e453a04a35444718db747ebaf0e3d029647d138012a2670570ec",
     "policy-source/prompts/roles/telecom-crm-change-capacity-dr.md": "bdf79714edcd8dcf00b117a1365e6428ff9520fa8af61216ccc7297fbe37fc2f",
     "policy-source/prompts/roles/telecom-crm-crm-business-flow.md": "d54483c11e37a461320fc3e48604f665afe35f3df1149e93409dbe66edc68126",
     "policy-source/prompts/roles/telecom-crm-java-runtime.md": "d7a10ea351302af2318892058338e27646a26d93767447fc4ac51df3a819d098",
