@@ -612,6 +612,9 @@
     "tools/oncall/test_oncall_updater.py",
     "tools/oncall/win-verify-2b4d70d/SHA256SUMS",
     "tools/oncall/win-verify-2b4d70d/WINDOWS-PROMPT.md",
-    "tools/oncall/win-verify-2b4d70d/win_verify.py"
+    "tools/oncall/win-verify-2b4d70d/win_verify.py",
+    "tools/oncall/win-verify-b48d6cf/SHA256SUMS",
+    "tools/oncall/win-verify-b48d6cf/WINDOWS-PROMPT.md",
+    "tools/oncall/win-verify-b48d6cf/win_verify.py"
   ]
 }
