@@ -1,5 +1,16 @@
 # DSH 2.8.0-dsh.1 修复候选验证（历史基线 2.8.0-rc10；2026-11-21）
 
+## 2026-11-21 Mac 实机回报与第二轮恢复协议修复
+
+本节保留执行方在固定提交 `ae452e1f9f9f9f1412a86df79303a22aeff87e6c` 上的 Mac CLI/Web 实际运行反馈：Harness `0.2.2-rc.1` + Agent Teams `0.1.30`，团长和成员 `zhipu-bigmodel/glm-5.3-flash`。该回报由用户提供，本轮尚未在本环境直接核验 SSD 原生日志。原生配置四条 patch 命中，CRM SRE preset 注入真实 system/message。T01 派单、T03 零补证、T05 两败停止、T06 只读行为在其报告范围内通过；T02 成员存在将两份独立材料捆绑为一项，团长最终保留三项符合用户侧限额，`member_atomicity` 不算通过。原报告提及两处 T02 偏差，第二处缺少可核对原文，保持待验证。
+
+T04-original：t1 首次 failed 后，E401 仅缺失尚未提供，团长调用 reassign 消耗唯一机会，attempt 2 再次失败、t2 保持阻断。T04b：用户提供 E401 后先 reassign，新 attempt 原始描述仍仅含 E402，随后团长额外 `send_message` 补送 E401，最终 t1、t2 完成。两次都保留原判，T04b 的功能完成不证明材料在重派时已经原子绑定。
+
+执行方报告 21:29 Mac 重启清空 `/private/tmp`，存于 SSD 的原生会话日志幸存并用于重建结构化报告；持久证据路径为 `/Volumes/WorkSSD/Archives/claude-tests/crm-sre-mac-acceptance-20261121/`，本轮未直接读取该私有目录。重建证据只能标识为 `derived-from-native`，不可宣称复原了已清理文件的原始字节。实际人工接受仍 `PENDING_HUMAN_REVIEW`；独立桌面 carrier 与 Windows VERIFY 均为 `NOT_RUN`。
+
+本次新修复候选仅增加材料缺失型失败的前置门控、控制性 ACK、新 attempt 上下文核对及成员补证输出筛选顺序。上游 0.1.30 重派接口不支持更新 description；本次没有实现原子事务、引擎层强制配额或新的生产权限。新候选 Mac Harness 验收仍为 `NOT_RUN`，必须在新完整 SHA 上重点复测 T04c、T05、T02/T03 和 T06；Windows 须等待新候选 Mac 人工接受后再验证。
+
+
 ## 本次修复候选
 
 修复基线为 `3c7b1b5eb69b2ecacc724372ba043ca8bc89b9c4`；修复版本以 GitHub 对应提交为准，Mac 与 Windows 均须记录实际检出的完整 SHA。用户于 2026-11-21 反馈现用 Mac 运行正常，主调试端仍是 Mac；该反馈未绑定本次新修改后的提交。当前执行环境为 Linux，无法代替 Mac 或 Windows 的真实 Harness 会话。

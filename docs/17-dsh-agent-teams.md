@@ -1,6 +1,6 @@
 # DSH Agent Teams 交付（crm-sre profile）
 
-状态（2026-11-21）：本次修复以 `3c7b1b5eb69b2ecacc724372ba043ca8bc89b9c4` 为基线。该提交说明报告 Mac CLI/Web 的 1/2/0、0/0/0、receipt-gated E401 核心用例通过，用户也反馈现用 Mac 运行正常；原始回执本轮未重新核验。本文 11 月 17 日失败表保留历史时点。本次修复候选的 Mac、Windows 运行复测均为 `NOT_RUN`；新增源码修复与离线结果见源码仓库 `VALIDATION.md`。
+状态（2026-11-21）：本次修复以 `3c7b1b5eb69b2ecacc724372ba043ca8bc89b9c4` 为基线。该提交说明报告 Mac CLI/Web 的 1/2/0、0/0/0、receipt-gated E401 核心用例通过，用户也反馈现用 Mac 运行正常；原始回执本轮未重新核验。本文 11 月 17 日失败表保留历史时点。修复提交 `ae452e1` 的 Mac CLI/Web 实机结果已经由执行方报告，发现恢复顺序偏差；Windows 仍为 `NOT_RUN`。新一轮材料接收门控候选仍须重新进行 Mac 实机验收，旧提交的 PASS 不代表新候选通过；详见 `VALIDATION.md`。
 
 ## 定位
 
@@ -108,6 +108,18 @@ Write-Output (Join-Path $CRM_CHECKOUT 'dsh')
 将三个哈希与 Mac 接受记录逐项比对；不一致就停止安装并保留差异，不用重建或覆盖消除差异。上面验证的是完整 Git 检出，不能用只接受七文件解压目录的 `validate_installation()` 替代。Windows 无须重跑 Mac 全量测试，先完成来源与内容 VERIFY，再按实际宿主差异做短测。
 
 Windows 原生宿主使用打印出的 Windows 绝对路径；若 Harness 运行在 Docker，则应将固定检出挂载到容器，并使用**容器内**的 `dsh/` 绝对路径，不能将 `D:\...` 直接传给容器进程。全局 CLI、桌面内置 carrier 与容器内 carrier 分别记录，不能用其中一个的版本替代另一个。源码/CLI 安装的 Node 前置条件按所用 Harness 版本核对；桌面自带运行时不以系统 Node 版本代替。
+
+## 材料缺失型失败恢复（Agent Teams 0.1.30 实际接口）
+
+- `agent_teams_reassign_task` 只有 `task_id`、`assignee`、`reason` 参数，没有 `description`；运行中的 `edit_plan` 不允许更新已经开始或 failed 的任务。不能把新材料放在 reason 中就声称它已进入任务说明，也不得直接修改原生状态文件。
+- **没有新材料正文就不重派**：失败任务仍为 failed、依赖保持 pending；用户只提及证据编号或以后提供的承诺，不满足恢复前置条件。补证要求仍受本轮配额限制。
+- 取得授权补充材料后，团长使用 `agent_teams_send_message` 先发给原成员，并要求成员提供包含真实旧 task/attempt、E 编号及正文要点的控制性接收 ACK。团长普通指导不应将接收方标识填进属于发送方的 `source_task_id/source_attempt_id`。工具发送成功、邮箱已读或 ACK 的一句“收到”都不等于新 attempt 的模型上下文已经绑定材料。
+- 团长核对 ACK 与这一轮接收结束后，才对**同一任务、同一成员**执行唯一一次重派。成员在失败 attempt 上不再认领或更新任务状态；ACK 只是接收确认，不是业务完成。新 attempt 必须核对真实新 attempt_id 和当前可用上下文里的补充材料正文，缺失时不得提交 completed。该流程依赖会话连续性，**不是原子事务或引擎层硬守卫**。
+- 初始任务说明应将 E402 等称为“初始材料”，避免用永久排他措辞阻止后续同任务补充；用户授权范围和安全限制不能改变。
+- Mac 新候选复验 T04c：首次 failed → 仅告知 E401 编号但未给正文时不得 reassign → 提交合成 E401 正文 → 提前送达原成员 → 原成员内容 ACK → 唯一 reassign → 新 attempt 实际读取正文并得出结论 → t1 真正完成后才执行 t2。T05 保留“接收材料但仍不充分”的二次失败测试，必须停止重派并保持下游阻断。
+- T02 分别记录 `member_atomicity`、`captain_selection`、`user_visible_quota`；不能因团长最终筛选正确就将成员打包两份材料判为 PASS。执行方还提到另一处偏差，但当前仅有摘要，需要脱敏原文核验。
+- 实机证据保存在 Mac SSD 持久目录，避免重启清理 `/private/tmp`。标记原生幸存 `native-survived`、从日志重建 `derived-from-native`、不可恢复 `unrecoverable`，保存完整 task/attempt、证据路径与 SHA256；不要将重建报告哈希冒充原始文件哈希。公开仓库仅登记脱敏摘要。
+- Mac 实机通过与人工接受后才进入 Windows 同 SHA VERIFY；CLI/Web 的通过不代替独立桌面 carrier 验证。
 
 ## 模型与路由
 
