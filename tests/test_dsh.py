@@ -212,6 +212,21 @@ class DshRenderTests(unittest.TestCase):
             self.assertIn(role["agent"], prefix)
             self.assertIn(role["title"], prefix)
 
+    def test_07a_dsh_dispatch_preserves_roster_without_workbuddy_parameters(self):
+        renderer = _load("tools/build_bundle.py", "tested_roster_host_contracts")
+        routing = json.loads((ROOT / "policy-source/routing-source.json").read_text(encoding="utf-8"))
+        legacy_roster = renderer.render_team_roster(self.roles, routing)
+        frozen_lead = (ROOT / "agents/telecom-crm-sre-team-lead.md").read_text(encoding="utf-8")
+        # The default renderer must still match the frozen WorkBuddy artifact.
+        self.assertIn(legacy_roster, frozen_lead)
+        self.assertIn(routing["_dispatch_note"], legacy_roster)
+        domain_rows = [line for line in legacy_roster.splitlines() if line.startswith("|")]
+        for prefix in (self.sys_cfg["personaPrefix"], self.preset_persona_cfg["prefix"]):
+            self.assertEqual([line for line in prefix.splitlines() if line.startswith("|")], domain_rows)
+            self.assertIn("派单对象采用 profile 名册中的真实成员 name。", prefix)
+            self.assertNotIn("subagent_type", prefix)
+            self.assertNotIn("日常不传 name", prefix)
+
     def test_08_protocol_within_utf16_limit_and_honest(self):
         protocol = self.profile["protocol"]
         self.assertLessEqual(dsh_bundle.utf16_units(protocol), 240)
@@ -490,6 +505,40 @@ class DshBuildTests(unittest.TestCase):
         report = check_dsh.run(self.root)
         self.assertFalse(report["pass"])
         self.assertTrue(any("dsh_enrollment_exact" in e for e in report["errors"]), report["errors"])
+
+    def test_legacy_dispatch_reintroduction_fails_even_after_rebuild(self):
+        source = self.root / "policy-source/dsh/lead-rules.md"
+        original = source.read_bytes()
+        for instruction in ("派单时 subagent_type 填注册 ID。", "日常不传 name。"):
+            with self.subTest(instruction=instruction):
+                source.write_bytes(original + ("\n" + instruction + "\n").encode("utf-8"))
+                dsh_bundle.build(self.root)
+                report = check_dsh.run(self.root)
+                checks = {row["id"]: row["passed"] for row in report["checks"]}
+                self.assertTrue(checks["render_artifact_equality"])
+                self.assertFalse(checks["no_legacy_dispatch_parameters"])
+                self.assertFalse(report["pass"])
+        source.write_bytes(original)
+
+    def test_logical_task_retry_bound_removal_fails_even_after_rebuild(self):
+        # These checks protect the prompt contract, not runtime enforcement.
+        source = self.root / "policy-source/dsh/lead-rules.md"
+        original = source.read_text(encoding="utf-8")
+        for fragment in (
+            "每个逻辑任务失败后累计至多重派一次；重派后的 attempt 仍失败就停止并报告受阻，不再自动重派。",
+            "不得通过新建任务、改名或重新派单重置重派次数或补证额度。",
+            "重派上限是团长核对的协议约束，不是运行时硬守卫。",
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, original)
+                source.write_bytes(original.replace(fragment, "", 1).encode("utf-8"))
+                dsh_bundle.build(self.root)
+                report = check_dsh.run(self.root)
+                checks = {row["id"]: row["passed"] for row in report["checks"]}
+                self.assertTrue(checks["render_artifact_equality"])
+                self.assertFalse(checks["lead_boundary_sentences"])
+                self.assertFalse(report["pass"])
+        source.write_bytes(original.encode("utf-8"))
 
     def test_quota_rule_removal_still_fails_after_rebuild(self):
         for name, fragment in [

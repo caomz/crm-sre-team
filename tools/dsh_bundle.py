@@ -340,7 +340,7 @@ def render(root: Path) -> dict[str, str]:
         raise ValueError("lead-rules.md must be free of WorkBuddy mode blocks and state the managed boundary")
     routing = json.loads(_read(root, "policy-source/routing-source.json"))
     roster_renderer = _load_module(root, "tools/build_bundle.py", "dsh_roster_renderer")
-    roster = roster_renderer.render_team_roster(roles, routing)
+    roster = roster_renderer.render_team_roster(roles, routing, include_dispatch_note=False)
     persona_prefix = lead_persona_prefix(lead_rules, roster)
     members = render_members(root, roles, discipline)
     for m in members:

@@ -1,13 +1,15 @@
 # CRM SRE Team · DSH Agent Teams
 
-DSH 领域配置包 `crm-sre-dsh-team` · `2.8.0-dsh.1` · 候选版本；Mac CLI/Web 已真实运行 GLM 5.3 Flash 团队，但补证配额、恢复和部分回执表述未通过，尚未完成人工接受。
+DSH 领域配置包 `crm-sre-dsh-team` · `2.8.0-dsh.1` · Mac 主调试、GitHub 代码交接、Windows 后续验证。
+
+本次修复以 `3c7b1b5eb69b2ecacc724372ba043ca8bc89b9c4` 为基线。该提交说明报告 Mac CLI/Web 的 1/2/0、0/0/0 与 E401 恢复核心用例通过；用户于 2026-11-21 反馈现用 Mac 运行正常。11 月 17 日失败记录保留为历史，不再当作当前结论。本次新增修复后的 Mac、Windows 运行复测均为 `NOT_RUN`；离线结果与证据范围见源码仓库 `VALIDATION.md`。
 
 基于明确授权的脱敏材料，组织 CRM 业务、Oracle、Java/JVM、Linux、证据与可观测性、变更容量容灾及 K8s 专家协作，交付可追溯的分析结论、最小补证需求和人工评审材料。团长按证据选择必要领域，每批最多三名成员；K8s 仅在部署和平台证据均已确认时参与。
 
 ## 安装与启动
 
-1. 在独立的 DSH 宿主 profile 中，先安装 `@nanmicoder/dsh-agent-teams@0.1.30`。
-2. 将本发布包解压到新目录，加载其中 `dsh/` 的绝对路径。领域包覆盖既有配置并新增一个专用 preset 条目，不注册任何自带 JS 运行时的插件。
+1. 使用独立的 DSH 宿主 profile。新建验收环境的历史基线是 Harness `0.2.2-rc.1` 与 `@nanmicoder/dsh-agent-teams@0.1.30`，先安装上游插件；已有工作正常的 Mac 环境先记录并保留实际组合，不为套用示例而重装或降级。
+2. 从 GitHub 在新目录检出待测的**完整提交 SHA**，先核对源码、锁与生成物，再加载该检出中 `dsh/` 的绝对路径。源码根不是 DSH 插件入口；领域包覆盖既有配置并新增一个专用 preset 条目，不注册任何自带 JS 运行时的插件。
 3. 在该宿主 profile 中**新建会话**：确认会话运行在 `CRM SRE` preset（注册表默认已覆盖为 `crm-sre`，也可在选择器显式选择），并在实际 system/message 中核对团长规则全文（含名册表）在场。**仅完成装载不是证据**；既有标准 preset 会话不携带团长规则，不作为验证对象。然后运行：
 
 ```text
@@ -16,7 +18,7 @@ DSH 领域配置包 `crm-sre-dsh-team` · `2.8.0-dsh.1` · 候选版本；Mac CL
 
 宿主 profile 用于安装隔离；`crm-sre` 是团队插件内的命名 profile。验证基线为 Harness `0.2.2-rc.1` + Agent Teams `0.1.30`（旧的 `0.2.1-rc.2` 推荐未经验证，作废）；不同版本应记录实际版本并覆盖差异检查。桌面端、CLI 的 profile 管理入口分别核对。安装、验收和恢复步骤见[操作说明](docs/17-dsh-agent-teams.md)。
 
-本候选已确认团长规则与成员工具加载生效；实际行为仍须人工核对，详见操作说明中的现场记录。
+保留 Mac 已经工作正常的宿主、carrier、插件与模型组合，逐次记录实际版本；本次修复不要求自动升级上游。插件来源目录与 Harness 材料工作区分开：完整 Git 检出含历史测试与评分资料，只把 `dsh/` 加载为插件，在独立的合成或授权脱敏材料目录中运行。
 
 团长规则由专用 `preset-crm-sre` 条目的作用域 persona 注入，与全局覆盖逐字相同；标准 preset 自带的 persona 条目会遮蔽全局团长前缀——这正是此前团长会话缺失规则的根因。作用域插件只有 persona、time-context 与只读 tool-fs（`write`/`edit`/`applyPatch`/`readImage` 全关），无 shell、联网、技能或委派条目；该过滤是配置与模型可见性约束，不是操作系统沙箱。
 
@@ -32,7 +34,8 @@ DSH 领域配置包 `crm-sre-dsh-team` · `2.8.0-dsh.1` · 候选版本；Mac CL
 
 - 已确认事实：注明材料出处与时窗。
 - 高概率候选：列出支持、反证、替代解释和局限。
-- 待验证：提出能改变判断的最小材料需求。
+- 待验证：说明候选机制、缺乏的判断依据与结论边界。
+- 补证需求：仅在本任务获分配的额度内选定最小独立请求；零额度不列新增材料名称，也不在局限或转交建议中暗列请求。
 - 已排除：仅依据实际相反材料，不将缺失或无权限视为排除。
 
 每轮向用户最多三项原子补证；成员每逻辑任务最多两项，跨 attempt 累计。这些数字由协议、计划和回执核对，不是已部署的运行时硬守卫。成员意见一致不代替现场证据。
@@ -47,11 +50,11 @@ DSH 领域配置包 `crm-sre-dsh-team` · `2.8.0-dsh.1` · 候选版本；Mac CL
 
 ## 验收与交付范围
 
-源与产物校验、离线回归、ZIP 完整性、真实配置装载和真实模型会话分别报告。WorkBuddy 历史验收不能作为 DSH 通过证据。
+源与产物校验、离线回归、真实配置装载和真实模型会话分别报告。WorkBuddy 历史验收不能作为 DSH 通过证据。
 
-先完成 Mac 验收，经人工复核并接受后，Windows 安装同一接受产物并做完整性核对与差异短测。未运行项记为 `NOT_RUN`。
+先在固定提交的 Mac 检出中完成验收，经人工复核并接受后，Windows 从 GitHub 检出**同一个完整 SHA**，通过 `check_dsh.py` 和 `validate_bundle.py --check-only` 验证，再加载 `dsh/` 做差异短测。接收端先验证收到的字节，不先重建；相同版本号不能代替相同提交与哈希。未运行项记为 `NOT_RUN`。
 
-DSH ZIP 仅包含三个 `dsh/` 文件、本文、`PROJECT.md`、操作说明和项目运行契约，不包含旧插件、用户材料、历史会话或评分 gold。
+本流程只通过 GitHub 交接代码，不传 ZIP、虚拟环境、宿主 profile、API 凭据、会话状态或事故材料。历史 ZIP 工具及其七文件载荷契约保留用于回归，不作为本次交接入口。
 
 ## 源码开发
 
@@ -62,8 +65,6 @@ python3 tools/build_bundle.py
 python3 tools/check_dsh.py
 python3 tools/validate_bundle.py
 python3 -m pytest tests/ -q
-python3 tools/build_release.py --output dist/crm-sre-dsh.zip
-python3 tools/validate_release.py --zip dist/crm-sre-dsh.zip
 ```
 
 仅编辑 `policy-source/` 中的规则源；生成的 `dsh/` 和锁文件由构建维护。新增文件按精确发布白名单登记。开发约定见[项目说明](PROJECT.md)。

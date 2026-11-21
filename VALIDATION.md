@@ -1,8 +1,45 @@
-# DSH 2.8.0-dsh.1 候选验证（历史基线 2.8.0-rc10；2026-11-17）
+# DSH 2.8.0-dsh.1 修复候选验证（历史基线 2.8.0-rc10；2026-11-21）
 
-当前结论：Mac CLI/Web 真实 GLM 团队可运行，完整团长规则与工具加载通过；补证原子性、恢复流程和部分回执表述实测失败，尚未完成人工接受，Windows 为 NOT_RUN。
+## 本次修复候选
 
-离线检查：DSH 静态校验 183/183，领域检查 102/102；专项回归 58 passed、66 subtests passed。最终完整回归、确定性、七文件 ZIP 与解包复验由 tools/release.py 的本次机器回执逐项记录；这些源码门禁不代表模型行为通过。未在本分支 commit、push 或部署。
+修复基线为 `3c7b1b5eb69b2ecacc724372ba043ca8bc89b9c4`；修复版本以 GitHub 对应提交为准，Mac 与 Windows 均须记录实际检出的完整 SHA。用户于 2026-11-21 反馈现用 Mac 运行正常，主调试端仍是 Mac；该反馈未绑定本次新修改后的提交。当前执行环境为 Linux，无法代替 Mac 或 Windows 的真实 Harness 会话。
+
+本次修复范围：DSH 名册不再混入 WorkBuddy 的 `subagent_type` 派单说明；重派上限明确按逻辑任务累计，第二次失败后停止，不允许通过新任务或改名重置；新增 `validate_bundle.py --check-only`，接收校验不改写报告。历史 WorkBuddy 行为与七文件 ZIP 契约保留；主交接改为 GitHub 完整提交 SHA，先由 Mac 接受，再让 Windows 检出和验证同一提交。
+
+本轮使用 Python 3.12.14 与项目锁定依赖（pytest 9.1.1、PyYAML 6.0.3、jsonschema 4.26.0、referencing 0.37.0）。已完成 DSH 静态校验 183/183、领域检查 103/103，命令均退出 0；原始基线在隔离工作树中全量回归为 2116 passed、2 skipped、2187 subtests passed。
+
+| 验证范围 | 本次状态 |
+| --- | --- |
+| 源与生成物、结构与边界 | PASS_STATIC_ONLY：`build_bundle.py`、`check_dsh.py`、`validate_bundle.py --check-only` 均退出 0 |
+| 修复后的完整离线回归 | PASS：`python -m pytest tests/ -q -ra` 为 2123 passed、2 skipped、2192 subtests passed；相对本轮基线新增 7 项测试全部通过 |
+| oncall 历史回归 | PASS：`python -m pytest tools/oncall/ -q -ra` 为 100 passed、269 subtests passed |
+| 确定性与历史产物 | PASS：重复默认构建后 `dsh/` 三文件与总锁字节不变；`check_workbuddy.py` 通过，历史运行树和根版本无差异 |
+| Mac 真实 Harness 配置、模型与新增修复用例 | NOT_RUN：需对本次修复的固定提交复测，包含名册、逻辑任务重派上限、1/2/0、0/0/0 与 E401 恢复 |
+| 本次修复的人工接受 | PENDING_HUMAN_REVIEW：此前 Mac 工作正常的反馈不自动覆盖新修改 |
+| Windows 来源 VERIFY 与宿主差异短测 | NOT_RUN：Mac 接受后才使用同一完整 SHA |
+
+离线校验只能证明结构、规则与字节一致性；本项目没有新增配额或重派次数的运行时硬守卫。合成测试结果与真实模型回执分别记录，不把 Linux 通过说成 Mac 或 Windows 通过。交接不生成 ZIP，不迁移虚拟环境、宿主配置、凭据或事故材料。
+
+两项跳过与原始基线相同：当前 POSIX 环境没有 Windows junction 概念，且未提供执行人私有评分目录；不将它们记作实机通过。另有一条预期告警来自重复 ZIP 条目的负向测试，不影响退出状态，也不生成交接包。所有上述检查退出 0。新增回归覆盖两份团长 persona 的派单参数、错误源重新构建后仍被独立校验拒绝、重派上限被删后的拒绝，以及两种构建目标的只校验模式成功、失败与默认写报告兼容性。
+
+提交前还须对最终暂存树运行版本化 pre-commit 门，实际结果随本次 GitHub PR 记录；后续 Mac/Windows 接收端使用 `--check-only`，不得把本轮开发时更新的报告操作带入只验证流程。
+
+## 2026-11-20 Mac 核心用例更新（依据提交说明）
+
+本轮核对了 Git 提交说明，未取得或重新审核当时仓库外的完整 Mac 原始回执。下表保留证据归属，不把提交说明扩展为本次修复的实机测试结果。
+
+| 提交 | 提交说明报告的范围 |
+| --- | --- |
+| `53cbbdd8a62948e464d3bad60dbb4db283df1927` | Mac 零配额与 E401 恢复通过；1/2/0 正向用例仍暴露 Oracle 正常基线与其他补证捆绑。 |
+| `3c7b1b5eb69b2ecacc724372ba043ca8bc89b9c4` | 同一候选的 Mac CLI/Web 1/2/0、0/0/0、receipt-gated E401 核心用例通过；保留一次预算内材料名称提前出现，以及一次状态迁移被拒后在同 attempt 完成的观察。 |
+
+这两次更新说明 11 月 17 日的失败表已经属于历史时点；它们没有声明 Windows 通过，也不能证明提示词规则对所有运行均可靠。
+
+## 2026-11-17 DSH 候选摘要（历史）
+
+当时结论：Mac CLI/Web 真实 GLM 团队可运行，完整团长规则与工具加载通过；补证原子性、恢复流程和部分回执表述实测失败，尚未完成人工接受，Windows 为 NOT_RUN。
+
+当时离线检查：DSH 静态校验 183/183，领域检查 102/102；专项回归 58 passed、66 subtests passed。最终完整回归、确定性、七文件 ZIP 与解包复验由 tools/release.py 的当轮机器回执逐项记录；这些源码门禁不代表模型行为通过。此段的未提交、未推送或未部署状态只对应该历史记录时点。
 
 ## 2026-11-18 pre-commit 解释器选择修复
 
