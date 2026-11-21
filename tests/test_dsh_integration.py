@@ -7,6 +7,7 @@ import importlib.util
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -373,6 +374,70 @@ class IdentityTests(unittest.TestCase):
         self.assertEqual((lock["version"], lock["target"], lock["target_version"]),
                          (ROOT_VERSION, "dsh", DSH_VERSION))
         self.assertNotEqual(ROOT_VERSION, DSH_VERSION)
+
+
+class ValidatorCheckOnlyTests(unittest.TestCase):
+    """Git handoff verification must preserve the checkout and prior reports."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.base = Path(tmp.name)
+        self.root = make_full_fixture(self.base)
+        builder.build(self.root)
+        self.report_path = self.root / "tests/static-checks.json"
+        self.report_path.write_bytes(b'{"synthetic_previous_report": true}\n')
+
+    def run_cli(self, *args):
+        result = subprocess.run(
+            [sys.executable, "-B", str(self.root / "tools/validate_bundle.py"),
+             "--root", str(self.root), *args],
+            cwd=self.root, capture_output=True, text=True, encoding="utf-8",
+            timeout=60,
+        )
+        self.assertTrue(result.stdout.strip(), result.stderr)
+        return result, json.loads(result.stdout)
+
+    def test_35_check_only_success_preserves_checkout_and_report(self):
+        before = tree_hash(self.root)
+        result, report = self.run_cli("--check-only")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(report["result"], "PASS_STATIC_ONLY")
+        self.assertEqual(report["target"], "dsh")
+        self.assertEqual(tree_hash(self.root), before)
+
+    def test_36_check_only_tamper_fails_without_rewriting_report(self):
+        patch_path = self.root / "dsh/cordis.patch.yml"
+        patch_path.write_bytes(patch_path.read_bytes() + b"\n# synthetic handoff tamper\n")
+        before = tree_hash(self.root)
+        result, report = self.run_cli("--check-only")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(report["result"], "FAIL")
+        self.assertTrue(report["errors"])
+        self.assertEqual(tree_hash(self.root), before)
+
+    def test_37_default_validation_still_writes_complete_report(self):
+        before = tree_hash(self.root)
+        result, summary = self.run_cli()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        report = json.loads(self.report_path.read_text(encoding="utf-8"))
+        self.assertEqual(report["result"], "PASS_STATIC_ONLY")
+        self.assertTrue(report["checks"])
+        self.assertEqual({k: v for k, v in report.items() if k != "checks"}, summary)
+        after = tree_hash(self.root)
+        changed = {name for name in set(before) | set(after) if before.get(name) != after.get(name)}
+        self.assertEqual(changed, {"tests/static-checks.json"})
+
+    def test_38_workbuddy_check_only_preserves_all_generated_reports(self):
+        builder.build(self.root, target="workbuddy")
+        for name in ("reasoning-matrix-results.json", "judgment-matrix-results.json",
+                     "contract-test-results.txt"):
+            (self.root / "tests" / name).write_bytes(b'{"synthetic_previous_report": true}\n')
+        before = tree_hash(self.root)
+        result, report = self.run_cli("--target", "workbuddy", "--check-only")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(report["result"], "PASS_STATIC_ONLY")
+        self.assertEqual(tree_hash(self.root), before)
 
 
 class PipelineTargetTests(unittest.TestCase):

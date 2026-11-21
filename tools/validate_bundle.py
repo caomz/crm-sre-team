@@ -25,7 +25,7 @@ def iter_test_cases(suite):
         else:
             yield test
 
-def _run_workbuddy(root: Path) -> dict:
+def _run_workbuddy(root: Path, *, write_reports: bool = True) -> dict:
     checks=[];errors=[]
     def check(name: str, ok: bool, detail=""):
         checks.append({"id":name,"passed":bool(ok),"detail":detail})
@@ -240,7 +240,8 @@ def _run_workbuddy(root: Path) -> dict:
     check("reasoning_matrix_unit_tests",matrix_result.wasSuccessful(),f"{matrix_result.testsRun} tests; failures={len(matrix_result.failures)}; errors={len(matrix_result.errors)}")
     for name,group in matrix_report["matrices"].items():
         check("reasoning_matrix:"+name,group["mismatches"]==0,f"{group['cases']} cases; mismatches={group['mismatches']}")
-    (root/"tests/reasoning-matrix-results.json").write_text(json.dumps(matrix_report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8",newline="\n")
+    if write_reports:
+        (root/"tests/reasoning-matrix-results.json").write_text(json.dumps(matrix_report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8",newline="\n")
     spec=importlib.util.spec_from_file_location("judgment_contract_tests",root/"tests/test_judgment_contracts.py")
     judgment_tests=importlib.util.module_from_spec(spec);spec.loader.exec_module(judgment_tests)
     judgment_result=unittest.TextTestRunner(stream=stream,verbosity=2).run(unittest.defaultTestLoader.loadTestsFromModule(judgment_tests))
@@ -253,7 +254,8 @@ def _run_workbuddy(root: Path) -> dict:
     check("judgment_matrix_unit_tests",judgment_matrix_result.wasSuccessful(),f"{judgment_matrix_result.testsRun} tests; failures={len(judgment_matrix_result.failures)}; errors={len(judgment_matrix_result.errors)}")
     for name,group in judgment_matrix_report["matrices"].items():
         check("judgment_matrix:"+name,group["mismatches"]==0,f"{group['cases']} cases; mismatches={group['mismatches']}")
-    (root/"tests/judgment-matrix-results.json").write_text(json.dumps(judgment_matrix_report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8",newline="\n")
+    if write_reports:
+        (root/"tests/judgment-matrix-results.json").write_text(json.dumps(judgment_matrix_report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8",newline="\n")
     spec=importlib.util.spec_from_file_location("thinking_tool_checker",root/"tools/check_thinking_tools.py")
     tool_checker=importlib.util.module_from_spec(spec);spec.loader.exec_module(tool_checker)
     thinking_report=tool_checker.run_checks(root)
@@ -292,7 +294,8 @@ def _run_workbuddy(root: Path) -> dict:
         errors.append(entry["id"]+": "+detail)
     entry["detail"]=detail
     stable_output=re.sub(r"Ran (\d+) tests? in [0-9.]+s", r"Ran \1 tests in <elapsed>", stream.getvalue())
-    (root/"tests/contract-test-results.txt").write_text(stable_output,encoding="utf-8", newline="\n")
+    if write_reports:
+        (root/"tests/contract-test-results.txt").write_text(stable_output,encoding="utf-8", newline="\n")
     checks.sort(key=lambda item:(item["id"],json.dumps(item["detail"],ensure_ascii=False,sort_keys=True),item["passed"]))
     errors.sort()
     return {"version":version,"scope":"STATIC_STRUCTURE_AND_OFFLINE_SCHEMA_POLICY_TESTS_ONLY","result":"PASS_STATIC_ONLY" if not errors else "FAIL","checks_total":len(checks),"checks_passed":sum(x["passed"] for x in checks),"relative_links_checked":links,"offline_contract_tests_run":result.testsRun,"offline_contract_test_failures":len(result.failures),"offline_contract_test_errors":len(result.errors),"reasoning_matrix_test_methods":matrix_result.testsRun,"reasoning_matrix_test_failures":len(matrix_result.failures),"reasoning_matrix_test_errors":len(matrix_result.errors),"reasoning_matrix_cases":matrix_report["cases_total"],"reasoning_matrix_mismatches":matrix_report["mismatches_total"],"judgment_contract_tests_run":judgment_result.testsRun,"judgment_contract_test_failures":len(judgment_result.failures),"judgment_contract_test_errors":len(judgment_result.errors),"judgment_matrix_test_methods":judgment_matrix_result.testsRun,"judgment_matrix_test_failures":len(judgment_matrix_result.failures),"judgment_matrix_test_errors":len(judgment_matrix_result.errors),"judgment_matrix_cases":judgment_matrix_report["cases_total"],"judgment_matrix_mismatches":judgment_matrix_report["mismatches_total"],"thinking_tools_defined":thinking_report["course_tools"],"thinking_tools_role_assignments":thinking_report["roles"],"thinking_tool_tests_run":thinking_result.testsRun,"thinking_tool_test_failures":len(thinking_result.failures),"thinking_tool_test_errors":len(thinking_result.errors),"thinking_tool_case_specs_not_run":thinking_report["case_specs"],"additional_static_tests":extra_tests_run,"offline_unit_tests_total":extra_tests_run+result.testsRun+matrix_result.testsRun+judgment_result.testsRun+judgment_matrix_result.testsRun+thinking_result.testsRun,"model_or_host_runtime_test_status":"NOT_RUN_IN_TARGET_HOST","production_access":"NONE","errors":errors,"checks":checks}
@@ -420,10 +423,11 @@ def _run_dsh(root: Path) -> dict:
             "production_access":"NONE","errors":errors,"checks":checks}
 
 
-def run(root: Path, *, target: str | None = None) -> dict:
+def run(root: Path, *, target: str | None = None, write_reports: bool = True) -> dict:
     """Dispatch on the resolved release target. Default delivery is dsh; the
     historical workbuddy validation remains available explicitly for old
-    fixtures and regression, never as DSH proof."""
+    fixtures and regression, never as DSH proof. Disable report writes when
+    verifying a Git checkout that must remain unchanged."""
     root = Path(root).resolve(strict=True)
     rule_spec=importlib.util.spec_from_file_location("validate_bundle_target_rules",root/"tools/release_rules.py")
     rule_module=importlib.util.module_from_spec(rule_spec);rule_spec.loader.exec_module(rule_module)
@@ -431,7 +435,7 @@ def run(root: Path, *, target: str | None = None) -> dict:
     if resolved=="dsh":
         return _run_dsh(root)
     if resolved=="workbuddy":
-        return _run_workbuddy(root)
+        return _run_workbuddy(root,write_reports=write_reports)
     raise ValueError("Unknown release target: "+str(resolved))
 
 
@@ -440,12 +444,15 @@ def main():
     parser.add_argument("--root",type=Path,default=ROOT)
     parser.add_argument("--target",choices=["dsh","workbuddy"],default=None,
                         help="Override the manifest default_target (default: dsh)")
+    parser.add_argument("--check-only",action="store_true",
+                        help="Check without writing generated validation reports")
     args=parser.parse_args()
     root=args.root.resolve()
-    try:report=run(root,target=args.target)
+    try:report=run(root,target=args.target,write_reports=not args.check_only)
     except Exception as exc:
         raise SystemExit(f"Static validation failed before completion: {type(exc).__name__}: {exc}") from exc
-    (root/"tests/static-checks.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8", newline="\n")
+    if not args.check_only:
+        (root/"tests/static-checks.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8", newline="\n")
     print(json.dumps({k:v for k,v in report.items() if k!="checks"},ensure_ascii=False,indent=2))
     if report["errors"]:raise SystemExit(1)
 

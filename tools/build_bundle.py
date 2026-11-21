@@ -42,10 +42,12 @@ NATIVE_CLOSURE_TEXT = (
 )
 
 
-def render_team_roster(roles: dict, routing: dict) -> str:
+def render_team_roster(roles: dict, routing: dict, *, include_dispatch_note: bool = True) -> str:
     """T5/M15: render the natural-language member roster from routing-source.json.
     Chinese formal names come from roles-source.json (single protected source).
-    Internal routing fields never become host tool parameters."""
+    Internal routing fields never become host tool parameters. The default
+    preserves the historical WorkBuddy dispatch note; DSH supplies its own
+    host-specific dispatch instructions and requests only the domain roster."""
     by_agent = {r["agent"]: r for r in roles.values()}
     lines = [
         "## 成员名册（何时派给谁）",
@@ -68,8 +70,9 @@ def render_team_roster(roles: dict, routing: dict) -> str:
         lines.append(f"| {agent_id} | {role['title']} | {rw} | {dn} | {eo} |")
     lines.append("")
     lines.append("中间件证据初步归属：消费端线程、连接池与调用异常由 Java 成员先分析；订单积压与补偿语义由 CRM 业务链路成员处理；跨服务时延与链路时间线由证据与可观测性成员处理；超出上述 Runbook 范围的中间件服务端问题，在报告中标注为专业覆盖缺口，不冒充已完成专项诊断。")
-    lines.append("")
-    lines.append(routing["_dispatch_note"])
+    if include_dispatch_note:
+        lines.append("")
+        lines.append(routing["_dispatch_note"])
     return "\n".join(lines)
 
 def read_json(path: Path):

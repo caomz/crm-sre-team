@@ -25,7 +25,7 @@
   ],
   "members": 7,
   "outputs": {
-    "cordis.patch.yml": "4fafcc7b5235bad139acec4640b592b939e1069b401cf3143a6e1c7c954b06eb",
+    "cordis.patch.yml": "eeb2991c6a4ec41998f3d1c800fd0b0204e12e648f211ef31de59dd12f9c7c76",
     "package.json": "bfe6a71f90c38967338ff0d238bc7a219016d7dc733be85e77ada54889d7726a"
   },
   "package": "crm-sre-dsh-team",
@@ -35,7 +35,7 @@
   "scope": "CONFIGURATION_AND_PROMPTS_ONLY_NO_JS_RUNTIME",
   "source_files": {
     "policies/runtime-contract.json": "16be90a2a2f2e459aacd38bbc104cb9488d1f192c22f19762c5d751b21be1dd8",
-    "policy-source/dsh/lead-rules.md": "4955272a67833c08366e12d85e96e1e8d300954b6d8c1cf3ce734fdd64cb6302",
+    "policy-source/dsh/lead-rules.md": "1d8b87ce3b92ab413fa8331802d93493c66145a671edf78051e717f328d486de",
     "policy-source/dsh/package-source.json": "33548b285c7cdd1b9a8e299e58fb2817e89ee16c26e5ef53704a257a0ae25426",
     "policy-source/dsh/protocol-summary.md": "3f88e19218d9a957c1567b99412323da635ca81dfe47b2fb643d11edc8993a15",
     "policy-source/dsh/shared-discipline.md": "c99422ec3aa2e453a04a35444718db747ebaf0e3d029647d138012a2670570ec",
@@ -55,8 +55,8 @@
     "policy-source/references/telecom-crm-knowledge.md": "955cd0f19c5b330081736ed7915ca1be754b57cda1a12bd6190a38ffa69c7857",
     "policy-source/roles-source.json": "4220cfb96e2dd7ac4c027ce8f7fd41482a43a750fe81b086498b2fd6888862bd",
     "policy-source/routing-source.json": "f794a80e7530fb93d312897fa3865055dae79ba1fe5190acc16856f34fdde0a9",
-    "tools/build_bundle.py": "670ac549002a6b677718e5dc646bd9f73c3fe8ebb0b92a822ba90f9048590d88",
-    "tools/dsh_bundle.py": "83b87512f656d5a32de51d5fc29ddbf31a998bc3323e418fcec82f134c163d1b",
+    "tools/build_bundle.py": "8df333698047c8367b85b094e1b39d2f8fe0e8a6d28edad1f7140e464798cbc3",
+    "tools/dsh_bundle.py": "b631694719a22139efaee4c918ae4a132dd92184a978c8a5212aaca2029e1a42",
     "tools/release_rules.py": "e0cc604ba4b09dce5dc0bbf8420917a3e8eea228bc3b9537a0e3219be1114cb7"
   },
   "upstream_install": "EXPLICIT_SEPARATE_INSTALL_REQUIRED_NOT_AUTO_DISCOVERED",
