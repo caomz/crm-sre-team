@@ -540,6 +540,61 @@ class DshBuildTests(unittest.TestCase):
                 self.assertFalse(report["pass"])
         source.write_bytes(original.encode("utf-8"))
 
+    def test_evidence_ack_gate_embeds_in_both_personas_and_all_members(self):
+        dsh_bundle.build(self.root)
+        data = yaml.safe_load((self.root / "dsh/cordis.patch.yml").read_text(encoding="utf-8"))
+        personas = (
+            data[0]["config"]["personaPrefix"],
+            data[3]["insert"][0]["config"]["plugins"][0]["config"]["prefix"],
+        )
+        for persona in personas:
+            with self.subTest(persona=persona[:30]):
+                self.assertIn("材料缺失型失败先等待用户提供所缺的新授权材料正文", persona)
+                self.assertIn("控制性接收 ACK", persona)
+                self.assertIn("确认该接收轮次已结束后", persona)
+                self.assertIn("新 attempt 必须核对引擎真实 attempt_id", persona)
+        members = data[1]["config"]["profiles"]["crm-sre"]["members"]
+        self.assertEqual(len(members), 7)
+        for member in members:
+            with self.subTest(member=member["name"]):
+                prompt = member["executionPrompt"]
+                self.assertIn("原失败 attempt 收到团长明确的补充材料接收请求时", prompt)
+                self.assertIn("真正重派后只使用引擎新返回的 attempt_id", prompt)
+                self.assertIn("在 output、发给团长的消息和成员会话答复中使用同一组已选材料", prompt)
+
+    def test_missing_evidence_gate_rebuild_still_fails_independent_checker(self):
+        # A regenerated YAML may equal an invalid rule source: pin the policy
+        # independently of the renderer, not only through artifact hashes.
+        cases = (
+            ("lead-rules.md", (
+                "材料缺失型失败先等待用户提供所缺的新授权材料正文；仅出现 E 编号、口头承诺或空材料时不得调用 agent_teams_reassign_task",
+                "取得原成员针对真实失败 task/attempt 的控制性接收 ACK",
+                "确认该接收轮次已结束后，才对同一 task_id 与原成员执行唯一一次 agent_teams_reassign_task",
+                "新 attempt 必须核对引擎真实 attempt_id 与当前会话是否含新材料正文",
+            ), "lead_boundary_sentences"),
+            ("shared-discipline.md", (
+                "原失败 attempt 收到团长明确的补充材料接收请求时，只通过 agent_teams_send_message 向团长发送一次控制性 ACK",
+                "真正重派后只使用引擎新返回的 attempt_id",
+                "在 output、发给团长的消息和成员会话答复中使用同一组已选材料",
+            ), "discipline_boundary_sentences"),
+        )
+        for name, fragments, expected_check in cases:
+            source = self.root / "policy-source/dsh" / name
+            original = source.read_text(encoding="utf-8")
+            for fragment in fragments:
+                with self.subTest(name=name, fragment=fragment[:30]):
+                    self.assertIn(fragment, original)
+                    source.write_text(original.replace(fragment, "", 1), encoding="utf-8")
+                    dsh_bundle.build(self.root)
+                    report = check_dsh.run(self.root)
+                    checks = {item["id"]: item["passed"] for item in report["checks"]}
+                    self.assertTrue(checks["render_artifact_equality"])
+                    self.assertFalse(checks[expected_check])
+                    self.assertFalse(report["pass"])
+                    source.write_text(original, encoding="utf-8")
+        dsh_bundle.build(self.root)
+        self.assertTrue(check_dsh.run(self.root)["pass"])
+
     def test_quota_rule_removal_still_fails_after_rebuild(self):
         for name, fragment in [
             ("lead-rules.md", 'SQL 执行统计摘要与执行计划是两份独立材料，分别占用名额；不得写成一项“摘要与计划”。同一份既有活动会话采样导出可含多列字段，但不能搭配另一份独立报告或计划。名额外不以“仅记缺口”“转交建议”暗列材料名，只说明现有证据无法区分的机制。'),
