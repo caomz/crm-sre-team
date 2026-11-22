@@ -106,7 +106,7 @@ class ManifestTargetTests(unittest.TestCase):
 
     def test_02_historical_manifest_without_targets_falls_back_to_workbuddy(self):
         with tempfile.TemporaryDirectory() as td:
-            root = make_legacy_fixture(Path(td))
+            root = make_legacy_fixture(Path(td).resolve(strict=True))
             self.assertEqual(release_rules.target_name(root), "workbuddy")
             self.assertEqual(release_rules.target_files(root), release_rules.manifest_names(root))
 
@@ -127,7 +127,7 @@ class ManifestTargetTests(unittest.TestCase):
         }
         for label, mutate in cases.items():
             with self.subTest(case=label), tempfile.TemporaryDirectory() as td:
-                root = manifest_mutated(Path(td), mutate)
+                root = manifest_mutated(Path(td).resolve(strict=True), mutate)
                 with self.assertRaises(ValueError):
                     release_rules.manifest_names(root)
                 with self.assertRaises(ValueError):
@@ -138,7 +138,7 @@ class DefaultBuildTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.base = Path(tmp.name)
+        self.base = Path(tmp.name).resolve(strict=True)
         self.root = make_full_fixture(self.base)
 
     def frozen_hash(self) -> dict:
@@ -209,10 +209,38 @@ class DefaultBuildTests(unittest.TestCase):
         with patch.object(builder.os, "replace", side_effect=fail_lock):
             with self.assertRaises(OSError):
                 builder.build(self.root)
+        self.assertTrue(failed[0], "expected lock-write fault was never injected")
         self.assertEqual(tree_hash(self.root / "dsh"), dsh_before)
         self.assertEqual((self.root / "prompt-bundles.lock").read_bytes(), lock_before)
         builder.build(self.root)
         self.assertEqual(tree_hash(self.root / "dsh"), dsh_before)
+
+    def test_15b_lock_rollback_fault_survives_canonical_root_alias(self):
+        # A symlink alias of the fixture root must not change the target of
+        # failure injection after build() resolves the root.
+        alias = self.base / "fixture-alias"
+        try:
+            alias.symlink_to(self.root, target_is_directory=True)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f"symlink capability unavailable: {exc}")
+        builder.build(self.root)
+        previous = tree_hash(self.root / "dsh")
+        lock_before = (self.root / "prompt-bundles.lock").read_bytes()
+        original_replace = builder.os.replace
+        failed = [False]
+
+        def fail_lock(src, dst):
+            if Path(dst) == self.root / "prompt-bundles.lock" and not failed[0]:
+                failed[0] = True
+                raise OSError("synthetic lock commit failure through alias")
+            return original_replace(src, dst)
+
+        with patch.object(builder.os, "replace", side_effect=fail_lock):
+            with self.assertRaises(OSError):
+                builder.build(alias)
+        self.assertTrue(failed[0], "alias root did not reach expected write fault")
+        self.assertEqual(tree_hash(self.root / "dsh"), previous)
+        self.assertEqual((self.root / "prompt-bundles.lock").read_bytes(), lock_before)
 
     def test_16_explicit_workbuddy_target_rebuilds_historical_outputs(self):
         before = tree_hash(self.root / "agents")
@@ -247,7 +275,7 @@ class DshZipTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.base = Path(tmp.name)
+        self.base = Path(tmp.name).resolve(strict=True)
         self.root = make_full_fixture(self.base)
         builder.build(self.root)
 
@@ -262,6 +290,20 @@ class DshZipTests(unittest.TestCase):
         report = validate_release.validate(self.root, output)
         self.assertTrue(report["pass"], report["errors"])
         self.assertEqual(report["target"], "dsh")
+
+    def test_20b_release_symlink_output_parent_is_still_rejected(self):
+        # Path normalization belongs to the test fixture. Real release code
+        # must continue to reject caller-supplied symlinked output parents.
+        alias = self.base / "output-alias"
+        destination = self.base / "safe-output"
+        destination.mkdir()
+        try:
+            alias.symlink_to(destination, target_is_directory=True)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f"symlink capability unavailable: {exc}")
+        with self.assertRaisesRegex(ValueError, "Symlink output or parent"):
+            build_release.build_release(self.root, alias / "not-allowed.zip")
+        self.assertFalse((destination / "not-allowed.zip").exists())
 
     def test_21_dsh_zip_deterministic_across_builds(self):
         first = self.base / "dsh-a.zip"
@@ -360,7 +402,7 @@ class IdentityTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.base = Path(tmp.name)
+        self.base = Path(tmp.name).resolve(strict=True)
         self.root = make_full_fixture(self.base)
 
     def test_30_frozen_root_version_and_active_dsh_identity_separate(self):
@@ -382,7 +424,7 @@ class ValidatorCheckOnlyTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.base = Path(tmp.name)
+        self.base = Path(tmp.name).resolve(strict=True)
         self.root = make_full_fixture(self.base)
         builder.build(self.root)
         self.report_path = self.root / "tests/static-checks.json"
@@ -444,7 +486,7 @@ class PipelineTargetTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.base = Path(tmp.name)
+        self.base = Path(tmp.name).resolve(strict=True)
         self.root = make_full_fixture(self.base)
         builder.build(self.root)
 
@@ -456,14 +498,14 @@ class PipelineTargetTests(unittest.TestCase):
 
     def test_41_preflight_on_legacy_fixture_resolves_workbuddy(self):
         with tempfile.TemporaryDirectory() as td:
-            legacy = make_legacy_fixture(Path(td))
+            legacy = make_legacy_fixture(Path(td).resolve(strict=True))
             pipeline = release.Pipeline(legacy)
             self.assertTrue(pipeline._step_preflight()["ok"])
             self.assertEqual(pipeline.target, "workbuddy")
 
     def test_42_legacy_version_step_keeps_plugin_identity_check(self):
         with tempfile.TemporaryDirectory() as td:
-            legacy = make_legacy_fixture(Path(td))
+            legacy = make_legacy_fixture(Path(td).resolve(strict=True))
             pipeline = release.Pipeline(legacy)
             pipeline._step_preflight()
             self.assertTrue(pipeline._step_version_validation()["ok"])
