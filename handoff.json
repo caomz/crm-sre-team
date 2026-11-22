@@ -1,0 +1,64 @@
+{
+  "schema_version": "crm-sre-mac-rework-handoff/v1",
+  "provenance": "NEW_PROVISIONAL_FILE_PREVIOUS_HANDOFF_JSON_NOT_PROVIDED",
+  "repository": "caomz/crm-sre-team",
+  "source_branch": "fix/dsh-retry-evidence-gate-followup",
+  "repair_branch": "fix/dsh-mac-receive-visibility-action-review-20261122",
+  "mac_tested_commit": "f4729dff88a6d67fd22fe9f772b82ec821bdcaeb",
+  "historical_mac_acceptance": "FAIL",
+  "harness_version": "0.2.2-rc.1",
+  "agent_teams_version": "0.1.30",
+  "model": "zhipu-bigmodel/glm-5.3-flash",
+  "addressed_failures": [
+    {
+      "id": "T04c",
+      "change": "require trusted receive-round completion visible in captain decision input",
+      "scope": "PROMPT_ONLY",
+      "mac_verified": false
+    },
+    {
+      "id": "T05",
+      "change": "same gate, preserve unique retry and downstream wait",
+      "scope": "PROMPT_ONLY",
+      "mac_verified": false
+    },
+    {
+      "id": "T06",
+      "change": "review each production action actually asked, preserving read-only constraints",
+      "scope": "PROMPT_ONLY",
+      "mac_verified": false
+    }
+  ],
+  "runtime_guarantee_scope": "SOURCE_AND_GENERATED_DSH_PROMPT_CONTRACT_ONLY; NO_ATOMIC_HARNESS_REASSIGN_GUARD",
+  "remaining_evidence_gaps": [
+    "HANDOFF.md and previous handoff.json",
+    "t05-recheck.json",
+    "t06-recheck.json",
+    "review-disposition.json",
+    "acceptance.md",
+    "results.json",
+    "environment.json",
+    "evidence-manifest.json",
+    "T04c and T05 complete engine/tool event sequences and decision-model inputs including all equivalent trusted completion evidence",
+    "T06 original user request, established rubric and two complete model answers",
+    "e401-followup.md future provenance"
+  ],
+  "user_summary_not_original_evidence": true,
+  "original_mac_evidence_read": false,
+  "e401_followup_excluded_from_historical_run": true,
+  "mmx_review": "FAIL",
+  "zcode_review": "NOT_EVALUATED_TWO_TIMEOUTS",
+  "requires_mac_acceptance": true,
+  "windows_verify_allowed": false,
+  "next_mac_acceptance": {
+    "worktree": "NEW_INDEPENDENT",
+    "profile": "NEW_ISOLATED",
+    "session": "NEW_ISOLATED",
+    "staged_approval": "REQUIRED_FRESH",
+    "preserve_old_fail": true,
+    "no_e401_in_initial_session": true
+  },
+  "offline_verification": "PENDING_CI",
+  "production_tools_enabled": false,
+  "status": "PROMPT_LAYER_REWORK_AWAITING_MAC_EVIDENCE"
+}
