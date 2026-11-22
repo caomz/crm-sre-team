@@ -16,6 +16,10 @@ jobs:
   offline:
     name: Python 3.12 / deterministic DSH bundle
     runs-on: ubuntu-24.04
+    # Legacy oncall fixtures require os.environ["TMPDIR"]; runner defaults
+    # may leave it unset. /tmp is physical on the Ubuntu CI image.
+    env:
+      TMPDIR: /tmp
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
