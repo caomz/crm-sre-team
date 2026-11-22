@@ -1,0 +1,50 @@
+name: DSH offline regression
+
+on:
+  push:
+    branches:
+      - fix/dsh-retry-evidence-gate-followup
+  pull_request:
+    branches:
+      - fix/dsh-mac-first-audit
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    name: Python 3.12 / deterministic DSH bundle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned development dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Inspect Python and tempfile paths
+        run: |
+          python --version
+          python -m pip freeze
+          python -c "import tempfile; from pathlib import Path; print('tempfile:', tempfile.gettempdir(), 'resolved:', Path(tempfile.gettempdir()).resolve())"
+      - name: Check DSH source and generated configuration
+        run: python tools/check_dsh.py
+      - name: Check exact manifest and committed hashes before rebuild
+        run: python tools/validate_bundle.py --check-only
+      - name: Run complete synthetic/offline regression
+        run: python -m pytest tests/ tools/oncall/ -q -ra
+      - name: Rebuild deterministic configuration and lock
+        run: python tools/build_bundle.py
+      - name: Recheck rebuilt configuration
+        run: |
+          python tools/check_dsh.py
+          python tools/validate_bundle.py --check-only
+      - name: Reject uncommitted generated changes
+        run: |
+          git diff --check
+          git diff --exit-code
+          test -z "$(git status --porcelain)"
