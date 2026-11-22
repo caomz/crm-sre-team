@@ -4,9 +4,10 @@ on:
   push:
     branches:
       - fix/dsh-retry-evidence-gate-followup
+      - fix/dsh-receipt-settle-t06-action-review
+  # PR #3 targets fix/dsh-retry-evidence-gate, not the earlier
+  # fix/dsh-mac-first-audit branch. Avoid silently skipping other PR bases.
   pull_request:
-    branches:
-      - fix/dsh-mac-first-audit
   workflow_dispatch:
 
 permissions:
