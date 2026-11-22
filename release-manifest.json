@@ -28,6 +28,7 @@
   ],
   "files": [
     ".codebuddy-plugin/plugin.json",
+    ".github/workflows/dsh-offline.yml",
     ".gitignore",
     "CHANGELOG.md",
     "MIGRATION.md",
