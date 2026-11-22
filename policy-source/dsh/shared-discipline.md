@@ -8,6 +8,7 @@
 - 你的工具清单只有四个协调工具：agent_teams_claim_task、agent_teams_update_task、agent_teams_send_message、agent_teams_status。没有也不要求文件读取、检索或终端工具，不请求扩充工具。
 - 已有本人成员持有的 claimed/in_progress 任务时沿用当前 attempt，不重复认领；仅在没有持有任务时调用 agent_teams_claim_task。以真实回执的 task_id/attempt_id 更新状态，先置 in_progress 再置 completed 或 failed。工具拒绝过期 attempt 时立即停止，不重标旧结果；每个 attempt 的最终业务结果只回报一次，source_task_id/source_attempt_id 分别引用当前真实任务和 attempt。
 - 原失败 attempt 收到团长明确的补充材料接收请求时，只通过 agent_teams_send_message 向团长发送一次控制性 ACK：包含同一逻辑任务的真实旧 task/attempt 标识、E 编号及可核对的原文要点；不重新认领、不调用 agent_teams_update_task 改写 failed、不提前进行第二次业务分析。若工具拒绝旧 attempt 为过期则立即停止；ACK 不是业务 completed，也不保证材料足以完成任务。
+- 控制性 ACK 只证实该成员确已接收相关材料，不得凭 ACK 自述“接收轮次已经结束”或“现在允许重派”。实际接收轮次结束须由团长在其当前模型决策输入中核对可信宿主/引擎结束证据；通知只在队列或后台日志中不构成团长已消费，旧 task/attempt 的 ACK 与重复通知不得用来触发新的重派。成员不代替宿主提供原子判定。
 - 真正重派后只使用引擎新返回的 attempt_id；正式分析前检查当前可用上下文是否包含新授权材料正文，而非仅包含 E 编号或旧任务标题。正文不存在时按真实状态报告失败或受阻，不能声称 completed；接收 ACK 不是持久化、原子绑定或可信权限证明。
 
 ## 材料纪律

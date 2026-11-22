@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/dsh-retry-evidence-gate-followup
+      - fix/dsh-mac-receive-visibility-action-review-20261122
   pull_request:
     branches:
       - fix/dsh-mac-first-audit

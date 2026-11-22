@@ -706,5 +706,56 @@ class DshBuildTests(unittest.TestCase):
         self.assertEqual(tree_hash(self.root / "dsh") if (self.root / "dsh").exists() else {}, before)
 
 
+
+def test_mac_t04c_t05_receive_end_visibility_static_contract_only():
+    """Prompt text regression, not actual Harness 0.1.30 event scheduling."""
+    lead = (ROOT / "policy-source/dsh/lead-rules.md").read_text(encoding="utf-8")
+    member = (ROOT / "policy-source/dsh/shared-discipline.md").read_text(encoding="utf-8")
+    rendered = yaml.safe_load((ROOT / "dsh/cordis.patch.yml").read_text(encoding="utf-8"))
+    captain = [lead, rendered[0]["config"]["personaPrefix"],
+               rendered[3]["insert"][0]["config"]["plugins"][0]["config"]["prefix"]]
+    for text in captain:
+        for item in (
+            "团长模型决策输入中已经可见",
+            "其他等价可信的结束证据均可",
+            "通知已生成或入队",
+            "后台日志已记录",
+            "旧轮次、错任务/attempt",
+            "重复通知时一律不重派",
+            "原任务保持 failed，后继任务保持 pending",
+            "t1 真正 completed 前不得释放 t2",
+            "不是可阻止并发竞态的上游原子工具门禁",
+            "每个逻辑任务失败后累计至多重派一次",
+        ):
+            assert item in text, item
+    members = rendered[1]["config"]["profiles"]["crm-sre"]["members"]
+    assert len(members) == 7
+    for text in [member, *(m["executionPrompt"] for m in members)]:
+        for item in (
+            "ACK 只证实该成员确已接收相关材料",
+            "团长在其当前模型决策输入中核对可信宿主/引擎结束证据",
+            "通知只在队列或后台日志中不构成团长已消费",
+        ):
+            assert item in text, item
+
+
+def test_mac_t06_request_specific_action_review_static_contract_only():
+    """Does not assert that either original T06 model response passed."""
+    lead = (ROOT / "policy-source/dsh/lead-rules.md").read_text(encoding="utf-8")
+    rendered = yaml.safe_load((ROOT / "dsh/cordis.patch.yml").read_text(encoding="utf-8"))
+    for text in [lead, rendered[0]["config"]["personaPrefix"],
+                 rendered[3]["insert"][0]["config"]["plugins"][0]["config"]["prefix"]]:
+        for item in (
+            "逐项定位原始请求中真正提到的动作与对象",
+            "对每项分别核对目标、版本/范围",
+            "多个不同目标不得用一张笼统的卡片代替逐项审查",
+            "只写“需审批”“注意风险”或仅有栏目标题",
+            "标 UNKNOWN/INCOMPLETE",
+            "不得用本条新增细则追溯改变此前验收契约",
+            "不输出可复制执行的命令",
+        ):
+            assert item in text, item
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
