@@ -308,7 +308,10 @@ class DshBuildTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.base = Path(tmp.name)
+        # tempfile may return a /var/... alias to /private/var/... on macOS.
+        # Builders resolve the input root before os.replace; use the physical
+        # directory here so failure-injection comparisons reach the same path.
+        self.base = Path(tmp.name).resolve(strict=True)
         self.root = self.base / "crm-sre-team"
         self.root.mkdir()
         for name in release_rules.manifest_names(ROOT):
@@ -643,6 +646,36 @@ class DshBuildTests(unittest.TestCase):
         with patch.object(dsh_bundle.os, "replace", side_effect=concurrent_write):
             with self.assertRaises(OSError):
                 dsh_bundle.build(self.root)
+        # Asserting only an exception can give a false result if some unrelated
+        # os.replace failure occurs before the intended injection.
+        self.assertTrue(raced[0], "concurrent edit was never injected")
+        self.assertEqual(proof.read_bytes(), changed)
+
+    @requires_real_symlink
+    def test_31b_alias_root_keeps_rollback_failure_injection_targeted(self):
+        # Regression for /var vs /private/var style aliases. Do not weaken
+        # input/output symlink rejection: the root is canonicalized by build().
+        dsh_bundle.build(self.root)
+        alias = self.base / "crm-sre-team-alias"
+        alias.symlink_to(self.root, target_is_directory=True)
+        self.assertNotEqual(alias / "dsh", self.root / "dsh")
+        self.assertEqual((alias / "dsh").resolve(strict=True),
+                         (self.root / "dsh").resolve(strict=True))
+        actual = dsh_bundle.os.replace
+        raced = [False]
+        proof = self.root / "dsh/package.json"
+        changed = proof.read_bytes() + b"\n"
+
+        def concurrent_write(src, dst):
+            if Path(src) == self.root / "dsh" and not raced[0]:
+                raced[0] = True
+                proof.write_bytes(changed)
+            return actual(src, dst)
+
+        with patch.object(dsh_bundle.os, "replace", side_effect=concurrent_write):
+            with self.assertRaises(OSError):
+                dsh_bundle.build(alias)
+        self.assertTrue(raced[0], "root alias must not bypass the fault injection")
         self.assertEqual(proof.read_bytes(), changed)
 
     @requires_real_symlink
