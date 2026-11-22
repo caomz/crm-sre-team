@@ -513,7 +513,7 @@
     "tests/test_bomc_readonly.py": "973bc0a455fcb65b3e312282ff38a3b95e55e350a72d4ea99c7d172ff03d8291",
     "tests/test_comparison_build.py": "0b5b2dc78c3e9187d40e23a9831356a4aeb725e3acdfc4855b8bcb93c2654734",
     "tests/test_contracts.py": "85e6f30902704be775b03a8423cd8c067e1ced9653896a9f38d5685698f75698",
-    "tests/test_dsh.py": "73e2c886d59023db91391d86ee55351e1702b967f51870837c6ad349b0fa47b7",
+    "tests/test_dsh.py": "626ec0340c67172ccae05d00dd82553560e38f5504da151cae677e2e1a2219fa",
     "tests/test_dsh_integration.py": "5f87ddbf2c2ddbffcb87ad1fbfac36b218e7aa95bb8485e3b867806a5edad746",
     "tests/test_fde_delivery.py": "8422215be6f9161a5e935bb2beb4ddbc9ba2d365e474a5d6fd9f6dfd90cc670a",
     "tests/test_git_hooks.py": "33ecf9dc14b3f3037336285b901082cbbc80687783e6135711610c6b9956d2bb",
