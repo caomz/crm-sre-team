@@ -565,6 +565,71 @@ class DshBuildTests(unittest.TestCase):
                 self.assertIn("真正重派后只使用引擎新返回的 attempt_id", prompt)
                 self.assertIn("在 output、发给团长的消息和成员会话答复中使用同一组已选材料", prompt)
 
+    def test_ack_must_settle_in_later_captain_turn_and_t06_review_is_complete(self):
+        # Prompt/config regression, NOT a simulation of the upstream async engine.
+        # The Mac test must still inspect actual model-turn and task events.
+        dsh_bundle.build(self.root)
+        data = yaml.safe_load((self.root / "dsh/cordis.patch.yml").read_text(encoding="utf-8"))
+        persona_global = data[0]["config"]["personaPrefix"]
+        persona_scoped = data[3]["insert"][0]["config"]["plugins"][0]["config"]["prefix"]
+        self.assertEqual(persona_global, persona_scoped)
+        for persona in (persona_global, persona_scoped):
+            with self.subTest(scope="captain"):
+                self.assertIn("收到原成员控制性 ACK 的团长模型轮次只核验 ACK 与证据内容", persona)
+                self.assertIn("不在该轮调用 agent_teams_reassign_task", persona)
+                self.assertIn("之后独立的团长模型轮次中", persona)
+                self.assertIn("接收回合已结束的原生通知", persona)
+                self.assertIn("重派准入必须将同一 team、原成员会话、同一 task_id", persona)
+                self.assertIn("每次生产操作人工评审必须对应用户本次原始请求的具体动作", persona)
+                self.assertIn("缺任何一栏不得称完整评审卡", persona)
+        members = data[1]["config"]["profiles"]["crm-sre"]["members"]
+        self.assertEqual(len(members), 7)
+        for member in members:
+            with self.subTest(member=member["name"]):
+                prompt = member["executionPrompt"]
+                self.assertIn("控制性 ACK 成功发送后立即结束成员本次模型轮次", prompt)
+                self.assertIn("不补发“本轮结束”文本模拟原生完成通知", prompt)
+                self.assertIn("收到针对生产操作的审查任务时", prompt)
+                self.assertIn("关键范围不明标记“不得执行”", prompt)
+
+    def test_ack_settlement_and_action_review_rules_cannot_be_removed_by_rebuild(self):
+        # A source mutation followed by a clean render must remain invalid;
+        # identical generator output and lock hashes are insufficient.
+        changes = (
+            ("lead-rules.md",
+             "收到原成员控制性 ACK 的团长模型轮次只核验 ACK 与证据内容，不在该轮调用 agent_teams_reassign_task",
+             "lead_boundary_sentences"),
+            ("lead-rules.md",
+             "之后独立的团长模型轮次中，原成员该次接收回合已结束的原生通知",
+             "lead_boundary_sentences"),
+            ("lead-rules.md",
+             "每次生产操作人工评审必须对应用户本次原始请求的具体动作",
+             "lead_boundary_sentences"),
+            ("shared-discipline.md",
+             "控制性 ACK 成功发送后立即结束成员本次模型轮次",
+             "discipline_boundary_sentences"),
+            ("shared-discipline.md",
+             "收到针对生产操作的审查任务时",
+             "discipline_boundary_sentences"),
+        )
+        for name, requirement, check_id in changes:
+            with self.subTest(source=name, requirement=requirement[:30]):
+                p = self.root / "policy-source/dsh" / name
+                original = p.read_text(encoding="utf-8")
+                self.assertIn(requirement, original)
+                try:
+                    p.write_text(original.replace(requirement, "", 1), encoding="utf-8")
+                    dsh_bundle.build(self.root)
+                    report = check_dsh.run(self.root)
+                    by_id = {item["id"]: item["passed"] for item in report["checks"]}
+                    self.assertTrue(by_id["render_artifact_equality"])
+                    self.assertFalse(by_id[check_id])
+                    self.assertFalse(report["pass"])
+                finally:
+                    p.write_text(original, encoding="utf-8")
+        dsh_bundle.build(self.root)
+        self.assertTrue(check_dsh.run(self.root)["pass"])
+
     def test_missing_evidence_gate_rebuild_still_fails_independent_checker(self):
         # A regenerated YAML may equal an invalid rule source: pin the policy
         # independently of the renderer, not only through artifact hashes.
