@@ -192,6 +192,12 @@ class Ledger:
             if conn.execute("SELECT 1 FROM reservations WHERE request_id=?",
                             (request_id,)).fetchone():
                 raise DuplicateRequest("request id already consumed; never replay")
+            # UNKNOWN is not just a non-refundable slot: it freezes the stage
+            # until independent human reconciliation. Do not keep dispatching
+            # other IDs while billed status remains ambiguous.
+            if conn.execute("SELECT 1 FROM reservations WHERE status='UNKNOWN' "
+                            "LIMIT 1").fetchone():
+                raise BudgetExceeded("stage frozen: UNKNOWN must be reconciled")
             used = conn.execute(
                 "SELECT COUNT(*), COALESCE(SUM(input_upper + output_upper),0), "
                 "COALESCE(SUM(reserved_cost_micro),0) FROM reservations"
