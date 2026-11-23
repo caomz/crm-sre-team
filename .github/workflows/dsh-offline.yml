@@ -5,9 +5,9 @@ on:
     branches:
       - fix/dsh-retry-evidence-gate-followup
       - fix/dsh-mac-receive-visibility-action-review-20261122
+      - feat/budget-gateway-offline-20261123
+  # Test every draft PR target without silently omitting this repair line.
   pull_request:
-    branches:
-      - fix/dsh-mac-first-audit
   workflow_dispatch:
 
 permissions:
@@ -40,6 +40,10 @@ jobs:
         run: python tools/check_dsh.py
       - name: Check exact manifest and committed hashes before rebuild
         run: python tools/validate_bundle.py --check-only
+      - name: Compile independent budget guard
+        run: python -m compileall -q budget_guard
+      - name: Run focused synthetic budget guard tests
+        run: python -m pytest tests/test_budget_guard.py -q -ra
       - name: Run complete synthetic/offline regression
         run: python -m pytest tests/ tools/oncall/ -q -ra
       - name: Rebuild deterministic configuration and lock

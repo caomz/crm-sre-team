@@ -1,5 +1,12 @@
 # DSH 2.8.0-dsh.1 修复候选验证（历史基线 2.8.0-rc10；2026-11-21）
 
+## 2026-11-23 预算网关原型与 WorkBuddy 历史校验口径
+
+本预算分支保持原有 `docs/` 历史集合不变，另在 `budget_guard/` 中实现本地合成预算门；不会修改 DSH 七文件发布载荷。隔离 CI 观察到既有 WorkBuddy 验证器运行时结构检查共 **1915 项**，原 `VALIDATION.md` 中针对过去候选的 1913 项记录不能当作当前结构统计。为维持现有 `test_validation_md_counts_match_static_checks` 的实时文档契约，本分支的**目标口径**为 WorkBuddy 历史静态校验 1915/1915；只有最终 SHA 的独立 CI 实际完成才可报告 PASS，不能把本句当作执行成功证据。旧 1913/1913 仍留在历史段落中，代表当时范围。
+
+预算测试属于 `SYNTHETIC_OFFLINE_ONLY`；`TOKEN_COST_HARD_CAP=BLOCKED`、新 SHA 的 Mac 0B `NOT_RUN`、阶段 A `BLOCKED`、Windows VERIFY `NOT_ELIGIBLE`。专项断言中模拟请求从未连接真实供应商，无法据此宣称全部 Harness 调用路径均被预算门控覆盖。
+
+
 ## 2026-11-21 Mac 实机回报与第二轮恢复协议修复
 
 本节保留执行方在固定提交 `ae452e1f9f9f9f1412a86df79303a22aeff87e6c` 上的 Mac CLI/Web 实际运行反馈：Harness `0.2.2-rc.1` + Agent Teams `0.1.30`，团长和成员 `zhipu-bigmodel/glm-5.3-flash`。该回报由用户提供，本轮尚未在本环境直接核验 SSD 原生日志。原生配置四条 patch 命中，CRM SRE preset 注入真实 system/message。T01 派单、T03 零补证、T05 两败停止、T06 只读行为在其报告范围内通过；T02 成员存在将两份独立材料捆绑为一项，团长最终保留三项符合用户侧限额，`member_atomicity` 不算通过。原报告提及两处 T02 偏差，第二处缺少可核对原文，保持待验证。
