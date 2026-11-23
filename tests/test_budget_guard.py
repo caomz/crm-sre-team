@@ -266,6 +266,25 @@ def test_unknown_never_releases_slot(tmp_path):
     assert led.get("req-000001")["status"] == "UNKNOWN"
 
 
+def test_unknown_freezes_remaining_stage_capacity(tmp_path):
+    led = Ledger(tmp_path / "freeze.sqlite3", policy(max_requests=10))
+    reserve(led, 1)
+    led.begin_dispatch("req-000001")
+    led.mark_unknown("req-000001")
+    with pytest.raises(BudgetExceeded, match="stage frozen"):
+        reserve(led, 2)
+    assert led.snapshot()["reservations"] == 1
+
+
+def test_synthetic_429_freezes_other_request_ids(tmp_path):
+    with server_session(tmp_path) as (led, receiver, server):
+        assert request(server, 1, fault="429")[0] == 502
+        code, body, _ = request(server, 2)
+        assert code == 429
+        assert "stage frozen" in body["error"]
+        assert receiver.received() == ["req-000001"]
+
+
 def test_recovery_marks_unfinished_reservation_unknown(ledger):
     reserve(ledger, 1)
     reopened = Ledger(ledger.path, ledger.limits)
@@ -400,7 +419,10 @@ def test_confirmation_disk_failure_cannot_trigger_repeat_send(tmp_path):
         assert led.get("req-000001")["status"] == "DISPATCHING"
         assert led.recover_unknown() == 1
         assert led.get("req-000001")["status"] == "UNKNOWN"
-        assert request(server, 1)[0] == 409
+        # A write failure fails closed for the whole process, not just the
+        # original request ID. New IDs must never reach the receiver either.
+        assert request(server, 1)[0] == 503
+        assert request(server, 2)[0] == 503
         assert len(receiver.received()) == 1
 
 
