@@ -1,0 +1,10 @@
+{
+  "model": "glm-5.3-flash",
+  "max_requests": 35,
+  "max_reserved_tokens": 445040,
+  "max_cost_micro_yuan": 1250000,
+  "max_output_per_request": 1024,
+  "input_rate_micro_yuan_per_million": 800000,
+  "output_rate_micro_yuan_per_million": 2800000,
+  "price_version": "SYNTHETIC_EXAMPLE_NOT_ACCOUNT_VERIFIED_2026-11-23"
+}
