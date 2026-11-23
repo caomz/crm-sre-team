@@ -94,9 +94,23 @@ def test_policy_rejects_nonpositive_limits():
                  "max_output_per_request", "input_rate_micro_yuan_per_million",
                  "output_rate_micro_yuan_per_million"):
         with pytest.raises(InvalidRequest):
-            policy(**{name: 0})
+            policy(**{name: -1})
         with pytest.raises(InvalidRequest):
             policy(**{name: True})
+    for name in ("max_output_per_request", "input_rate_micro_yuan_per_million",
+                 "output_rate_micro_yuan_per_million"):
+        with pytest.raises(InvalidRequest):
+            policy(**{name: 0})
+
+
+@pytest.mark.parametrize("cap", ["max_requests", "max_reserved_tokens",
+                                  "max_cost_micro_yuan"])
+def test_zero_budget_allows_no_synthetic_receipt(tmp_path, cap):
+    with server_session(tmp_path, policy(**{cap: 0})) as (led, receiver, server):
+        code, _, _ = request(server, 1)
+        assert code == 429
+        assert receiver.received() == []
+        assert led.snapshot()["reservations"] == 0
 
 
 def test_policy_drift_refused_on_same_database(tmp_path):
