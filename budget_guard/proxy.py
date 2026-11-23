@@ -108,6 +108,9 @@ def make_handler(ledger: Ledger, receiver: SyntheticReceiver,
                  auth_token: str) -> type[BaseHTTPRequestHandler]:
     if not isinstance(auth_token, str) or len(auth_token) < 24:
         raise InvalidRequest("required local bearer secret is too short")
+    # An audit/SQLite exception anywhere in a request freezes the in-process
+    # gateway too. Crash recovery marks unfinished sends UNKNOWN on restart.
+    persistence_failed = threading.Event()
 
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
@@ -144,12 +147,15 @@ def make_handler(ledger: Ledger, receiver: SyntheticReceiver,
                 "mode": "SYNTHETIC_OFFLINE_ONLY",
                 "real_provider_sends": 0,
                 "synthetic_sink_receipts": len(receiver.received()),
+                "stage_frozen_due_to_persistence_failure": persistence_failed.is_set(),
                 "token_cost_hard_cap": "BLOCKED",
             })
 
         def do_POST(self) -> None:  # noqa: N802
             if not self._authorized():
                 return self._reply(401, {"error": "authentication required"})
+            if persistence_failed.is_set():
+                return self._reply(503, {"error": "stage frozen after ledger failure"})
             if self.path != "/v1/chat/completions":
                 return self._reply(404, {"error": "unsupported route"})
             if self.headers.get("Transfer-Encoding"):
@@ -211,8 +217,10 @@ def make_handler(ledger: Ledger, receiver: SyntheticReceiver,
             except (BudgetError, ValueError, TypeError) as exc:
                 self._reply(400, {"error": str(exc)})
             except Exception:
-                # Database or audit failure must never fall through to sink.
-                self._reply(503, {"error": "persistent gate unavailable"})
+                # Database or audit failure must never fall through to sink,
+                # and must freeze every subsequent request on this instance.
+                persistence_failed.set()
+                self._reply(503, {"error": "persistent gate unavailable; stage frozen"})
 
     return Handler
 
