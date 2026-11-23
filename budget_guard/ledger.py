@@ -47,6 +47,12 @@ def _positive_int(value: Any, name: str) -> int:
     return value
 
 
+def _nonnegative_int(value: Any, name: str) -> int:
+    if type(value) is not int or value < 0:
+        raise InvalidRequest(f"{name} must be a nonnegative integer")
+    return value
+
+
 def _utc() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
@@ -69,8 +75,11 @@ class Limits:
             raise InvalidRequest("model must be non-empty")
         if not self.price_version or not isinstance(self.price_version, str):
             raise InvalidRequest("price_version required")
-        for name in ("max_requests", "max_reserved_tokens", "max_cost_micro_yuan",
-                     "max_output_per_request", "input_rate_micro_yuan_per_million",
+        # A zero quota is a valid fail-closed configuration: it must never
+        # create a receipt, even when the synthetic service is running.
+        for name in ("max_requests", "max_reserved_tokens", "max_cost_micro_yuan"):
+            _nonnegative_int(getattr(self, name), name)
+        for name in ("max_output_per_request", "input_rate_micro_yuan_per_million",
                      "output_rate_micro_yuan_per_million"):
             _positive_int(getattr(self, name), name)
 
