@@ -6,7 +6,7 @@
   "target_version": "2.8.0-dsh.1",
   "files": {
     ".codebuddy-plugin/plugin.json": "5fe2885438cba6ce4d68f09c3c807a49ccf3ed48c117b797bda913d7eb359cc7",
-    ".github/workflows/dsh-offline.yml": "637379ab426c6ad0d9f27a7ece5dbdbcbd504c78619e5c44c486a4152dec3286",
+    ".github/workflows/dsh-offline.yml": "76eeab33af7b9c11b3de4c20639805e11fa92d4c4e3e49a9076c97b0bd52245a",
     ".gitignore": "966c3380520e3f3cd867bd844fe62ac87acc513583f262a4ccfd743acc389457",
     "CHANGELOG.md": "ffab01e68f824dd84458b4454a192eddab4e1e3a8099db2790bc7df7c32f584d",
     "MIGRATION.md": "c28116644b842112bb0c80ec267a6b9d06f996446ba5445ee24c909d823e2812",
