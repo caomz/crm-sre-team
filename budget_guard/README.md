@@ -19,7 +19,7 @@ DSH 没有自有 JavaScript 发送引擎。修改 persona、patch YAML、提示�
 - `RESERVED → DISPATCHING → CONFIRMED / UNKNOWN`，写入 `DISPATCHING`
   成功提交**之后**才可触达本地合成接收器。
 - 任何编号已被使用，均不重放；`UNKNOWN`、崩溃前的未完成预留占额且不自动退款。
-  同一个账本被团长、成员和辅助角色共享。
+  **任何 UNKNOWN 将冻结整个阶段**，不能在尚未人工核对账务前换一个请求 ID 继续发送。同一个账本被团长、成员和辅助角色共享。
 - 仅绑定 `127.0.0.1`，要求私有 bearer token；OpenAI
   `POST /v1/chat/completions` **仅接受文本、非 streaming 子集**。
   不支持的字段、模型、路由一律拒绝，绝不静默退回供应商原直连。
