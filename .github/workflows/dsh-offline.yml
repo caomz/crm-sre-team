@@ -6,9 +6,8 @@ on:
       - fix/dsh-retry-evidence-gate-followup
       - fix/dsh-mac-receive-visibility-action-review-20261122
       - feat/budget-gateway-offline-20261123
+  # Test every draft PR target without silently omitting this repair line.
   pull_request:
-    branches:
-      - fix/dsh-mac-first-audit
   workflow_dispatch:
 
 permissions:
